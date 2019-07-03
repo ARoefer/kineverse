@@ -1,0 +1,7 @@
+*.pyc
+*.gv
+*.pdf
+*.controllers/*
+*.sublime-project
+*.sublime-workspace
+*.blend1
