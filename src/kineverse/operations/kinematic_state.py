@@ -1,9 +1,9 @@
-from kineverse.operations.history import History
-
+from kineverse.operations.data_tree import DataTree
+from kineverse.operations.history   import History
 
 class KinematicState(object):
     def __init__(self):
-        self.root  = {}
+        self.data_tree = DataTree()
         self.state = {}
         self.grounded_symbols  = set()
         self.operation_history = History()
@@ -35,6 +35,12 @@ class KinematicState(object):
             chunk.op.apply(self)
             self.operation_history.flag_clean(chunk)
             self.operation_history.flag_dirty(chunk.dependents)            
+
+    def set_value(self, key, value):
+        self.data_tree[key] = value
+
+    def set_symbol_value(self, symbol, value=0.0):
+        self.state[symbol] = value
 
     def get_expressions_at(self, time_idx_or_tag):
         pass
