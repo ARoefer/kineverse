@@ -1,6 +1,6 @@
 
 
-class PathDict(object):
+class PathDict(dict):
     def __init__(self, value=None, paths=[]):
         super(PathDict, self).__init__()
         self.value = value
