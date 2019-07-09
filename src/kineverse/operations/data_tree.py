@@ -13,6 +13,23 @@ class DataTree(object):
 		# Mapping of {DLConcept: set}
 		self.lock = RLock()
 
+	def __contains__(self, key):
+		with self.lock:
+			container = self.data_tree
+			try:
+				for part in key:
+					if type(container) is dict:
+						container = container[part]
+					elif type(container) is list:
+						container = container[int(part)]
+					else:
+						container = getattr(container, part)
+				return True
+			except (KeyError, IndexError, AttributeError):
+				if self.parent is not None:
+					return key in self.parent
+				return False
+
 	def __setitem__(self, key, value):
 		self.insert_data(key, value)
 
@@ -28,7 +45,7 @@ class DataTree(object):
 		with self.lock:
 			container = self.data_tree
 			try:
-				for part in path:
+				for part in key:
 					if type(container) is dict:
 						container = container[part]
 					elif type(container) is list:
@@ -38,10 +55,10 @@ class DataTree(object):
 				return container
 			except (KeyError, IndexError, AttributeError):
 				if self.parent is not None:
-					return self.parent.find_data(path)
+					return self.parent.find_data(key)
 				raise Exception('Unknown data id "{}"'.format(key))
 
-	def insert_data(self, data, key):
+	def insert_data(self, key, data):
 		with self.lock:	
 			container = self.data_tree
 			try:
@@ -69,6 +86,28 @@ class DataTree(object):
 				is_new = hasattr(container, key[-1])
 				setattr(container, key[-1], data)
 
+
+	def remove_data(self, key):
+		with self.lock:
+			container = self.data_tree
+			try:
+				for part in key[:-1]:
+					if type(container) is dict:
+						container = container[part]
+					elif type(container) is list:
+						container = container[int(part)]
+					else:
+						container = getattr(container, part)
+			except (KeyError, IndexError, AttributeError):
+				raise Exception('Can not remove data at "{}", "{}" does not exist.'.format(key, part))
+
+			if type(container) is dict:
+				del container[key[-1]]
+			elif type(container) is list:
+				idx = int(key[-1])
+				del container[idx]
+			else:
+				delattr(container, key[-1])			
 
 	def get_data_map(self):
 		return self.data_tree.copy()
