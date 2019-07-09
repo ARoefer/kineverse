@@ -95,6 +95,8 @@ class History(object):
         for p in chunk.modifications:
             self._insert_modification(chunk, p)
 
+        self.chunk_history.add(chunk)
+
     def remove_chunk(self, chunk):
         for p in chunk.modifications:
             if self.modification_history[p][0] == chunk and len(chunk.dependents) > 0 and max([p in c.dependencies for c in chunk.dependents]):
@@ -118,6 +120,7 @@ class History(object):
                 pred  = self.modification_history[p][pos]
             pred.dependents.discard(chunk)
 
+        self.chunk_history.remove(chunk)
         self.dirty_chunks.update(chunk.dependents)
 
     def replace_chunk(self, c_old, c_new):
@@ -156,10 +159,13 @@ class History(object):
         for c in new_deps.values():
             c.dependents.add(c_new)
 
+        self.chunk_history.remove(c_old)
+        self.chunk_history.add(c_new)
+
 
     def get_chunk(self, stamp):
         pos, chunk = self.chunk_history.get_floor(stamp)
-        return chunk if chunk.stamp == stamp else None
+        return chunk if chunk is None or chunk.stamp == stamp else None
 
     def flag_dirty(self, *chunks):
         self.dirty_chunks.update(chunks)
@@ -198,8 +204,8 @@ class Chunk(object):
     def __init__(self, stamp, op):
         self.stamp     = stamp
         self.operation = op
-        self.dependencies  = {p for _, p in op.args_paths.values()}
-        self.modifications = {p for _, p in op.e_paths.values()}
+        self.dependencies  = {p for p in op.args_paths.values()}
+        self.modifications = {p for p in op.mod_paths.values()}
         self.dependents    = set()
 
     def __lt__(self, other):
