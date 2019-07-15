@@ -13,6 +13,9 @@ class DataTree(object):
 		# Mapping of {DLConcept: set}
 		self.lock = RLock()
 
+	def __str__(self):
+		return '{}\n{}'.format('\n'.join(['{}:\n  {}'.format(k, '\n  '.join(str(v).split('\n'))) for k, v in self.data_tree.items()]), str(self.parent))
+
 	def __contains__(self, key):
 		with self.lock:
 			container = self.data_tree
