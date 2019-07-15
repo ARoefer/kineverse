@@ -1,3 +1,4 @@
+import giskardpy.symengine_wrappers as spw
 from kineverse.gradients.diff_logic import get_diff_symbol, get_int_symbol
 
 class GradientContainer(object):
