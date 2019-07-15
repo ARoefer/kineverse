@@ -2,7 +2,7 @@ from kineverse.model.data_tree import DataTree
 from kineverse.model.history   import History, Chunk
 from kineverse.model.paths     import Path
 
-class KinematicState(object):
+class KinematicModel(object):
     def __init__(self):
         self.data_tree         = DataTree()
         self.operation_history = History()

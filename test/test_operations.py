@@ -3,12 +3,12 @@ import unittest as ut
 from kineverse.utils import bb
 from kineverse.operations.basic_operations import *
 from kineverse.gradients.gradient_math     import *
-from kineverse.model.kinematic_state       import KinematicState
+from kineverse.model.kinematic_model       import KinematicModel
 
 
 class TestOperations(ut.TestCase):
     def test_add_single(self):
-        ks = KinematicState()
+        ks = KinematicModel()
         p  = Path('my_var')
         op = CreateSingleValue(p, 5)
         ks.apply_operation(op, 'create my_var')
@@ -19,7 +19,7 @@ class TestOperations(ut.TestCase):
 
 
     def test_add_object(self):
-        ks  = KinematicState()
+        ks  = KinematicModel()
         obj = bb(some_str='lol', some_scalar=7.5, some_subobj=bb(x=4, y=5, z=10))
         op  = CreateComplexObject(Path('my_obj'), obj)
         self.assertIn('some_str', op.mod_paths)
@@ -51,7 +51,7 @@ class TestOperations(ut.TestCase):
 
 
     def test_add_fn_call(self):
-        ks  = KinematicState()
+        ks  = KinematicModel()
         ks.apply_operation(CreateSingleValue('my_var', 5), 'create my_var')
         ks.apply_operation(CreateSingleValue('vec_a', spw.vector3(1,0,0)),  'create vec_a')
         ks.apply_operation(CreateSingleValue('vec_b', spw.vector3(0,1,0)),  'create vec_b')
