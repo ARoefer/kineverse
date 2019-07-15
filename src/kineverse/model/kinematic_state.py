@@ -1,6 +1,6 @@
-from kineverse.operations.data_tree import DataTree
-from kineverse.operations.history   import History, Chunk
-from kineverse.operations.operation import Path
+from kineverse.model.data_tree import DataTree
+from kineverse.model.history   import History, Chunk
+from kineverse.model.paths     import Path
 
 class KinematicState(object):
     def __init__(self):

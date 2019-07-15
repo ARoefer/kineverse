@@ -1,6 +1,6 @@
 import unittest as ut
 
-from kineverse.operations.history import *
+from kineverse.model.history import *
 from kineverse.utils import bb
 
 

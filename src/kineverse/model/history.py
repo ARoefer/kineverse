@@ -1,6 +1,6 @@
 from sortedcontainers import SortedList, SortedSet
 
-from kineverse.operations.operation import Path
+from kineverse.model.paths import Path
 
 class Timeline(SortedList):
     def get_floor(self, key):

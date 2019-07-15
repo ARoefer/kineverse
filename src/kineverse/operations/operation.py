@@ -1,38 +1,5 @@
 from symengine import Symbol
-
-class Path(tuple):
-    def __new__(cls, path):
-        if type(path) == str:
-            return super(Path, cls).__new__(Path, path.split('/'))
-        return super(Path, cls).__new__(Path, path)
-
-    def __add__(self, other):
-        return Path(super(Path, self).__add__(other))
-
-    def __radd__(self, other):
-        return Path(other) + self
-
-    def __getitem__(self, idx):
-        if type(idx) is int:
-            return super(Path, self).__getitem__(idx)
-        return Path(super(Path, self).__getitem__(idx))
-
-    def __eq__(self, other):
-        if type(other) is str:
-            return self == Path(other)
-        return super(Path, self).__eq__(other)
-
-    def __ne__(self, other):
-        return not self.__eq__(other)
-
-    def to_symbol(self):
-        return Symbol('__'.join(self))
-
-    def __str__(self):
-        return '/'.join(self)
-
-    def __repr__(self):
-        return 'P{}'.format(super(Path, self).__repr__())
+from kineverse.model.paths import Path
 
 # Every action needs to declare the fields it depends on and the ones it modifies
 class Operation(object):

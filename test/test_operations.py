@@ -3,7 +3,7 @@ import unittest as ut
 from kineverse.utils import bb
 from kineverse.operations.basic_operations import *
 from kineverse.gradients.gradient_math     import *
-from kineverse.operations.kinematic_state  import KinematicState
+from kineverse.model.kinematic_state       import KinematicState
 
 
 class TestOperations(ut.TestCase):

@@ -1,5 +1,6 @@
-from kineverse.operations.operation    import Operation, Path
 from kineverse.gradients.gradient_math import GC, GM, spw
+from kineverse.model.paths             import Path
+from kineverse.operations.operation    import Operation
 
 stopping_set = set([int, float, bool, str, GC, GM] + [getattr(spw.sp, x) for x in dir(spw.sp) if type(getattr(spw.sp, x)) == type])
 
