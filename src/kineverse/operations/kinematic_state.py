@@ -4,11 +4,11 @@ from kineverse.operations.operation import Path
 
 class KinematicState(object):
     def __init__(self):
-        self.data_tree = DataTree()
-        self.state = {}
-        self.grounded_symbols  = set()
+        self.data_tree         = DataTree()
         self.operation_history = History()
         self.timeline_tags     = {}
+        self.constraints       = {}
+        self.constraint_symbol_map = {}
 
     def apply_operation(self, op, tag):
         time = self.timeline_tags[tag] if tag in self.timeline_tags else self.operation_history.get_time_stamp()
@@ -66,8 +66,35 @@ class KinematicState(object):
             key = Path(key.split('/'))
         self.data_tree.remove_data(key)
 
-    def set_symbol_value(self, symbol, value=0.0):
-        self.state[symbol] = value
+    def add_constraint(self, key, constraint):
+        if key in self.constraints:
+            c = self.constraints[key]
+            for s in c.expr.free_symbols:
+                self.constraint_symbol_map[s].remove(c)    
+        self.constraints[key] = constraint
+        for s in constraint.expr.free_symbols:
+            if s not in self.constraint_symbol_map:
+                self.constraint_symbol_map[s] = set()
+            self.constraint_symbol_map[s].add(constraint)
+
+    def has_constraint(self, key):
+        return key in self.constraints
+
+    def get_constraint(self, key):
+        return self.constraints[key]
+
+    def remove_constraint(self, key):
+        c = self.constraints[key]
+        for s in c.expr.free_symbols:
+            self.constraint_symbol_map[s].remove(c)
+        del self.constraints[key]
+
+    def get_constraints_by_symbols(self, symbol_set):
+        out = set()
+        for s in symbol_set:
+            if s in self.constraint_symbol_map:
+                out.update(self.constraint_symbol_map[s])
+        return out 
 
     def get_expressions_at(self, time_idx_or_tag):
         pass
