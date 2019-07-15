@@ -1,5 +1,6 @@
 from kineverse.operations.data_tree import DataTree
 from kineverse.operations.history   import History, Chunk
+from kineverse.operations.operation import Path
 
 class KinematicState(object):
     def __init__(self):
@@ -47,22 +48,22 @@ class KinematicState(object):
 
     def has_data(self, key):
         if type(key) == str:
-            key = tuple(key.split('/'))
+            key = Path(key.split('/'))
         return key in self.data_tree
 
     def get_data(self, key):
         if type(key) == str:
-            key = tuple(key.split('/'))
+            key = Path(key.split('/'))
         return self.data_tree[key]
 
     def set_data(self, key, value):
         if type(key) == str:
-            key = tuple(key.split('/'))
+            key = Path(key.split('/'))
         self.data_tree[key] = value
 
     def remove_data(self, key):
         if type(key) == str:
-            key = tuple(key.split('/'))
+            key = Path(key.split('/'))
         self.data_tree.remove_data(key)
 
     def set_symbol_value(self, symbol, value=0.0):

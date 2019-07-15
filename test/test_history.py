@@ -5,8 +5,8 @@ from kineverse.utils import bb
 
 
 def fake_op(deps, mods):
-    return bb(args_paths={n: (None, p) for n, p in enumerate(deps)},
-                 e_paths={n: (None, p) for n, p in enumerate(mods)})
+    return bb(args_paths={n: Path(p) for n, p in enumerate(deps)},
+               mod_paths={n: Path(p) for n, p in enumerate(mods)})
 
 op_c_a  = fake_op([], ['a'])
 op_c_ae = fake_op([], ['a', 'e'])

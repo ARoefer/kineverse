@@ -1,5 +1,6 @@
 from sortedcontainers import SortedList, SortedSet
 
+from kineverse.operations.operation import Path
 
 class Timeline(SortedList):
     def get_floor(self, key):
@@ -204,7 +205,7 @@ class Chunk(object):
     def __init__(self, stamp, op):
         self.stamp     = stamp
         self.operation = op
-        self.dependencies  = {p for p in op.args_paths.values()}
+        self.dependencies  = {p for p in op.args_paths.values() if type(p) == Path}
         self.modifications = {p for p in op.mod_paths.values()}
         self.dependents    = set()
 
