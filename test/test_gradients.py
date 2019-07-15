@@ -1,5 +1,6 @@
 import unittest as ut
 
+from kineverse.gradients.diff_logic    import get_diff_symbol
 from kineverse.gradients.gradient_math import *
 
 
@@ -9,8 +10,8 @@ class TestOperators(ut.TestCase):
         x, y = spw.sp.symbols('x_p y_p')
 
         baseline = x + y
-        gc_x = GradientContainer(x)
-        gc_y = GradientContainer(y)
+        gc_x = GC(x)
+        gc_y = GC(y)
         
         # Generate gradients
         gc_x[get_diff_symbol(x)]
@@ -26,8 +27,8 @@ class TestOperators(ut.TestCase):
         x, y = spw.sp.symbols('x_p y_p')
 
         baseline = x - y
-        gc_x = GradientContainer(x)
-        gc_y = GradientContainer(y)
+        gc_x = GC(x)
+        gc_y = GC(y)
         
         # Generate gradients
         gc_x[get_diff_symbol(x)]
@@ -44,8 +45,8 @@ class TestOperators(ut.TestCase):
         x, y = spw.sp.symbols('x_p y_p')
 
         baseline = x * (5 * y)
-        gc_x = GradientContainer(x)
-        gc_y = GradientContainer(5 * y)
+        gc_x = GC(x)
+        gc_y = GC(5 * y)
         
         # Generate gradients
         gc_x[get_diff_symbol(x)]
@@ -62,8 +63,8 @@ class TestOperators(ut.TestCase):
         x, y = spw.sp.symbols('x_p y_p')
 
         baseline = x / (5 * y)
-        gc_x = GradientContainer(x)
-        gc_y = GradientContainer(5 * y)
+        gc_x = GC(x)
+        gc_y = GC(5 * y)
         
         # Generate gradients
         gc_x[get_diff_symbol(x)]
@@ -80,8 +81,8 @@ class TestOperators(ut.TestCase):
         x, y = spw.sp.symbols('x_p y_p')
 
         baseline = x ** (4 * y)
-        gc_x = GradientContainer(x)
-        gc_y = GradientContainer(4 * y)
+        gc_x = GC(x)
+        gc_y = GC(4 * y)
         
         # Generate gradients
         gc_x[get_diff_symbol(x)]
@@ -100,8 +101,8 @@ class TestFunctions(ut.TestCase):
         x, y = spw.sp.symbols('x_p y_p')
 
         baseline = spw.sin(x + 5 * y)
-        gc_x = GradientContainer(x)
-        gc_y = GradientContainer(5 * y)
+        gc_x = GC(x)
+        gc_y = GC(5 * y)
 
         # Generate gradients
         gc_x[get_diff_symbol(x)]
@@ -117,8 +118,8 @@ class TestFunctions(ut.TestCase):
         x, y = spw.sp.symbols('x_p y_p')
 
         baseline = spw.cos(x + 5 * y)
-        gc_x = GradientContainer(x)
-        gc_y = GradientContainer(5 * y)
+        gc_x = GC(x)
+        gc_y = GC(5 * y)
 
         # Generate gradients
         gc_x[get_diff_symbol(x)]
@@ -134,8 +135,8 @@ class TestFunctions(ut.TestCase):
         x, y = spw.sp.symbols('x_p y_p')
 
         baseline = spw.tan(x + 5 * y)
-        gc_x = GradientContainer(x)
-        gc_y = GradientContainer(5 * y)
+        gc_x = GC(x)
+        gc_y = GC(5 * y)
 
         # Generate gradients
         gc_x[get_diff_symbol(x)]
@@ -151,8 +152,8 @@ class TestFunctions(ut.TestCase):
         x, y = spw.sp.symbols('x_p y_p')
 
         baseline = spw.asin(x + 5 * y)
-        gc_x = GradientContainer(x)
-        gc_y = GradientContainer(5 * y)
+        gc_x = GC(x)
+        gc_y = GC(5 * y)
 
         # Generate gradients
         gc_x[get_diff_symbol(x)]
@@ -168,8 +169,8 @@ class TestFunctions(ut.TestCase):
         x, y = spw.sp.symbols('x_p y_p')
 
         baseline = spw.acos(x + 5 * y)
-        gc_x = GradientContainer(x)
-        gc_y = GradientContainer(5 * y)
+        gc_x = GC(x)
+        gc_y = GC(5 * y)
 
         # Generate gradients
         gc_x[get_diff_symbol(x)]
@@ -185,8 +186,8 @@ class TestFunctions(ut.TestCase):
         x, y = spw.sp.symbols('x_p y_p')
 
         baseline = spw.atan(x + 5 * y)
-        gc_x = GradientContainer(x)
-        gc_y = GradientContainer(5 * y)
+        gc_x = GC(x)
+        gc_y = GC(5 * y)
 
         # Generate gradients
         gc_x[get_diff_symbol(x)]
@@ -202,8 +203,8 @@ class TestFunctions(ut.TestCase):
         x, y = spw.sp.symbols('x_p y_p')
 
         baseline = spw.sp.sinh(x + 5 * y)
-        gc_x = GradientContainer(x)
-        gc_y = GradientContainer(5 * y)
+        gc_x = GC(x)
+        gc_y = GC(5 * y)
 
         # Generate gradients
         gc_x[get_diff_symbol(x)]
@@ -219,8 +220,8 @@ class TestFunctions(ut.TestCase):
         x, y = spw.sp.symbols('x_p y_p')
 
         baseline = spw.sp.cosh(x + 5 * y)
-        gc_x = GradientContainer(x)
-        gc_y = GradientContainer(5 * y)
+        gc_x = GC(x)
+        gc_y = GC(5 * y)
 
         # Generate gradients
         gc_x[get_diff_symbol(x)]
@@ -236,8 +237,8 @@ class TestFunctions(ut.TestCase):
         x, y = spw.sp.symbols('x_p y_p')
 
         baseline = spw.sp.tanh(x + 5 * y)
-        gc_x = GradientContainer(x)
-        gc_y = GradientContainer(5 * y)
+        gc_x = GC(x)
+        gc_y = GC(5 * y)
 
         # Generate gradients
         gc_x[get_diff_symbol(x)]
@@ -253,8 +254,8 @@ class TestFunctions(ut.TestCase):
         x, y = spw.sp.symbols('x_p y_p')
 
         baseline = spw.sp.asinh(x + 5 * y)
-        gc_x = GradientContainer(x)
-        gc_y = GradientContainer(5 * y)
+        gc_x = GC(x)
+        gc_y = GC(5 * y)
 
         # Generate gradients
         gc_x[get_diff_symbol(x)]
@@ -270,8 +271,8 @@ class TestFunctions(ut.TestCase):
         x, y = spw.sp.symbols('x_p y_p')
 
         baseline = spw.sp.acosh(x + 5 * y)
-        gc_x = GradientContainer(x)
-        gc_y = GradientContainer(5 * y)
+        gc_x = GC(x)
+        gc_y = GC(5 * y)
 
         # Generate gradients
         gc_x[get_diff_symbol(x)]
@@ -287,8 +288,8 @@ class TestFunctions(ut.TestCase):
         x, y = spw.sp.symbols('x_p y_p')
 
         baseline = spw.sp.atanh(x + 5 * y)
-        gc_x = GradientContainer(x)
-        gc_y = GradientContainer(5 * y)
+        gc_x = GC(x)
+        gc_y = GC(5 * y)
 
         # Generate gradients
         gc_x[get_diff_symbol(x)]
@@ -304,8 +305,8 @@ class TestFunctions(ut.TestCase):
         x, y = spw.sp.symbols('x_p y_p')
 
         baseline = spw.sp.exp(x + 5 * y)
-        gc_x = GradientContainer(x)
-        gc_y = GradientContainer(5 * y)
+        gc_x = GC(x)
+        gc_y = GC(5 * y)
 
         # Generate gradients
         gc_x[get_diff_symbol(x)]
@@ -321,8 +322,8 @@ class TestFunctions(ut.TestCase):
         x, y = spw.sp.symbols('x_p y_p')
 
         baseline = spw.sp.log(x + 5 * y)
-        gc_x = GradientContainer(x)
-        gc_y = GradientContainer(5 * y)
+        gc_x = GC(x)
+        gc_y = GC(5 * y)
 
         # Generate gradients
         gc_x[get_diff_symbol(x)]
@@ -338,8 +339,8 @@ class TestFunctions(ut.TestCase):
         x, y = spw.sp.symbols('x_p y_p')
 
         baseline = spw.sqrt(x + 5 * y)
-        gc_x = GradientContainer(x)
-        gc_y = GradientContainer(5 * y)
+        gc_x = GC(x)
+        gc_y = GC(5 * y)
 
         # Generate gradients
         gc_x[get_diff_symbol(x)]
@@ -355,8 +356,8 @@ class TestFunctions(ut.TestCase):
         x, y = spw.sp.symbols('x_p y_p')
 
         baseline = spw.fake_Abs(x + 5 * y)
-        gc_x = GradientContainer(x)
-        gc_y = GradientContainer(5 * y)
+        gc_x = GC(x)
+        gc_y = GC(5 * y)
 
         # Generate gradients
         gc_x[get_diff_symbol(x)]
@@ -374,7 +375,7 @@ class TestMatrix(ut.TestCase):
         M = spw.sp.Matrix([[1,2],[3,4],[5,6]])
 
         baseline = M * spw.sp.Matrix([[4],[9]])
-        gm_M = GradientMatrix(M)
+        gm_M = GM(M)
         gm_R = gm_M * spw.sp.Matrix([[4],[9]])
 
         self.assertEqual(gm_M.expr, M)
@@ -384,7 +385,7 @@ class TestMatrix(ut.TestCase):
         M = spw.sp.Matrix([[1,2],[3,4],[5,6]])
 
         baseline = M.T
-        gm_M = GradientMatrix(M).T
+        gm_M = GM(M).T
 
         for e, x in zip(gm_M, baseline):
             self.assertEqual(e.expr, x)
