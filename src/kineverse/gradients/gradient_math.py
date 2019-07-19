@@ -4,6 +4,7 @@ from kineverse.gradients.diff_logic         import get_diff_symbol
 from kineverse.gradients.gradient_container import GradientContainer as GC
 from kineverse.gradients.gradient_matrix    import GradientMatrix    as GM
 
+dot    = spw.dot
 pos_of = spw.pos_of
 rot_of = spw.rot_of
 x_of   = spw.x_of
