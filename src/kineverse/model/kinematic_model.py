@@ -15,14 +15,12 @@ class KinematicModel(object):
         self.timeline_tags     = {}
         self.constraints       = {}
         self.constraint_symbol_map = {}
+        self._touched_set      = set()
+        self._touched_stamp    = 0
 
     def apply_operation(self, op, tag):
         time = self.timeline_tags[tag] if tag in self.timeline_tags else self.operation_history.get_time_stamp()
-        while len(self.operation_history.dirty_chunks) > 0 and self.operation_history.dirty_chunks[0].stamp <= time:
-            chunk = self.operation_history.dirty_chunks[0]
-            chunk.operation.apply(self)
-            self.operation_history.flag_clean(chunk)
-            self.operation_history.flag_dirty(chunk.dependents)
+        self.clean_structure(time)
 
         if tag in self.timeline_tags:
             chunk = self.operation_history.get_chunk(self.timeline_tags[tag])
@@ -44,13 +42,17 @@ class KinematicModel(object):
             raise Exception('History returned no chunk for tag "{}" associated with timestamp {}. This should not happen.'.format(tag, self.timeline_tags[tag]))
         chunk.operation.revoke(self)
         self.operation_history.remove_chunk(chunk)
+        del self.timeline_tags[tag]
 
-    def clean_structure(self):
-        while len(self.operation_history.dirty_chunks) > 0:
+    def clean_structure(self, until=2e9):
+        while len(self.operation_history.dirty_chunks) > 0 and self.operation_history.dirty_chunks[0].stamp <= until:
             chunk = self.operation_history.dirty_chunks[0]
-            chunk.operation.apply(self)
+            if self._touched_stamp > chunk.stamp:
+                self._touched_set = set()
+            chunk.operation.apply(self, self._touched_set)
+            self._touched_set |= chunk.modifications
             self.operation_history.flag_clean(chunk)
-            self.operation_history.flag_dirty(chunk.dependents)            
+            self.operation_history.flag_dirty(*chunk.dependents)            
 
     def has_data(self, key):
         if type(key) == str:
@@ -101,6 +103,8 @@ class KinematicModel(object):
             if s in self.constraint_symbol_map:
                 out.update(self.constraint_symbol_map[s])
         return out 
+    def str_op_history(self):
+        return '\n'.join(['{:>9.4f}: {}'.format(s, t) for s, t in sorted([(s, t) for t, s in self.timeline_tags.items()])])
 
     def get_expressions_at(self, time_idx_or_tag):
         pass

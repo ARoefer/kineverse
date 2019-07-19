@@ -3,14 +3,15 @@ import symengine as sp
 import numpy as np
 import rospy
 import yaml
+import copy as copy_module
 
 from collections import namedtuple
 from gebsyas.data_structures import StampedData, JointState
 from giskardpy.symengine_wrappers import *
+from kineverse.type_sets import symengine_types
 from sensor_msgs.msg import JointState as JointStateMsg
 from iai_bullet_sim.utils import Frame, Vector3, Point3
 from visualization_msgs.msg import Marker as MarkerMsg
-from copy import deepcopy
 
 from gebsyas.core.dl_types import DLShape, DLCube, DLCylinder, DLSphere, DLCylinder, DLCompoundObject
 
@@ -200,6 +201,19 @@ def jsDictToJSMsg(js_dict):
 
 	return js
 
+def copy(obj):
+	if type(obj) in symengine_types:
+		return obj
+	return copy_module.copy(obj)
+
+def deepcopy(obj):
+	if type(obj) in symengine_types:
+		return obj
+	out = copy_module.deepcopy(obj)
+	if out is None and obj is not None:
+		raise Exception('Deep copy of {} failed! Please implement a custom __deepcopy__ function for type {}.'.format(obj, type(obj)))
+	return out
+
 class Blank:
 	def __str__(self):
 		return '\n'.join(['{}: {}'.format(field, str(getattr(self, field))) for field in dir(self) if field[0] != '_' and not callable(getattr(self, field))])
@@ -208,10 +222,10 @@ class Blank:
 		out = Blank()
 		for attrn in [x  for x in dir(self) if x[0] != '_']:
 			attr = getattr(self, attrn)
-			if isinstance(attr, sp.Basic) or isinstance(attr, sp.Number) or isinstance(attr, sp.Expr) or isinstance(attr, sp.Add) or isinstance(attr, sp.Mul) or isinstance(attr, sp.Min) or isinstance(attr, sp.Max) or isinstance(attr, sp.Matrix):
+			if type(attr) in symengine_types:
 				setattr(out, attrn, attr)
 			else:
-				setattr(out, attrn, deepcopy(attr, memo))
+				setattr(out, attrn, copy_module.deepcopy(attr, memo))
 		memo[id(self)] = out
 		return out
 
