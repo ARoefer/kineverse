@@ -1,3 +1,13 @@
+from kineverse.gradients.gradient_math import spw
+from kineverse.type_sets               import atomic_types, matrix_types, symengine_types
+
+class PathException(Exception):
+    def __init__(self, path, obj):
+        super(PathException, self).__init__('Object {} at {} has no attribute {}.'.format(path[:-1], obj, path[-1]))
+        self.path = path
+        self.obj  = obj
+
+
 class Path(tuple):
     def __new__(cls, path):
         if type(path) == str:
@@ -15,6 +25,9 @@ class Path(tuple):
             return super(Path, self).__getitem__(idx)
         return Path(super(Path, self).__getitem__(idx))
 
+    def __getslice__(self, i, j):
+        return Path(super(Path, self).__getslice__(i, j))
+
     def __eq__(self, other):
         if type(other) is str:
             return self == Path(other)
@@ -24,7 +37,7 @@ class Path(tuple):
         return not self.__eq__(other)
 
     def to_symbol(self):
-        return Symbol('__'.join(self))
+        return spw.Symbol('__'.join(self))
 
     def __str__(self):
         return '/'.join(self)
@@ -32,6 +45,49 @@ class Path(tuple):
     def __repr__(self):
         return 'P{}'.format(super(Path, self).__repr__())
 
+    def get_data(self, obj):
+        try:
+            for x in range(len(self)):
+                if type(obj) is dict:
+                    obj = obj[self[x]]
+                elif type(obj) is list:
+                    obj = obj[int(self[x])]
+                else:
+                    obj = getattr(obj, self[x])
+            return obj      
+        except (KeyError, IndexError, AttributeError):
+            raise PathException(self[:x + 1], obj)
+
+
+stopping_set = atomic_types.union(matrix_types).union(symengine_types)
+
+def collect_paths(obj, root):
+    t = type(obj)
+    out = {root}
+    if t not in stopping_set:
+        for a in [a for a in dir(obj) if a[0] != '_' and not callable(getattr(obj, a))]:
+            out.update(collect_paths(getattr(obj, a), root + Path(a,)))
+    return out
+
+def find_common_root(paths):
+    out = Path([])
+    if len(paths) > 0:
+        idx = 0 
+        ok  = True
+        while ok:
+            part = None
+            for p in paths:
+                part = p[idx] if part is None and len(p) > idx else part
+                if len(p) == idx or p[idx] != part:
+                    ok = False
+                    break
+            if ok:
+                out = out + (part, )
+                idx += 1
+    return out
+
+def is_prefix(a, b):
+       return len(a) <= len(b) and b[:len(a)] == a
 
 class PathDict(dict):
     def __init__(self, value=None, paths=[]):

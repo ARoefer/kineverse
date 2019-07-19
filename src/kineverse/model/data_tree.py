@@ -1,3 +1,5 @@
+from kineverse.model.paths import PathException
+
 from yaml import load, dump
 
 from multiprocessing import RLock
@@ -46,34 +48,14 @@ class DataTree(object):
 
 	def find_data(self, key):	
 		with self.lock:
-			container = self.data_tree
-			try:
-				for part in key:
-					if type(container) is dict:
-						container = container[part]
-					elif type(container) is list:
-						container = container[int(part)]
-					else:
-						container = getattr(container, part)
-				return container
-			except (KeyError, IndexError, AttributeError):
-				if self.parent is not None:
-					return self.parent.find_data(key)
-				raise Exception('Unknown data id "{}"'.format(key))
+			return key.get_data(self.data_tree)
 
 	def insert_data(self, key, data):
 		with self.lock:	
-			container = self.data_tree
 			try:
-				for part in key[:-1]:
-					if type(container) is dict:
-						container = container[part]
-					elif type(container) is list:
-						container = container[int(part)]
-					else:
-						container = getattr(container, part)
-			except (KeyError, IndexError, AttributeError):
-				raise Exception('Can not insert data at "{}", "{}" does not exist.'.format(key, part))
+				container = key[:-1].get_data(self.data_tree)
+			except PathException as e:
+				raise Exception('Can not insert data at "{}", since attribute "{}" does not exist in object "{}".'.format(key, e.path[-1], e.path[:-1]))
 
 			if type(container) is dict:
 				is_new = key[-1] in container
@@ -92,17 +74,10 @@ class DataTree(object):
 
 	def remove_data(self, key):
 		with self.lock:
-			container = self.data_tree
 			try:
-				for part in key[:-1]:
-					if type(container) is dict:
-						container = container[part]
-					elif type(container) is list:
-						container = container[int(part)]
-					else:
-						container = getattr(container, part)
-			except (KeyError, IndexError, AttributeError):
-				raise Exception('Can not remove data at "{}", "{}" does not exist.'.format(key, part))
+				container = key[:-1].get_data(self.data_tree)
+			except PathException as e:
+				raise Exception('Can not remove data at "{}", since attribute "{}" does not exist in object "{}".'.format(key, e.path[-1], e.path[:-1]))
 
 			if type(container) is dict:
 				del container[key[-1]]
