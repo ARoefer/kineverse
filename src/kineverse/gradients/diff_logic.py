@@ -11,6 +11,11 @@ TYPE_SUFFIXES = {'_p': TYPE_POSITION,
                  '_e': TYPE_EFFORT}
 TYPE_SUFFIXES_INV = {v: k for k, v in TYPE_SUFFIXES.items()}
 
+def create_symbol(symbol, stype):
+    if stype not in TYPE_SUFFIXES_INV:
+        raise Exception('Can not create symbol for type {}: Type id not defined.'.format(stype))
+    return spw.Symbol('{}{}'.format(str(symbol), TYPE_SUFFIXES_INV[stype]))
+
 def get_symbol_type(symbol):
     return TYPE_SUFFIXES[str(symbol)[-2:]] if str(symbol)[-2:] in TYPE_SUFFIXES else TYPE_UNKNOWN
 
