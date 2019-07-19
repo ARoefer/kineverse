@@ -87,7 +87,7 @@ class History(object):
     def insert_chunk(self, chunk):
         for p in chunk.dependencies:
             if p not in self.modification_history:
-                raise Exception('Chunk depends on attribute without history!')
+                raise Exception('Chunk depends on attribute without history!\n Operation "{}" at {}\n Attribute: {}\n'.format(chunk.operation.name, chunk.stamp, p))
             _, pred = self.modification_history[p].get_floor(chunk.stamp)
             if pred is None:
                 raise Exception('Chunk depends on attribute with empty history!')
@@ -172,7 +172,8 @@ class History(object):
         self.dirty_chunks.update(chunks)
 
     def flag_clean(self, *chunks):
-        self.dirty_chunks.discard(chunks)
+        for c in chunks:
+            self.dirty_chunks.discard(c)
 
     def expand_dirty_set(self):
         active_set = set(self.dirty_chunks)
