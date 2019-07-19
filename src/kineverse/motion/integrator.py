@@ -1,7 +1,7 @@
-from giskardpy.symengine_wrappers    import *
-from kineverse.plotting              import ValueRecorder, SymbolicRecorder
-from kineverse.gradients.diff_logic  import get_symbol_type
-from kineverse.motion.min_qp_builder import TypedQPBuilder as TQPB
+from giskardpy.symengine_wrappers     import *
+from kineverse.visualization.plotting import ValueRecorder, SymbolicRecorder
+from kineverse.gradients.diff_logic   import get_symbol_type
+from kineverse.motion.min_qp_builder  import TypedQPBuilder as TQPB
 
 DT_SYM = sp.symbols('T_p')
 
