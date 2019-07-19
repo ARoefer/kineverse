@@ -1,7 +1,26 @@
 import giskardpy.symengine_wrappers as spw
 
+from kineverse.gradients.diff_logic         import get_diff_symbol
 from kineverse.gradients.gradient_container import GradientContainer as GC
 from kineverse.gradients.gradient_matrix    import GradientMatrix    as GM
+
+pos_of = spw.pos_of
+rot_of = spw.rot_of
+x_of   = spw.x_of
+y_of   = spw.y_of
+z_of   = spw.z_of
+
+def get_diff(term):
+    if type(term) == spw.Symbol:
+        return get_diff_symbol(term)
+    
+    if type(term) != GC:
+        term = GC(term)
+
+    for s in term.free_diff_symbols:
+        term[s]
+    return sum([s * t for s, t in term.gradients.items()])
+
 
 def sin(expr):
     if type(expr) == GC:
@@ -84,6 +103,27 @@ def abs(expr):
         return GC(spw.fake_Abs(expr.expr), {s: d * expr.expr / spw.sqrt(expr.expr ** 2) for s, d in expr.gradients.items()})
     return spw.fake_Abs(expr)
 
+def is_gradient(m_list):
+    return max([type(x) == GC if type(x) != list and type(x) != tuple else is_gradient(x) for x in m_list])
+
+def matrix_wrapper(m_list):
+    if is_gradient(m_list):
+        return GM(m_list)
+    return spw.sp.Matrix(m_list)
+
+
+def point3(x, y, z):
+    a = [x, y, z]
+    if max([type(v) == GC for v in a]):
+        return GM([x, y, z, 1])
+    return spw.point3(x, y, z)
+
+def vector3(x, y, z):
+    a = [x, y, z]
+    if max([type(v) == GC for v in a]):
+        return GM([x, y, z, 0])
+    return spw.vector3(x, y, z)
+
 def norm(v):
     r = 0
     for x in v:
@@ -91,13 +131,9 @@ def norm(v):
     return sqrt(r)
 
 def cross(u, v):
-    if type(u) == GM or type(v) == GM:
-        return GM([u[1] * v[2] - u[2] * v[1],
-                   u[2] * v[0] - u[0] * v[2],
-                   u[0] * v[1] - u[1] * v[0], 0])
-    return spw.sp.Matrix([u[1] * v[2] - u[2] * v[1],
-                      u[2] * v[0] - u[0] * v[2],
-                      u[0] * v[1] - u[1] * v[0], 0])
+    return matrix_wrapper([u[1] * v[2] - u[2] * v[1],
+                           u[2] * v[0] - u[0] * v[2],
+                           u[0] * v[1] - u[1] * v[0], 0])
 
 def translation3(x, y, z, w=1):
     a = [x, y, z, w]
