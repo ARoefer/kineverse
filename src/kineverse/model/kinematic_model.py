@@ -2,6 +2,12 @@ from kineverse.model.data_tree import DataTree
 from kineverse.model.history   import History, Chunk
 from kineverse.model.paths     import Path
 
+class Constraint(object):
+    def __init__(self, lower, upper, expr):
+        self.lower = lower
+        self.upper = upper
+        self.expr  = expr
+
 class KinematicModel(object):
     def __init__(self):
         self.data_tree         = DataTree()

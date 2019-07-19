@@ -7,16 +7,13 @@ from giskardpy.qp_solver  import QPSolver
 
 from kineverse.gradients.diff_logic         import get_symbol_type
 from kineverse.gradients.gradient_container import GradientContainer as GC
+from kineverse.model.kinematic_model        import Constraint
 
 default_bound = 1e9    
 
-class HardConstraint(object):
-    def __init__(self, lower, upper, expr):
-        self.lower = lower
-        self.upper = upper
-        self.expr  = expr
+HardConstraint = Constraint
 
-class SoftConstraint(HardConstraint):
+class SoftConstraint(Constraint):
     def __init__(self, lower, upper, weight, expr):
         super(SoftConstraint, self).__init__(lower, upper, expr)
         self.weight = weight
@@ -36,7 +33,7 @@ def wrap_expr(expr):
 
 class MinimalQPBuilder(object):
     def __init__(self, hard_constraints, soft_constraints, controlled_values):
-        hc = [(k, HardConstraint(extract_expr(c.lower), extract_expr(c.upper), wrap_expr(c.expr))) for k, c in hard_constraints.items()]
+        hc = [(k, Constraint(extract_expr(c.lower), extract_expr(c.upper), wrap_expr(c.expr))) for k, c in hard_constraints.items()]
         sc = [(k, SoftConstraint(extract_expr(c.lower), extract_expr(c.upper), c.weight, wrap_expr(c.expr))) for k, c in soft_constraints.items()]
         cv = [(k, ControlledValue(extract_expr(c.lower), extract_expr(c.upper), c.symbol, extract_expr(c.weight))) for k, c in controlled_values.items()]
 
