@@ -55,6 +55,7 @@ class KinematicModel(object):
         self.timeline_tags[tag] = time
         self.operation_history.insert_chunk(Chunk(time, op))
         op.apply(self)
+
     def remove_operation(self, tag):
         if tag not in self.timeline_tags:
             raise Exception('Tag "{}" not found in time line.'.format(tag))
@@ -99,12 +100,12 @@ class KinematicModel(object):
         if key in self.constraints:
             c = self.constraints[key]
             for s in c.expr.free_symbols:
-                self.constraint_symbol_map[s].remove(c)    
+                self.constraint_symbol_map[s].remove(key)    
         self.constraints[key] = constraint
         for s in constraint.expr.free_symbols:
             if s not in self.constraint_symbol_map:
                 self.constraint_symbol_map[s] = set()
-            self.constraint_symbol_map[s].add(constraint)
+            self.constraint_symbol_map[s].add(key)
 
     def has_constraint(self, key):
         return key in self.constraints
@@ -119,11 +120,12 @@ class KinematicModel(object):
         del self.constraints[key]
 
     def get_constraints_by_symbols(self, symbol_set):
-        out = set()
+        out = {}
         for s in symbol_set:
             if s in self.constraint_symbol_map:
-                out.update(self.constraint_symbol_map[s])
-        return out 
+                out.update({k: self.constraints[k] for k in self.constraint_symbol_map[s]})
+        return out
+
     def str_op_history(self):
         return '\n'.join(['{:>9.4f}: {}'.format(s, t) for s, t in sorted([(s, t) for t, s in self.timeline_tags.items()])])
 
