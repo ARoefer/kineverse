@@ -202,28 +202,38 @@ class History(object):
         return '\n'.join(['{:>8.3f} : {}'.format(chunk.stamp, str(chunk.op)) for chunk in self.chunk_history])
 
 
-class Chunk(object):
-    def __init__(self, stamp, op):
-        self.stamp     = stamp
-        self.operation = op
-        self.dependencies  = {p for p in op.args_paths.values() if type(p) == Path}
-        self.modifications = {p for p in op.mod_paths.values()}
-        self.dependents    = set()
+class StampedData(object):
+    def __init__(self, stamp, **kwargs):
+        self.stamp = stamp
+        for k, v in self.kwargs.items():
+            setattr(self, k, v)
 
     def __lt__(self, other):
-        if type(other) == Chunk:
+        if isinstance(other, StampedData):
             return self.stamp < other.stamp
         return self.stamp < other
 
     def __gt__(self, other):
-        if type(other) == Chunk:
+        if isinstance(other, StampedData):
             return self.stamp > other.stamp
         return self.stamp > other
 
     def __cmp__(self, other):
-        if type(other) == Chunk:
+        if isinstance(other, StampedData):
             return cmp(self.stamp, other.stamp)
         return cmp(self.stamp, other)
+
+    def __str__(self):
+        return 'Stamped Data {}'.format(self.stamp)
+
+
+class Chunk(StampedData):
+    def __init__(self, stamp, op):
+        super(Chunk, self).__init__(stamp,
+                                    operation=op,
+                                    dependencies={p for p in op.args_paths.values() if type(p) == Path},
+                                    modifications={p for p in op.mod_paths.values()},
+                                    dependents=set())
 
     def __str__(self):
         return 'Stamp: {}\n Arguments: {}\n Modifications: {}\n Dependents: {}\n'.format(self.stamp, ', '.join(self.dependencies), ', '.join(self.modifications), ', '.join([str(d.stamp) for d in self.dependents]))
