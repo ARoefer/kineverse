@@ -25,7 +25,7 @@ class KinematicModel(object):
         if tag in self.timeline_tags:
             chunk = self.operation_history.get_chunk(self.timeline_tags[tag])
             if chunk is None:
-                raise Exception('History returned no chunk for tag "{}"" associated with timestamp {}. This should not happen.'.format(tag, self.timeline_tags[tag]))
+                raise Exception('History returned no chunk for tag "{}" associated with timestamp {}. This should not happen.'.format(tag, self.timeline_tags[tag]))
             chunk.operation.revoke(self)
             self.operation_history.replace_chunk(chunk, Chunk(time, op))
             op.apply(self)
@@ -34,6 +34,27 @@ class KinematicModel(object):
             self.operation_history.insert_chunk(Chunk(time, op))
             op.apply(self)
 
+    def apply_operation_before(self, op, tag, before_tag):
+        if before_tag not in self.timeline_tags:
+            raise Exception('History does not contain a timestamp for tag "{}"'.format(before_tag))
+        if tag in self.timeline_tags:
+            raise Exception('Inserting operations before others can only be done for new operations. Tag "{}" is already refering to an operation.'.format(tag))
+
+        time = self.operation_history.get_time_stamp(before=self.timeline_tags[before_tag])
+        self.timeline_tags[tag] = time
+        self.operation_history.insert_chunk(Chunk(time, op))
+        op.apply(self)
+
+    def apply_operation_after(self, op, tag, after_tag):
+        if after_tag not in self.timeline_tags:
+            raise Exception('History does not contain a timestamp for tag "{}"'.format(after_tag))
+        if tag in self.timeline_tags:
+            raise Exception('Inserting operations after others can only be done for new operations. Tag "{}" is already refering to an operation.'.format(tag))
+
+        time = self.operation_history.get_time_stamp(before=self.timeline_tags[after_tag])
+        self.timeline_tags[tag] = time
+        self.operation_history.insert_chunk(Chunk(time, op))
+        op.apply(self)
     def remove_operation(self, tag):
         if tag not in self.timeline_tags:
             raise Exception('Tag "{}" not found in time line.'.format(tag))
