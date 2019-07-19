@@ -1,0 +1,259 @@
+<robot name="testbot">
+    <material name="metal_profile">
+        <color rgba="0.8 0.8 0.8 1"/>
+    </material>
+    <material name="screw">
+        <color rgba="0.1 0.1 0.1 1"/>
+    </material>
+    <material name="sledge">
+        <color rgba="0.6 0.6 0.6 1"/>
+    </material>
+    <material name="arm_joint">
+        <color rgba="0 0.6 1 1"/>
+    </material>
+    <material name="finger">
+        <color rgba="0.9 0.2 0.2 1"/>
+    </material>
+    <link name="base_link">
+        <visual>
+            <origin xyz="-0.5 -0.5 0.5"/>
+            <geometry>
+                <box size="0.05 0.05 1"/>
+            </geometry>
+            <material name="metal_profile"/>
+        </visual>
+        <visual>
+            <origin xyz="0.5 -0.5 0.5"/>
+            <geometry>
+                <box size="0.05 0.05 1"/>
+            </geometry>
+            <material name="metal_profile"/>
+        </visual>
+        <visual>
+            <origin xyz="-0.5 0.5 0.5"/>
+            <geometry>
+                <box size="0.05 0.05 1"/>
+            </geometry>
+            <material name="metal_profile"/>
+        </visual>
+        <visual>
+            <origin xyz="0.5 0.5 0.5"/>
+            <geometry>
+                <box size="0.05 0.05 1"/>
+            </geometry>
+            <material name="metal_profile"/>
+        </visual>
+        <visual>
+            <origin xyz="0 -0.5 1.025"/>
+            <geometry>
+                <box size="1.05 0.05 0.05"/>
+            </geometry>
+            <material name="metal_profile"/>
+        </visual>
+        <visual>
+            <origin xyz="0 0.5 1.025"/>
+            <geometry>
+                <box size="1.05 0.05 0.05"/>
+            </geometry>
+            <material name="metal_profile"/>
+        </visual>
+        <visual>
+            <origin xyz="-0.5 0 1.025"/>
+            <geometry>
+                <box size="0.05 0.95 0.05"/>
+            </geometry>
+            <material name="metal_profile"/>
+        </visual>
+        <visual>
+            <origin xyz="0.5 0 1.025"/>
+            <geometry>
+                <box size="0.05 0.95 0.05"/>
+            </geometry>
+            <material name="metal_profile"/>
+        </visual>
+        <visual>
+            <origin xyz="0 0.45 1.025" rpy="0 1.57 0"/>
+            <geometry>
+                <cylinder radius="0.0075" length="0.9"/>
+            </geometry>
+            <material name="screw"/>
+        </visual>
+        <visual>
+            <origin xyz="0 0.45 1.025" rpy="0 1.57 0"/>
+            <geometry>
+                <cylinder radius="0.0075" length="0.95"/>
+            </geometry>
+            <material name="screw"/>
+        </visual>
+        <visual>
+            <origin xyz="0 -0.45 1.025" rpy="0 1.57 0"/>
+            <geometry>
+                <cylinder radius="0.0075" length="0.95"/>
+            </geometry>
+            <material name="screw"/>
+        </visual>
+    </link>
+    <link name="rail_link">
+        <visual>
+            <origin xyz="0.04 0 0" rpy="1.57 0 0"/>
+            <geometry>
+                <cylinder radius="0.0075" length="0.92"/>
+            </geometry>
+            <material name="screw"/>
+        </visual>
+        <visual>
+            <origin xyz="-0.04 0 0" rpy="1.57 0 0"/>
+            <geometry>
+                <cylinder radius="0.0075" length="0.92"/>
+            </geometry>
+            <material name="screw"/>
+        </visual>
+        <visual>
+            <origin xyz="0 -0.45 0" rpy="0 0 0"/>
+            <geometry>
+                <box size="0.1 0.03 0.03"/>
+            </geometry>
+            <material name="sledge"/>
+        </visual>
+        <visual>
+            <origin xyz="0 0.45 0" rpy="0 0 0"/>
+            <geometry>
+                <box size="0.1 0.03 0.03"/>
+            </geometry>
+            <material name="sledge"/>
+        </visual>
+    </link>
+    <link name="arm_mount_link">
+        <visual>
+            <geometry>
+                <box size="0.1 0.1 0.03"/>
+            </geometry>
+            <material name="metal_profile"/>
+        </visual>
+    </link>
+    <link name="shoulder_link">
+        <visual>
+            <geometry>
+                <cylinder radius="0.04" length="0.01"/>
+            </geometry>
+            <material name="metal_profile"/>
+        </visual>
+    </link>
+    <link name="upperarm_link">
+        <visual>
+            <origin xyz="0 0 0.2"/>
+            <geometry>
+                <cylinder radius="0.025" length="0.4"/>
+            </geometry>
+            <material name="metal_profile"/>
+        </visual>
+        <visual>
+            <origin xyz="0 0 0.4" rpy="0 1.57 0"/>
+            <geometry>
+                <cylinder radius="0.03" length="0.06"/>
+            </geometry>
+            <material name="arm_joint"/>
+        </visual>
+    </link>
+    <link name="forearm_link">
+        <visual>
+            <origin xyz="0 0 0.2"/>
+            <geometry>
+                <cylinder radius="0.025" length="0.4"/>
+            </geometry>
+            <material name="metal_profile"/>
+        </visual>
+    </link>
+    <link name="wrist_roll_link"/>
+    <link name="gripper_link">
+        <visual>
+            <origin xyz="0 0 0.04"/>
+            <geometry>
+                <box size="0.04 0.1 0.08"/>
+            </geometry>
+            <material name="metal_profile"/>
+        </visual>
+    </link>
+    <link name="right_finger_link">
+        <visual>
+            <origin xyz="0 0.0025 0.03"/>
+            <geometry>
+                <box size="0.03 0.005 0.06"/>
+            </geometry>
+            <material name="finger"/>
+        </visual>
+    </link>
+    <link name="left_finger_link">
+        <visual>
+            <origin xyz="0 -0.0025 0.03"/>
+            <geometry>
+                <box size="0.03 0.005 0.06"/>
+            </geometry>
+            <material name="finger"/>
+        </visual>
+    </link>
+    <joint name="x_rail_joint" type="prismatic">
+        <origin xyz="0 0 1.025"/>
+        <parent link="base_link"/>
+        <child  link="rail_link"/>
+        <axis   xyz="1 0 0"/>
+        <limit lower="-0.425" upper="0.425" velocity="0.4" effort="100"/>
+    </joint>
+    <joint name="y_rail_joint" type="prismatic">
+        <origin xyz="0 0 0"/>
+        <parent link="rail_link"/>
+        <child  link="arm_mount_link"/>
+        <axis   xyz="0 1 0"/>
+        <limit lower="-0.395" upper="0.395" velocity="0.4" effort="100"/>
+    </joint>
+    <joint name="mount_joint" type="continuous">
+        <origin xyz="0 0 -0.03" rpy="3.145 0 0"/>
+        <parent link="arm_mount_link"/>
+        <child  link="shoulder_link"/>
+        <axis   xyz="0 0 1"/>
+        <limit  velocity="0.6" effort="50"/>
+    </joint>
+    <joint name="shoulder_joint" type="revolute">
+        <origin xyz="0 0 0.01"/>
+        <parent link="shoulder_link"/>
+        <child  link="upperarm_link"/>
+        <axis   xyz="1 0 0"/>
+        <limit  lower="-1.57" upper="1.57" velocity="0.6" effort="40"/>
+    </joint>
+    <joint name="elbow_joint" type="revolute">
+        <origin xyz="0 0 0.4"/>
+        <parent link="upperarm_link"/>
+        <child  link="forearm_link"/>
+        <axis   xyz="1 0 0"/>
+        <limit  lower="0" upper="1.57" velocity="0.6" effort="40"/>
+    </joint>
+    <joint name="wrist_roll_joint" type="continuous">
+        <origin xyz="0 0 0.4"/>
+        <parent link="forearm_link"/>
+        <child  link="wrist_roll_link"/>
+        <axis   xyz="0 0 1"/>
+        <limit  velocity="0.6" effort="40"/>
+    </joint>
+    <joint name="wrist_flex_joint" type="revolute">
+        <origin xyz="0 0 0"/>
+        <parent link="wrist_roll_link"/>
+        <child  link="gripper_link"/>
+        <axis   xyz="0 1 0"/>
+        <limit  lower="-1.2" upper="1.2" velocity="0.6" effort="40"/>
+    </joint>
+    <joint name="right_finger_joint" type="prismatic">
+        <origin xyz="0 0 0.08"/>
+        <parent link="gripper_link"/>
+        <child  link="right_finger_link"/>
+        <axis   xyz="0 1 0"/>
+        <limit  lower="0" upper="0.05" velocity="0.6" effort="60"/>
+    </joint>
+    <joint name="left_finger_joint" type="prismatic">
+        <origin xyz="0 0 0.08"/>
+        <parent link="gripper_link"/>
+        <child  link="left_finger_link"/>
+        <axis   xyz="0 1 0"/>
+        <mimic  joint="right_finger_joint" multiplier="-1"/>
+        <limit  lower="-0.05" upper="0" velocity="0.6" effort="60"/>
+    </joint>
+</robot>
