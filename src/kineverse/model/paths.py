@@ -12,6 +12,8 @@ class Path(tuple):
     def __new__(cls, path):
         if type(path) == str:
             return super(Path, cls).__new__(Path, path.split('/'))
+        elif type(path) == spw.Symbol:
+            return super(Path, cls).__new__(Path, str(path).split('__'))
         return super(Path, cls).__new__(Path, path)
 
     def __add__(self, other):
