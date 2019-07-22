@@ -205,7 +205,7 @@ class History(object):
 class StampedData(object):
     def __init__(self, stamp, **kwargs):
         self.stamp = stamp
-        for k, v in self.kwargs.items():
+        for k, v in kwargs.items():
             setattr(self, k, v)
 
     def __lt__(self, other):
