@@ -10,6 +10,7 @@ from kineverse.motion.min_qp_builder      import SoftConstraint, ControlledValue
 from kineverse.operations.urdf_operations import load_urdf
 from kineverse.type_sets                  import atomic_types
 from kineverse.utils                      import res_pkg_path
+from kineverse.visualization.graph_generator import generate_dependency_graph, plot_graph
 from kineverse.visualization.plotting     import draw_recorders, split_recorders
 
 from sensor_msgs.msg     import JointState as JointStateMsg
@@ -20,6 +21,7 @@ from urdf_parser_py.urdf import URDF
 if __name__ == '__main__':
     rospy.init_node('kineverse_sandbox')
 
+    plot_dir = res_pkg_path('package://kineverse/test/plots')
     pub_path = '/opt/ros/{}/lib/robot_state_publisher/robot_state_publisher'.format(os.environ['ROS_DISTRO'])
 
     with open(res_pkg_path('package://fetch_description/robots/fetch.urdf'), 'r') as urdf_file:
@@ -38,6 +40,7 @@ if __name__ == '__main__':
 
     km = KinematicModel()
     load_urdf(km, Path('fetch'), urdf_model)
+    plot_graph(generate_dependency_graph(km), '{}/sandbox_dep_graph.pdf'.format(plot_dir))
 
 
     eef_pose = km.get_data('fetch/links/gripper_link/pose')
@@ -81,7 +84,7 @@ if __name__ == '__main__':
     integrator.restart('Fetch Cartesian Goal Example')
     integrator.run(int_factor)
 
-    draw_recorders([integrator.recorder] + split_recorders([integrator.sym_recorder]), 4.0/9.0, 8, 4).savefig(res_pkg_path('package://kineverse/test/plots/fetch_sandbox_plots.png'))
+    draw_recorders([integrator.recorder] + split_recorders([integrator.sym_recorder]), 4.0/9.0, 8, 4).savefig('{}/fetch_sandbox_plots.png'.format(plot_dir))
 
     trajectory = {Path(j)[-1][:-2]: [0.0] * len(integrator.recorder.data.values()[0]) for j in joint_symbols}
     trajectory.update({Path(spw.Symbol(j))[-1][:-2]: d for j, d in integrator.recorder.data.items()})
