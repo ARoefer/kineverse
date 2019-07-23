@@ -90,7 +90,7 @@ class History(object):
                 raise Exception('Chunk depends on attribute without history!\n Operation "{}" at {}\n Attribute: {}\n'.format(chunk.operation.name, chunk.stamp, p))
             _, pred = self.modification_history[p].get_floor(chunk.stamp)
             if pred is None:
-                raise Exception('Chunk depends on attribute with empty history!')
+                raise Exception('Chunk at time {} executing "{}" depends on attributes with empty history! Attributes:\n  {}'.format(chunk.stamp, chunk.operation.name, '\n  '.join([str(p) for p in chunk.dependencies if p not in self.modification_history or self.modification_history[p].get_floor(chunk.stamp)[1] is None])))
             pred.dependents.add(chunk)
 
         for p in chunk.modifications:
