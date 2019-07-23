@@ -47,7 +47,7 @@ class CommandIntegrator(object):
             #    print('Equilibrium point reached after {} iterations'.format(x))
             #    return
 
-            #print(cmd)
+            # print('---\n{}'.format('\n'.join(['{:>35}: {:>12.4f}'.format(k, v) for k, v in cmd.items()])))
             for s, i in self.integration_rules.items():
                 update = i.subs(cmd).subs(self.state)
                 # if s in cmd:
