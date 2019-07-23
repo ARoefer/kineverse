@@ -11,6 +11,11 @@ class GradientContainer(object):
     def copy(self):
         return GradientContainer(self.expr, self.gradients.copy())
 
+    def subs(self, subs):
+        return GradientContainer(self.expr.subs(subs), 
+                                {s: g.subs(subs) for s, g in self.gradients.items() 
+                                                 if get_int_symbol(s) not in subs})
+
     def __contains__(self, symbol):
         return symbol in self.gradients or symbol in self.free_diff_symbols
 
@@ -149,3 +154,10 @@ class GradientContainer(object):
 
     def __str__(self):
         return '{} ({})'.format(str(self.expr), ', '.join([str(k) for k in self.gradients.keys()]))
+
+    def __repr__(self):
+        return 'G({})'.format(self.expr)
+
+    def __eq__(self, other):
+        if type(other) == GradientContainer:
+            return self.expr == other.expr

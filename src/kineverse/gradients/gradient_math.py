@@ -3,6 +3,7 @@ import giskardpy.symengine_wrappers as spw
 from kineverse.gradients.diff_logic         import get_diff_symbol
 from kineverse.gradients.gradient_container import GradientContainer as GC
 from kineverse.gradients.gradient_matrix    import GradientMatrix    as GM
+from kineverse.type_sets                    import symengine_matrix_types
 
 dot    = spw.dot
 pos_of = spw.pos_of
@@ -139,8 +140,10 @@ def cross(u, v):
 def translation3(x, y, z, w=1):
     a = [x, y, z, w]
     if max([type(v) == GC for v in a]):
-        return GM(spw.translation3(*[v.expr if type(v) == GC else v for v in a]), 
-                  [([None] * 3) + [x] if type(x) == GC else [None]* 4 for x in a])
+        return GM([[1, 0, 0, x],
+                   [0, 1, 0, y],
+                   [0, 0, 1, z],
+                   [0, 0, 0, w]])
     return spw.translation3(x, y, z, w)
 
 
@@ -228,3 +231,11 @@ def inverse_frame(frame):
         inv[:3, 3] = -inv[:3, :3] * frame[:3, 3]
         return inv
     return spw.inverse_frame(frame)
+
+def wrap_matrix_mul(a, b):
+    if type(a) == GC or type(b) == GC:
+        if type(a) in symengine_matrix_types:
+            return GM(a) * b
+        elif type(b) in symengine_matrix_types:
+            return GM(b) * a
+    return a * b

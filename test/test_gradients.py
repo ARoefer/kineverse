@@ -378,8 +378,8 @@ class TestMatrix(ut.TestCase):
         gm_M = GM(M)
         gm_R = gm_M * spw.sp.Matrix([[4],[9]])
 
-        self.assertEqual(gm_M.expr, M)
-        self.assertEqual(gm_R.expr, baseline)
+        self.assertEqual(gm_M, GM(M))
+        self.assertEqual(gm_R, GM(baseline))
 
     def test_transpose(self):
         M = spw.sp.Matrix([[1,2],[3,4],[5,6]])
@@ -387,8 +387,8 @@ class TestMatrix(ut.TestCase):
         baseline = M.T
         gm_M = GM(M).T
 
-        for e, x in zip(gm_M, baseline):
-            self.assertEqual(e.expr, x)
+        for e, x in zip(gm_M, GM(baseline)):
+            self.assertEqual(e, x)
 
 
 if __name__ == '__main__':
