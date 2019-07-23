@@ -1,6 +1,15 @@
 from kineverse.utils       import copy, deepcopy
 from symengine import Symbol
-from kineverse.model.paths import Path, find_common_root, is_prefix
+from kineverse.model.paths import Path, find_common_root, is_prefix, collect_paths
+
+def op_construction_wrapper(init_fn, name, mod_list, *written_objs, **kwargs):
+    add_kwargs = kwargs
+    mod_attrs  = []
+    for path, name, obj in written_objs:
+        attrs = collect_paths(obj, Path(name))
+        add_kwargs.update({str(a): path + a[1:] for a in attrs})
+        mod_attrs.extend([str(a) for a in attrs])
+    init_fn(name, mod_list + mod_attrs, **add_kwargs)
 
 # Every action needs to declare the fields it depends on and the ones it modifies
 class Operation(object):

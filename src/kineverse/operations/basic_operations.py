@@ -1,5 +1,5 @@
 from kineverse.model.paths             import Path, collect_paths
-from kineverse.operations.operation    import Operation
+from kineverse.operations.operation    import Operation, op_construction_wrapper
 
 
 class CreateSingleValue(Operation):
@@ -13,8 +13,9 @@ class CreateSingleValue(Operation):
 
 class CreateComplexObject(Operation):
     def __init__(self, path, obj):
-        attrs = collect_paths(obj, Path('path'))
-        super(CreateComplexObject, self).__init__('Create Complex Object: {}'.format(type(obj)), [str(a) for a in attrs], **{str(a): path + a[1:] for a in attrs})
+        op_construction_wrapper(super(CreateComplexObject, self).__init__,
+                                'Create Complex Object: {}'.format(type(obj)), 
+                                [], (path, 'path', obj))
         self.obj = obj
 
     def _apply(self, ks):

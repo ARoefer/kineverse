@@ -10,7 +10,8 @@ from kineverse.gradients.diff_logic        import create_symbol, TYPE_POSITION
 from kineverse.operations.basic_operations import Operation,           \
                                                   CreateComplexObject, \
                                                   Path,                \
-                                                  collect_paths
+                                                  collect_paths#,       \
+from kineverse.operations.operation        import op_construction_wrapper
 from kineverse.model.kinematic_model       import Constraint
 from kineverse.model.frames                import Frame
 from kineverse.type_sets                   import matrix_types
@@ -136,15 +137,15 @@ class URDFRobot(object):
 class SetConnection(Operation):
     def __init__(self, name, joint_obj, parent_pose, child_pose, connection_path, connection_tf):
         self.joint_obj = joint_obj
-        attrs = collect_paths(self.joint_obj, Path('connection'))
-        super(SetConnection, self).__init__(name, 
-                                            ['child_pose', 'child_parent', 'child_parent_tf'] + [str(a) for a in attrs], 
-                                            parent_pose=parent_pose,
-                                            child_parent=child_pose[:-1] + ('parent',),
-                                            child_parent_tf=child_pose[:-1] + ('to_parent',),
-                                            child_pose=child_pose,  
-                                            connection_tf=connection_tf,
-                                            **{str(a): connection_path + a[1:] for a in attrs})
+        op_construction_wrapper(super(SetConnection, self).__init__,
+                                name, 
+                                ['child_pose', 'child_parent', 'child_parent_tf'],
+                                (connection_path, 'connection', self.joint_obj),
+                                parent_pose=parent_pose,
+                                child_parent=child_pose[:-1] + ('parent',),
+                                child_parent_tf=child_pose[:-1] + ('to_parent',),
+                                child_pose=child_pose,  
+                                connection_tf=connection_tf)
 
     def _apply(self, ks, parent_pose, child_pose, child_parent_tf, connection_tf):
         return {'child_parent': self.joint_obj.parent,
@@ -163,22 +164,22 @@ class SetPrismaticJoint(Operation):
     def __init__(self, parent_pose, child_pose, connection_path, connection_tf, axis, position, lower_limit, upper_limit, vel_limit, mimic_m=None, mimic_o=None):
         self.joint_obj = PrismaticJoint(str(parent_pose[:-1]), str(child_pose[:-1]), position)
         self.conn_path = connection_path
-        attrs = collect_paths(self.joint_obj, Path('connection'))
-        super(SetPrismaticJoint, self).__init__('Prismatic Joint', 
-                                            ['child_pose', 'child_parent', 'child_parent_tf'] + [str(a) for a in attrs], 
-                                            parent_pose=parent_pose,
-                                            child_parent=child_pose[:-1] + ('parent',),
-                                            child_parent_tf=child_pose[:-1] + ('to_parent',),
-                                            child_pose=child_pose, 
-                                            connection_tf=connection_tf,
-                                            axis=axis,
-                                            position=position,
-                                            lower_limit=lower_limit,
-                                            upper_limit=upper_limit,
-                                            vel_limit=vel_limit,
-                                            mimic_m=mimic_m,
-                                            mimic_o=mimic_o,
-                                            **{str(a): connection_path + a[1:] for a in attrs})
+        op_construction_wrapper(super(SetPrismaticJoint, self).__init__, 
+                                'Prismatic Joint',            
+                                ['child_pose', 'child_parent', 'child_parent_tf'], 
+                                (connection_path, 'connection', self.joint_obj),
+                                parent_pose=parent_pose,
+                                child_parent=child_pose[:-1] + ('parent',),
+                                child_parent_tf=child_pose[:-1] + ('to_parent',),
+                                child_pose=child_pose, 
+                                connection_tf=connection_tf,
+                                axis=axis,
+                                position=position,
+                                lower_limit=lower_limit,
+                                upper_limit=upper_limit,
+                                vel_limit=vel_limit,
+                                mimic_m=mimic_m,
+                                mimic_o=mimic_o)
 
     def _apply(self, ks, parent_pose, child_pose, child_parent_tf, connection_tf, axis, position, lower_limit, upper_limit, vel_limit, mimic_m, mimic_o):
         return {'child_parent': self.joint_obj.parent,
@@ -192,22 +193,22 @@ class SetRevoluteJoint(Operation):
     def __init__(self, parent_pose, child_pose, connection_path, connection_tf, axis, position, lower_limit, upper_limit, vel_limit, mimic_m=None, mimic_o=None):
         self.joint_obj = RevoluteJoint(str(parent_pose[:-1]), str(child_pose[:-1]), position)
         self.conn_path = connection_path
-        attrs = collect_paths(self.joint_obj, Path('connection'))
-        super(SetRevoluteJoint, self).__init__('Revolute Joint', 
-                                            ['child_pose', 'child_parent', 'child_parent_tf'] + [str(a) for a in attrs], 
-                                            parent_pose=parent_pose,
-                                            child_parent=child_pose[:-1] + ('parent',),
-                                            child_parent_tf=child_pose[:-1] + ('to_parent',), 
-                                            child_pose=child_pose, 
-                                            connection_tf=connection_tf,
-                                            axis=axis,
-                                            position=position,
-                                            lower_limit=lower_limit,
-                                            upper_limit=upper_limit,
-                                            vel_limit=vel_limit,
-                                            mimic_m=mimic_m,
-                                            mimic_o=mimic_o,
-                                            **{str(a): connection_path + a[1:] for a in attrs})
+        op_construction_wrapper(super(SetRevoluteJoint, self).__init__,
+                                'Revolute Joint', 
+                                ['child_pose', 'child_parent', 'child_parent_tf'], 
+                                (connection_path, 'connection', self.joint_obj),
+                                parent_pose=parent_pose,
+                                child_parent=child_pose[:-1] + ('parent',),
+                                child_parent_tf=child_pose[:-1] + ('to_parent',), 
+                                child_pose=child_pose, 
+                                connection_tf=connection_tf,
+                                axis=axis,
+                                position=position,
+                                lower_limit=lower_limit,
+                                upper_limit=upper_limit,
+                                vel_limit=vel_limit,
+                                mimic_m=mimic_m,
+                                mimic_o=mimic_o)
 
     def _apply(self, ks, parent_pose, child_pose, child_parent_tf, connection_tf, axis, position, lower_limit, upper_limit, vel_limit, mimic_m, mimic_o):
         position = position if mimic_m is None or mimic_o is None else position * mimic_m + mimic_o
@@ -222,20 +223,20 @@ class SetContinuousJoint(Operation):
     def __init__(self, parent_pose, child_pose, connection_path, connection_tf, axis, position,vel_limit, mimic_m=None, mimic_o=None):
         self.joint_obj = ContinuousJoint(str(parent_pose[:-1]), str(child_pose[:-1]), position)
         self.conn_path = connection_path
-        attrs = collect_paths(self.joint_obj, Path('connection'))
-        super(SetContinuousJoint, self).__init__('Continuous Joint', 
-                                            ['child_pose', 'child_parent', 'child_parent_tf'] + [str(a) for a in attrs], 
-                                            parent_pose=parent_pose, 
-                                            child_parent=child_pose[:-1] + ('parent',),
-                                            child_parent_tf=child_pose[:-1] + ('to_parent',),
-                                            child_pose=child_pose, 
-                                            connection_tf=connection_tf,
-                                            axis=axis,
-                                            position=position,
-                                            vel_limit=vel_limit,
-                                            mimic_m=mimic_m,
-                                            mimic_o=mimic_o,
-                                            **{str(a): connection_path + a[1:] for a in attrs}) 
+        op_construction_wrapper(super(SetContinuousJoint, self).__init__,
+                                'Continuous Joint', 
+                                ['child_pose', 'child_parent', 'child_parent_tf'],
+                                (connection_path, 'connection', self.joint_obj),
+                                parent_pose=parent_pose, 
+                                child_parent=child_pose[:-1] + ('parent',),
+                                child_parent_tf=child_pose[:-1] + ('to_parent',),
+                                child_pose=child_pose, 
+                                connection_tf=connection_tf,
+                                axis=axis,
+                                position=position,
+                                vel_limit=vel_limit,
+                                mimic_m=mimic_m,
+                                mimic_o=mimic_o) 
 
     def _apply(self, ks, parent_pose, child_pose, child_parent_tf, connection_tf, axis, position, vel_limit, mimic_m, mimic_o):
         position = position if mimic_m is None or mimic_o is None else position * mimic_m + mimic_o
@@ -247,12 +248,12 @@ class SetContinuousJoint(Operation):
 
 
 def load_urdf(ks, prefix, urdf, reference_frame='map'):
-    ks.apply_operation(CreateComplexObject(prefix, URDFRobot(urdf.name)), 'create_{}'.format(str(prefix)))
+    ks.apply_operation(CreateComplexObject(prefix, URDFRobot(urdf.name)), 'create {}'.format(str(prefix)))
 
     for u_link in urdf.links:
         ks.apply_operation(CreateComplexObject(prefix + Path(['links', u_link.name]), 
                                                KinematicLink(reference_frame, urdf_origin_to_transform(u_link.origin))),
-                                               'create_{}'.format(str(prefix + Path(u_link.name))))
+                                               'create {}'.format(str(prefix + Path(u_link.name))))
 
     links_left = [urdf.get_root()]
     joint_set  = set()
