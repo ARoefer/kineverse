@@ -51,7 +51,7 @@ class KinematicModel(object):
         if tag in self.timeline_tags:
             raise Exception('Inserting operations after others can only be done for new operations. Tag "{}" is already refering to an operation.'.format(tag))
 
-        time = self.operation_history.get_time_stamp(before=self.timeline_tags[after_tag])
+        time = self.operation_history.get_time_stamp(after=self.timeline_tags[after_tag])
         self.timeline_tags[tag] = time
         self.operation_history.insert_chunk(Chunk(time, op))
         op.apply(self)
