@@ -46,46 +46,55 @@ class DataTree(object):
 		dump(self.id_map, stream)
 		stream.close()
 
-	def find_data(self, key):	
+	def safe_find_data(self, key):
 		with self.lock:
-			return key.get_data(self.data_tree)
+			return self.find_data(key)
+
+	def safe_insert_data(self, key, data):
+		with self.lock:	
+			self.insert_data(key, data)
+
+	def safe_remove_data(self, key):
+		with self.lock:
+			self.remove_data(key)
+
+	def find_data(self, key):	
+		return key.get_data(self.data_tree)
 
 	def insert_data(self, key, data):
-		with self.lock:	
-			try:
-				container = key[:-1].get_data(self.data_tree)
-			except PathException as e:
-				raise Exception('Can not insert data at "{}", since attribute "{}" does not exist in object "{}".'.format(key, e.path[-1], e.path[:-1]))
+		try:
+			container = key[:-1].get_data(self.data_tree)
+		except PathException as e:
+			raise Exception('Can not insert data at "{}", since attribute "{}" does not exist in object "{}".'.format(key, e.path[-1], e.path[:-1]))
 
-			if type(container) is dict:
-				is_new = key[-1] in container
-				container[key[-1]] = data
-			elif type(container) is list:
-				idx = int(key[-1])
-				is_new = idx == len(container)
-				if is_new:
-					container.append(data)
-				else:
-					container[idx] = data
+		if type(container) is dict:
+			is_new = key[-1] in container
+			container[key[-1]] = data
+		elif type(container) is list:
+			idx = int(key[-1])
+			is_new = idx == len(container)
+			if is_new:
+				container.append(data)
 			else:
-				is_new = hasattr(container, key[-1])
-				setattr(container, key[-1], data)
+				container[idx] = data
+		else:
+			is_new = hasattr(container, key[-1])
+			setattr(container, key[-1], data)
 
 
 	def remove_data(self, key):
-		with self.lock:
-			try:
-				container = key[:-1].get_data(self.data_tree)
-			except PathException as e:
-				raise Exception('Can not remove data at "{}", since attribute "{}" does not exist in object "{}".'.format(key, e.path[-1], e.path[:-1]))
+		try:
+			container = key[:-1].get_data(self.data_tree)
+		except PathException as e:
+			raise Exception('Can not remove data at "{}", since attribute "{}" does not exist in object "{}".'.format(key, e.path[-1], e.path[:-1]))
 
-			if type(container) is dict:
-				del container[key[-1]]
-			elif type(container) is list:
-				idx = int(key[-1])
-				del container[idx]
-			else:
-				delattr(container, key[-1])			
+		if type(container) is dict:
+			del container[key[-1]]
+		elif type(container) is list:
+			idx = int(key[-1])
+			del container[idx]
+		else:
+			delattr(container, key[-1])			
 
 	def get_data_map(self):
 		return self.data_tree.copy()
