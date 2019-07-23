@@ -1,8 +1,10 @@
+from kineverse.gradients.gradient_math import spw
+
 class Frame(object):
-    def __init__(self, parent_path, pose, to_parent=None):
+    def __init__(self, parent_path, pose=None, to_parent=None):
         self.parent    = parent_path
-        self.to_parent = pose if to_parent is None else to_parent
-        self.pose      = pose
+        self.pose      = pose if pose is not None else spw.eye(4)
+        self.to_parent = to_parent if to_parent is not None else self.pose
 
     def __copy__(self):
         return Frame(self.parent, self.pose)
