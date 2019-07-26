@@ -1,19 +1,16 @@
 import os
 import symengine as sp
-import numpy as np
+import numpy     as np
 import rospy
 import yaml
-import copy as copy_module
+import copy      as copy_module
 
-from collections import namedtuple
-from gebsyas.data_structures import StampedData, JointState
+from collections                  import namedtuple
 from giskardpy.symengine_wrappers import *
-from kineverse.type_sets import symengine_types
-from sensor_msgs.msg import JointState as JointStateMsg
-from iai_bullet_sim.utils import Frame, Vector3, Point3
-from visualization_msgs.msg import Marker as MarkerMsg
-
-from gebsyas.core.dl_types import DLShape, DLCube, DLCylinder, DLSphere, DLCylinder, DLCompoundObject
+from kineverse.type_sets          import symengine_types
+from sensor_msgs.msg              import JointState as JointStateMsg
+from iai_bullet_sim.utils         import Frame, Vector3, Point3
+from visualization_msgs.msg       import Marker as MarkerMsg
 
 pi = 3.14159265359
 rad2deg = 57.2957795131
@@ -51,6 +48,7 @@ def res_pkg_path(rpath):
 
 def import_class(class_path):
     """Imports a class using a type string.
+
     :param class_path: Type string of the class.
     :type  class_path: str
     :rtype: type
@@ -60,45 +58,6 @@ def import_class(class_path):
     for comp in components[1:]:
         mod = getattr(mod, comp)
     return mod
-
-def nested_list_to_sym(l):
-	if type(l) == list:
-		return [nested_list_to_sym(x) for x in l]
-	else:
-		return sympify(l)
-
-def nested_symlist_to_yaml(l):
-	if type(l) == list:
-		return [nested_symlist_to_yaml(x) for x in l]
-	else:
-		return '{}'.format(str(l))
-
-def yaml_sym_representer(dumper, data):
-	return dumper.represent_scalar('!SymExpr', str(data))
-
-def yaml_sym_constructor(loader, node):
-	return sympify(str(loader.construct_scalar(node)))
-
-def yaml_matrix_representer(dumper, matrix):
-	return dumper.represent_sequence('!SymMatrix', nested_symlist_to_yaml(matrix.tolist()))
-
-def yaml_matrix_constructor(loader, node):
-	return Matrix(nested_list_to_sym(loader.construct_sequence(node, deep=True)))
-
-yaml.add_representer(sp.Basic, yaml_sym_representer)
-yaml.add_representer(sp.Number, yaml_sym_representer)
-yaml.add_representer(sp.Expr, yaml_sym_representer)
-yaml.add_representer(sp.Add, yaml_sym_representer)
-yaml.add_representer(sp.Mul, yaml_sym_representer)
-yaml.add_representer(sp.Min, yaml_sym_representer)
-yaml.add_representer(sp.Max, yaml_sym_representer)
-yaml.add_representer(sp.Matrix, yaml_matrix_representer)
-
-yaml.add_constructor('!SymExpr', yaml_sym_constructor)
-yaml.add_constructor('!SymMatrix', yaml_matrix_constructor)
-
-YAML = yaml
-
 
 
 def saturate(x, low=0, high=1):

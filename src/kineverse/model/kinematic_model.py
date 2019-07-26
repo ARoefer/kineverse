@@ -48,7 +48,7 @@ class KinematicModel(object):
     def apply_operation_after(self, op, tag, after_tag):
         if after_tag not in self.timeline_tags:
             raise Exception('History does not contain a timestamp for tag "{}"'.format(after_tag))
-        if tag in self.timeline_tags:
+        if tag in self.timeline_tags:    
             raise Exception('Inserting operations after others can only be done for new operations. Tag "{}" is already refering to an operation.'.format(tag))
 
         time = self.operation_history.get_time_stamp(after=self.timeline_tags[after_tag])
@@ -65,6 +65,11 @@ class KinematicModel(object):
         chunk.operation.revoke(self)
         self.operation_history.remove_chunk(chunk)
         del self.timeline_tags[tag]
+
+    def get_operation(self, tag):
+        if tag not in self.timeline_tags:
+            raise Exception('Tag "{}" not found in time line.'.format(tag))
+        return self.operation_history.get_chunk(self.timeline_tags[tag]).operation
 
     def clean_structure(self, until=2e9):
         while len(self.operation_history.dirty_chunks) > 0 and self.operation_history.dirty_chunks[0].stamp <= until:
@@ -126,6 +131,14 @@ class KinematicModel(object):
             if s in self.constraint_symbol_map:
                 out.update({k: self.constraints[k] for k in self.constraint_symbol_map[s]})
         return out
+
+    def has_tag(self, tag):
+        return tag in self.timeline_tags
+
+    def get_tag_stamp(self, tag):
+        if tag not in self.timeline_tags:
+            raise Exception('Tag "{}" is unknown.'.format(tag))
+        return self.timeline_tags[tag]
 
     def str_op_history(self):
         return '\n'.join(['{:>9.4f}: {}'.format(s, t) for s, t in sorted([(s, t) for t, s in self.timeline_tags.items()])])
