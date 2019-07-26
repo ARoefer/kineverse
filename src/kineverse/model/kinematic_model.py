@@ -72,7 +72,8 @@ class KinematicModel(object):
             if self._touched_stamp > chunk.stamp:
                 self._touched_set = set()
             chunk.operation.apply(self, self._touched_set)
-            self._touched_set |= chunk.modifications
+            self._touched_set  |= chunk.modifications
+            self._touched_stamp = chunk.stamp
             self.operation_history.flag_clean(chunk)
             self.operation_history.flag_dirty(*chunk.dependents)            
 
@@ -116,7 +117,7 @@ class KinematicModel(object):
     def remove_constraint(self, key):
         c = self.constraints[key]
         for s in c.expr.free_symbols:
-            self.constraint_symbol_map[s].remove(c)
+            self.constraint_symbol_map[s].remove(key)
         del self.constraints[key]
 
     def get_constraints_by_symbols(self, symbol_set):
@@ -128,8 +129,3 @@ class KinematicModel(object):
 
     def str_op_history(self):
         return '\n'.join(['{:>9.4f}: {}'.format(s, t) for s, t in sorted([(s, t) for t, s in self.timeline_tags.items()])])
-
-    def get_expressions_at(self, time_idx_or_tag):
-        pass
-        # Collect all chunks 1 after idx/tag
-        # Create copy of this state and call chunks' revoke() function on the copy
