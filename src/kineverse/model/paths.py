@@ -60,6 +60,12 @@ class Path(tuple):
         except (KeyError, IndexError, AttributeError):
             raise PathException(self[:x + 1], obj)
 
+    def get_data_no_throw(self, obj):
+        try:
+            return self.get_data(obj)
+        except PathException:
+            return None
+
 
 stopping_set = atomic_types.union(matrix_types).union(symengine_types)
 
@@ -91,10 +97,14 @@ def find_common_root(paths):
 def is_prefix(a, b):
        return len(a) <= len(b) and b[:len(a)] == a
 
+def none_factory():
+    return None
+
 class PathDict(dict):
-    def __init__(self, value=None, paths=[]):
+    def __init__(self, value=None, paths=[], default_factory=none_factory):
         super(PathDict, self).__init__()
         self.value = value
+        self._default_factory = default_factory
         for p, v in paths:
             self[p] = v
 
@@ -104,7 +114,7 @@ class PathDict(dict):
 
     # Gets closest value!
     def __getitem__(self, key):
-        return self.value if len(key) == 0 or not super(PathDict, self).__contains__(key[0]) else super(PathDict, self).__getitem__(key[0])[key[1:]]
+        return self.value if len(key) == 0 else super(PathDict, self).__getitem__(key[0])[key[1:]]
 
     # Gets closest value and returns its key too
     def get_with_key(self, key):
@@ -119,8 +129,31 @@ class PathDict(dict):
             self.value = value
         else:
             if not super(PathDict, self).__contains__(key[0]):
-                super(PathDict, self).__setitem__(key[0], PathDict())
+                super(PathDict, self).__setitem__(key[0], PathDict(self._default_factory(), default_factory=self._default_factory))
             super(PathDict, self).__getitem__(key[0])[key[1:]] = value
+
+    def get_sub_dict(self, key):
+        return self if len(key) == 0 else super(PathDict, self).__getitem__(key[0]).get_sub_dict(key[1:])
+
+    # Gets all values with prefix key
+    def get_all_under(self, key):
+        if len(key) == 0:
+            if len(self) > 0:
+                return sum([c.get_all_under(key) for x in self.values()])
+            return []
+        return self[key[0]].get_all_under(key[1:])
+
+    # Gets all values along the specified path
+    def get_all_on_path(self, key):
+        if len(key) == 0:
+            return [self.value]
+        return [self.value] + self[key[0]].get_on_path(key[1:])
+
+    # Gets all variables on the path and below the last node
+    def get_all_on_and_under(self, key):
+        if len(key) == 0:
+            return [self.value] + self.get_all_under(key)
+        return [self.value] + self[key[0]].get_all_on_and_under(key[1:])
 
 
 class PathSet(set):
@@ -143,6 +176,6 @@ class PathSet(set):
         return super(PathSet, self).__contains__(key)
 
     def add(self, key):
-        if type(key) != tuple:
-            raise Exception('Path sets can only store tuples. Key: "{}" is of type {}.'.format(key, type(key)))
+        if type(key) != Path:
+            raise Exception('Path sets can only store paths. Key: "{}" is of type {}.'.format(key, type(key)))
         super(PathSet, self).add(key)
