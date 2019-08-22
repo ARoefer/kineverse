@@ -7,7 +7,9 @@ from giskardpy.qp_solver  import QPSolver
 
 from kineverse.gradients.diff_logic         import get_symbol_type
 from kineverse.gradients.gradient_container import GradientContainer as GC
-from kineverse.model.kinematic_model        import Constraint
+from kineverse.model.kinematic_model        import Constraint, Path
+from kineverse.model.geometry_model         import CollisionSubworld, ContactHandler, obj_to_obj_infix
+from kineverse.visualization.bpb_visualizer import ROSBPBVisualizer
 
 default_bound = 1e9    
 
@@ -17,6 +19,10 @@ class SoftConstraint(Constraint):
     def __init__(self, lower, upper, weight, expr):
         super(SoftConstraint, self).__init__(lower, upper, expr)
         self.weight = weight
+
+    @classmethod
+    def from_constraint(cls, constraint, weight=1):
+        return cls(constraint.lower, constraint.upper, weight, constraint.expr)
 
 class ControlledValue(object):
     def __init__(self, lower, upper, symbol, weight=1):
@@ -63,8 +69,9 @@ class MinimalQPBuilder(object):
         self.shape2    = len(self.col_names)
         self.qp_solver = QPSolver(len(self.col_names), len(self.row_names))
 
-
-    def get_cmd(self, substitutions, nWSR=None):
+    @profile
+    def get_cmd(self, substitutions, nWSR=None, deltaT=None):
+        substitutions = {str(s): v for s, v in substitutions.items()}
         np_big_ass_M = self.cython_big_ass_M(**substitutions)
         self.np_H   = np.array(np_big_ass_M[self.shape1:, :-2])
         self.np_A   = np.array(np_big_ass_M[:self.shape1, :self.shape2])
@@ -72,6 +79,9 @@ class MinimalQPBuilder(object):
         self.np_ub  = np.array(np_big_ass_M[self.shape1:, -1])
         self.np_lbA = np.array(np_big_ass_M[:self.shape1, -2])
         self.np_ubA = np.array(np_big_ass_M[:self.shape1, -1])
+
+        self._post_process_matrices(deltaT)
+
         try:
             xdot_full = self.qp_solver.solve(self.np_H, self.np_g, self.np_A, self.np_lb,  self.np_ub, 
                                                                     self.np_lbA, self.np_ubA, nWSR)
@@ -97,6 +107,9 @@ class MinimalQPBuilder(object):
 
         return 'H =\n{}\nlb, ub =\n{}\nA =\n{}\nlbA, ubA =\n{}\n'.format(h_str, b_str, a_str, bA_str)
 
+    def _post_process_matrices(self, deltaT):
+        pass
+
 
 class TypedQPBuilder(MinimalQPBuilder):
     def __init__(self, hard_constraints, soft_constraints, controlled_values):
@@ -106,4 +119,168 @@ class TypedQPBuilder(MinimalQPBuilder):
 
     def get_command_signature(self):
         return dict(zip(self.cv, self.cv_type))
+
+
+class PID_Constraint():
+    def __init__(self, error_term, control_value, weight=1, k_p=1, k_i=0, k_d=0):
+        self.error_term    = error_term
+        self.control_value = control_value
+        self.weight = weight
+        self.k_p    = k_p
+        self.k_i    = k_i
+        self.k_d    = k_d
+
+    def to_soft_constraint(self):
+        return SoftConstraint(-self.error_term, -self.error_term, self.weight, self.control_value)
+
+    def to_hard_constraint(self):
+        return Constraint(-self.error_term, -self.error_term, self.control_value)
+
+    def to_constraint(self):
+        return self.to_hard_constraint() if self.weight is None else self.to_soft_constraint()
+
+
+class PIDQPBuilder(TypedQPBuilder):
+    def __init__(self, hard_constraints, soft_constraints, controlled_values):
+        pid_factors = []
+
+        for k in hard_constraints:
+            c = hard_constraints[k]
+            if isinstance(c, PID_Constraint):
+                hard_constraints[k] = c.to_hard_constraint()
+                pid_factors.append((c.k_p, c.k_i, c.k_d))
+            else:
+                pid_factors.append((1, 0, 0))
+
+        for k in soft_constraints:
+            c = soft_constraints[k]
+            if isinstance(c, PID_Constraint):
+                soft_constraints[k] = c.to_soft_constraint()
+                pid_factors.append((c.k_p, c.k_i, c.k_d))
+            else:
+                pid_factors.append((1, 0, 0))
+
+        self.pid_factors = np.array(pid_factors)
+        self._old_lbA = np.zeros((len(pid_factors), 1))
+        self._old_ubA = np.zeros((len(pid_factors), 1))
+        self._int_lbA = np.zeros((len(pid_factors), 1))
+        self._int_ubA = np.zeros((len(pid_factors), 1))
+
+        super(PIDQPBuilder, self).__init__(hard_constraints, soft_constraints, controlled_values)
+
+
+    def _post_process_matrices(self, deltaT):
+        if deltaT is None:
+            raise Exception('PIDQPBuilder needs valid deltaT, "{}" was given.'.format(deltaT))
+
+        true_lbA = self.np_lbA.copy()
+        true_ubA = self.np_ubA.copy()        
+
+        self.np_lbA = np.sum(np.hstack(self.np_lbA, self._int_lbA, (self.np_lbA - self._old_lbA) / deltaT) * self.pid_factors, axis=1, keepdims=True)
+        self.np_ubA = np.sum(np.hstack(self.np_ubA, self._int_ubA, (self.np_ubA - self._old_ubA) / deltaT) * self.pid_factors, axis=1, keepdims=True)
+
+        self._old_lbA  = true_lbA 
+        self._old_ubA  = true_ubA
+        self._int_lbA += true_lbA
+        self._int_ubA += true_ubA
+
+
+class GeomQPBuilder(TypedQPBuilder):
+    @profile
+    def __init__(self, collision_world, hard_constraints, soft_constraints, controlled_values, default_query_distance=1.0, visualizer=None):
+
+        if visualizer is not None and not isinstance(visualizer, ROSBPBVisualizer):
+            raise Exception('Visualizer needs to be an instance of ROSBPBVisualizer. Given argument is of type {}'.format(type(visualizer)))
+
+        self.visualizer = visualizer
+
+        self.collision_handlers = {}
+        symbols = set()
+        for c in hard_constraints.values() + soft_constraints.values():
+            symbols |= c.free_symbols
+
+        self.name_resolver = {}
+
+        #print('\n'.join(collision_world.names))
+
+        for s in symbols:
+            s_str = str(s)
+            if s_str[:9] == 'contact__':
+                path = Path(s)
+                #print(path)
+                obj_a = path[1:path.index(obj_to_obj_infix)] # Cut of the 'contact' and the onA/x bits
+                obj_a_str = str(obj_a)
+                if obj_a_str not in collision_world.named_objects:
+                    print('Object "{}" was referenced in symbol "{}" but is not part of the collision world. Skipping it.'.format(obj_a_str, s_str))
+                    continue
+
+                coll_a = collision_world.named_objects[obj_a_str]
+                self.name_resolver[coll_a] = obj_a
+
+                obj_b = path[path.index(obj_to_obj_infix) + 1: -2]
+                obj_b_str = str(obj_b)
+                #print('Adding handler for distance\n {} ->\n {}'.format(obj_a_str, obj_b_str))
+                if obj_b[0] == 'anon':
+                    if len(obj_b) > 1:
+                        n_anon = int(obj_b[1]) + 1 
+                    if coll_a not in self.collision_handlers:
+                        self.collision_handlers[coll_a] = ContactHandler(obj_a)
+                    handler = self.collision_handlers[coll_a]
+                    if handler.num_anon_contacts < n_anon:
+                        for x in range(n_anon - handler.num_anon_contacts):
+                            handler.add_passive_handle()
+                
+                else: 
+                    if obj_b_str not in collision_world.named_objects:
+                        print('Object "{}" was referenced in symbol "{}" but is not part of the collision world. Skipping it.'.format(obj_b_str, s_str))
+                        continue
+
+                    coll_b = collision_world.named_objects[obj_b_str]
+                    self.name_resolver[coll_b] = obj_b
+
+                    if coll_b not in self.collision_handlers:
+                        if obj_a_str not in self.collision_handlers:
+                            self.collision_handlers[coll_b] = ContactHandler(obj_a)
+                        handler = self.collision_handlers[coll_b]
+                        if not handler.has_handle_for(obj_b):
+                            handler.add_active_handle(obj_b)
+                    else:
+                        handler = self.collision_handlers[coll_b]
+                        if not handler.has_handle_for(obj_a):
+                            handler.add_active_handle(obj_a)
+        
+
+        self.closest_query_batch = {collision_object: default_query_distance for collision_object in self.collision_handlers.keys()}
+
+        self.collision_world = collision_world
+        super(GeomQPBuilder, self).__init__(hard_constraints, soft_constraints, controlled_values)
+
+
+    @profile
+    def get_cmd(self, substitutions, nWSR=None, deltaT=None):
+        self.collision_world.update_world(substitutions)
+        closest = self.collision_world.closest_distances(self.closest_query_batch)
+
+        if self.visualizer is not None:
+            self.visualizer.begin_draw_cycle()
+            self.visualizer.draw_world('debug', self.collision_world)
+            #for contacts in closest.values():
+            #    self.visualizer.draw_contacts('debug', contacts, 0.05)
+            self.visualizer.render()
+
+        for obj, contacts in closest.items():
+            if obj in self.collision_handlers:
+                handler = self.collision_handlers[obj]
+                handler.handle_contacts(contacts, self.name_resolver)
+                substitutions.update(handler.state)
+            # else:
+            #     raise Exception('A result for collision object {} was returned, even though this object has no handler.'.format(obj))
+
+        return super(GeomQPBuilder, self).get_cmd(substitutions, nWSR, deltaT)
+
+
+        
+
+
+
 
