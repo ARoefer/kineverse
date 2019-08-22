@@ -53,17 +53,23 @@ catkin_python_setup()
 ## Generate messages in the 'msg' folder
 add_message_files(
   FILES
+  Constraint.msg
   Model.msg
   ModelUpdate.msg
-  Constraint.msg
+  Operation.msg
   OperationCall.msg
+  OperationsUpdate.msg
 )
 
 ## Generate services in the 'srv' folder
 add_service_files(
   FILES
-  GetModel.srv
+  ApplyOperations.srv
   GetConstraints.srv
+  GetHistory.srv
+  GetModel.srv
+  DebugInfo.srv
+  ListPaths.srv
 )
 
 ## Generate actions in the 'action' folder

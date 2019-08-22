@@ -6,5 +6,4 @@ uint8 REMOVE=3
 uint8    call_mode
 string   reference_tag
 string   tag
-string   operation_type
-string[] parameters
+kineverse/Operation operation

@@ -1,0 +1,4 @@
+kineverse/OperationCall[] operations
+---
+bool   success
+string error_msg
