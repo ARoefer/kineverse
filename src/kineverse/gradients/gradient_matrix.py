@@ -1,17 +1,16 @@
 import giskardpy.symengine_wrappers as spw
 from kineverse.gradients.diff_logic         import get_diff_symbol
 from kineverse.gradients.gradient_container import GradientContainer as GC
+from kineverse.json_serializable            import JSONSerializable
 
-symengine_matrix_types = set([spw.sp.DenseMatrix, 
-                              spw.sp.ImmutableMatrix, 
-                              spw.sp.ImmutableDenseMatrix, 
-                              spw.sp.MatrixBase, 
-                              spw.sp.MutableDenseMatrix])
+from kineverse.symengine_types              import symengine_matrix_types
+
 
 def is_scalar(expr):
     return type(expr) == int or type(expr) == float or expr.is_Add or expr.is_AlgebraicNumber or expr.is_Atom or expr.is_Derivative or expr.is_Float or expr.is_Function or expr.is_Integer or expr.is_Mul or expr.is_Number or expr.is_Pow or expr.is_Rational or expr.is_Symbol or expr.is_finite or expr.is_integer or expr.is_number or expr.is_symbol
 
-
+def copy_nested_list(l):
+    return [copy_nested_list(r) if type(r) is list else r.__copy__() for r in l]
 
 def gradient_from_list(l):
     if len(l) == 0:
@@ -39,7 +38,10 @@ def collect_free_symbols(l):
             out |= collect_free_symbols(x)
     return out
 
-class GradientMatrix(object):
+def floatify_nested_list(l):
+    return [x.expr if type(x) == GC else floatify_nested_list(x) for x in l]
+
+class GradientMatrix(JSONSerializable):
     def __init__(self, expr):
         if type(expr) == list:
             if not check_correct_matrix(expr):
@@ -60,6 +62,9 @@ class GradientMatrix(object):
         
         self.free_symbols = collect_free_symbols(self.expr)
         #self.free_diff_symbols = {get_diff_symbol(s) for s in self.free_symbols if get_diff_symbol(s) not in self.gradients}
+
+    def _json_data(self, json_dict):
+        json_dict.update({'expr': self.expr})
 
     def __getitem__(self, idx):
         if type(idx) == int:
@@ -94,7 +99,7 @@ class GradientMatrix(object):
 
     @property
     def T(self):
-        return GradientMatrix([[self.expr[y][x].copy() 
+        return GradientMatrix([[self.expr[y][x].__copy__() 
                                 for y in range(self._nrows)] 
                                 for x in range(self._ncols)])
 
@@ -150,3 +155,12 @@ class GradientMatrix(object):
         if type(other) == GradientMatrix and self._nrows == other._nrows and self._ncols == other._ncols:
             return min([min([x == y for x, y in zip(self.expr[x], other.expr[x])]) for x in range(self._nrows)])
         return False
+
+    def __copy__(self):
+        return GradientMatrix(copy_nested_list(self.expr))
+
+    def __deepcopy__(self, memo):
+        return self.__copy__()
+
+    def to_sym_matrix(self):
+        return spw.Matrix(floatify_nested_list(self.expr))

@@ -16,6 +16,24 @@ def create_symbol(symbol, stype):
         raise Exception('Can not create symbol for type {}: Type id not defined.'.format(stype))
     return spw.Symbol('{}{}'.format(str(symbol), TYPE_SUFFIXES_INV[stype]))
 
+def create_pos(symbol):
+    return create_symbol(symbol, TYPE_POSITION)
+
+def create_vel(symbol):
+    return create_symbol(symbol, TYPE_VELOCITY)
+
+def create_acc(symbol):
+    return create_symbol(symbol, TYPE_ACCEL)
+
+def create_eff(symbol):
+    return create_symbol(symbol, TYPE_EFFORT)
+
+def erase_type(symbol):
+    st = get_symbol_type(symbol)
+    if st != TYPE_UNKNOWN:
+        return spw.Symbol(str(symbol)[:-len(TYPE_SUFFIXES_INV[st])])
+    return symbol
+
 def get_symbol_type(symbol):
     return TYPE_SUFFIXES[str(symbol)[-2:]] if str(symbol)[-2:] in TYPE_SUFFIXES else TYPE_UNKNOWN
 

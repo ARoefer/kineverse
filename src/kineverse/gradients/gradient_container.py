@@ -1,15 +1,36 @@
 import giskardpy.symengine_wrappers as spw
-from kineverse.gradients.diff_logic import get_diff_symbol, get_int_symbol
 
-class GradientContainer(object):
+from kineverse.gradients.diff_logic import get_diff_symbol, get_int_symbol
+from kineverse.json_serializable    import JSONSerializable
+
+
+class GradientContainer(JSONSerializable):
     def __init__(self, expr, gradient_exprs=None):
-        self.expr         = expr
-        self.gradients    = gradient_exprs if gradient_exprs is not None else {}
+        if type(expr) == GradientContainer:
+            self.expr      = expr.expr
+            self.gradients = expr.gradients.copy()
+            if gradient_exprs is not None:
+                self.gradients.update(gradient_exprs) 
+        else:
+            self.expr      = expr if type(expr) is not GradientContainer else expr.expr
+            self.gradients = gradient_exprs if gradient_exprs is not None else {}
         self.free_symbols = expr.free_symbols if hasattr(expr, 'free_symbols') else set()
         self.free_diff_symbols = {get_diff_symbol(s) for s in self.free_symbols if get_diff_symbol(s) not in self.gradients}
 
-    def copy(self):
-        return GradientContainer(self.expr, self.gradients.copy())
+    def do_full_diff(self):
+        for fs in self.free_diff_symbols.copy():
+            self[fs]
+
+    def _json_data(self, json_dict):
+        json_dict.update({'expr': self.expr, 
+                          'gradient_exprs': {str(k): d for k, d in self.gradients.items()}})
+
+    @classmethod
+    def json_factory(cls, expr, gradient_exprs):
+        return cls(expr, {spw.Symbol(k.encode('utf-8')): v for k, v in gradient_exprs.items()})
+
+    def __copy__(self):
+        return GradientContainer(self.expr, {k: g for k, g in self.gradients.items()})
 
     def subs(self, subs):
         return GradientContainer(self.expr.subs(subs), 
@@ -152,6 +173,7 @@ class GradientContainer(object):
             return GradientContainer(self.expr**other.expr, gradients)
         return GradientContainer(self.expr**other, {s: d * other * (self.expr** (other - 1)) for s, d in self.gradients.items()})
 
+
     def __str__(self):
         return '{} ({})'.format(str(self.expr), ', '.join([str(k) for k in self.gradients.keys()]))
 
@@ -161,3 +183,23 @@ class GradientContainer(object):
     def __eq__(self, other):
         if type(other) == GradientContainer:
             return self.expr == other.expr
+
+    def __lt__(self, other):
+        if type(other) is GradientContainer:
+            return self.expr < other.expr
+        return self.expr < other
+
+    def __gt__(self, other):
+        if type(other) is GradientContainer:
+            return self.expr > other.expr
+        return self.expr > other
+
+    def __le__(self, other):
+        if type(other) is GradientContainer:
+            return self.expr <= other.expr
+        return self.expr <= other
+
+    def __ge__(self, other):
+        if type(other) is GradientContainer:
+            return self.expr >= other.expr
+        return self.expr >= other

@@ -3,8 +3,9 @@ import giskardpy.symengine_wrappers as spw
 from kineverse.gradients.diff_logic         import get_diff_symbol
 from kineverse.gradients.gradient_container import GradientContainer as GC
 from kineverse.gradients.gradient_matrix    import GradientMatrix    as GM
-from kineverse.type_sets                    import symengine_matrix_types
+from kineverse.symengine_types              import symengine_types, symengine_matrix_types
 
+contrast = 1e10
 dot    = spw.dot
 pos_of = spw.pos_of
 rot_of = spw.rot_of
@@ -19,10 +20,13 @@ def get_diff(term):
     if type(term) != GC:
         term = GC(term)
 
-    for s in term.free_diff_symbols:
-        term[s]
+    term.do_full_diff()
     return sum([s * t for s, t in term.gradients.items()])
 
+def sqrt(expr):
+    if type(expr) == GC:
+        raise NotImplementedError
+    return spw.sqrt(expr)
 
 def sin(expr):
     if type(expr) == GC:
@@ -239,3 +243,66 @@ def wrap_matrix_mul(a, b):
         elif type(b) in symengine_matrix_types:
             return GM(b) * a
     return a * b
+
+
+def merge_gradients_add(ga, gb):
+    out = ga.copy()
+    for s, g in gb.items():
+        if s in out:
+            out[s] += g
+        else:
+            out[s]  = g
+    return out
+
+
+def greater_than(x, y):
+    fake_diffs = {}
+    if type(y) == spw.Symbol:
+        fake_diffs[get_diff_symbol(y)] = -1
+    else:
+        if type(y) in symengine_types: 
+            y = GC(y)
+        if type(y) == GC:
+            y.do_full_diff()
+            fake_diffs = {s: -g for s, g in y.gradients.items()}
+    if type(x) == spw.Symbol:
+        x_d = get_diff_symbol(x)
+        if x_d in fake_diffs:
+            fake_diffs[x_d] += 1
+        else:
+            fake_diffs[x_d] = 1
+    else:
+        if type(x) in symengine_types: 
+            x = GC(x)
+        if type(x) == GC:
+            x.do_full_diff()
+            fake_diffs = merge_gradients_add(fake_diffs, x.gradients)
+    return GC(0.5 * tanh((x - y) * contrast) + 0.5, fake_diffs)
+
+def less_than(x, y):
+    return greater_than(y, x)
+
+def alg_and(x, y):
+    if type(x) is GC:
+        if type(y) in symengine_types:
+            y = GC(y)
+
+        if type(y) is GC:
+            y.do_full_diff()
+            return GC(x.expr * y.expr, merge_gradients_add(x.gradients, y.gradients))
+        return GC(x.expr * y, x.gradients)
+    elif type(y) is GC:
+        if type(x) in symengine_types:
+            x = GC(x)
+        if type(x) is GC:
+            x.do_full_diff()
+            return GC(y.expr * y.expr, merge_gradients_add(x.gradients, y.gradients))
+        return GC(y.expr * x, y.gradients)
+
+    return x * y
+
+def alg_not(x):
+    return 1 - x
+
+def alg_or(x, y):
+    return alg_not(alg_and(alg_not(x), alg_not(y)))
