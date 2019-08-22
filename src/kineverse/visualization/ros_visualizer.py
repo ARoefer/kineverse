@@ -1,8 +1,7 @@
 import rospy
 from visualization_msgs.msg import Marker, MarkerArray
 from std_msgs.msg import ColorRGBA as ColorRGBAMsg
-from gebsyas.ros.auto_serialize import ks_to_rosmsg
-from gebsyas.msg import FloatTable
+from kineverse.network.ros_conversion import auto_encode, encode_vector
 from urdf_parser_py.urdf import Sphere, Cylinder, Box, Mesh
 
 def del_marker(Id, namespace):
@@ -18,6 +17,7 @@ def blank_marker(Id, namespace, r, g, b, a, frame):
 	out.ns = namespace
 	out.header.stamp = rospy.Time.now()
 	out.header.frame_id = frame
+	out.pose.orientation.w = 1
 	out.id = Id
 	out.action  = Marker.ADD
 	out.color.r = r
@@ -36,12 +36,11 @@ def color(r,g,b,a=1):
 	return out
 
 
-class ROSVisualizer():
+class ROSVisualizer(object):
 	def __init__(self, vis_topic, base_frame='base_link', plot_topic='plot'):
 		self.ids     = {}
 		self.lastIds = {}
 		self.publisher = rospy.Publisher(vis_topic, MarkerArray, queue_size=1, tcp_nodelay=1, latch=True)
-		self.plot_publisher = rospy.Publisher(plot_topic, FloatTable, queue_size=1, tcp_nodelay=1, latch=True)
 		self.base_frame = base_frame
 		self.current_msg = {}
 
@@ -87,8 +86,8 @@ class ROSVisualizer():
 	def draw_sphere(self, namespace, position, radius, r=1, g=0, b=0, a=1, frame=None):
 		marker = blank_marker(self.consume_id(namespace), namespace, r, g, b, a, self.__resframe(frame))
 		marker.type = Marker.SPHERE
-		marker.pose.position = ks_to_rosmsg(position)
-		marker.scale = ks_to_rosmsg([radius * 2] * 3)
+		marker.pose.position = auto_encode(position)
+		marker.scale = encode_vector([radius * 2] * 3)
 		self.current_msg[namespace].markers.append(marker)
 
 	def draw_cube(self, namespace, pose, scale, r=0, g=0, b=1, a=1, frame=None):
@@ -97,8 +96,8 @@ class ROSVisualizer():
 	def draw_points(self, namespace, pose, size, points, r=1, g=0, b=0, a=1, frame=None, colors=None):
 		marker = blank_marker(self.consume_id(namespace), namespace, r, g, b, a, self.__resframe(frame))
 		marker.type = Marker.POINTS
-		marker.pose = ks_to_rosmsg(pose)
-		marker.points = [ks_to_rosmsg(p) for p in points]
+		marker.pose = auto_encode(pose)
+		marker.points = [auto_encode(p) for p in points]
 		marker.colors = [] if colors is None else [color(*c) for c in colors]
 		marker.scale.x = size
 		marker.scale.y = size
@@ -108,8 +107,8 @@ class ROSVisualizer():
 	def draw_strip(self, namespace, pose, size, points, r=1, g=0, b=0, a=1, frame=None, colors=None):
 		marker = blank_marker(self.consume_id(namespace), namespace, r, g, b, a, self.__resframe(frame))
 		marker.type = Marker.LINE_STRIP
-		marker.pose = ks_to_rosmsg(pose)
-		marker.points = [ks_to_rosmsg(p) for p in points]
+		marker.pose = auto_encode(pose)
+		marker.points = [auto_encode(p) for p in points]
 		marker.colors = [] if colors is None else [color(*c) for c in colors]
 		marker.scale.x = size
 		marker.scale.y = size
@@ -119,8 +118,8 @@ class ROSVisualizer():
 	def draw_lines(self, namespace, pose, size, points, r=1, g=0, b=0, a=1, frame=None, colors=None):
 		marker = blank_marker(self.consume_id(namespace), namespace, r, g, b, a, self.__resframe(frame))
 		marker.type = Marker.LINE_LIST
-		marker.pose = ks_to_rosmsg(pose)
-		marker.points = [ks_to_rosmsg(p) for p in points]
+		marker.pose = auto_encode(pose)
+		marker.points = [auto_encode(p) for p in points]
 		marker.colors = [] if colors is None else [color(*c) for c in colors]
 		marker.scale.x = size
 		marker.scale.y = size
@@ -130,8 +129,8 @@ class ROSVisualizer():
 	def draw_cube_batch(self, namespace, pose, size, positions, r=1, g=0, b=0, a=1, frame=None, colors=None):
 		marker = blank_marker(self.consume_id(namespace), namespace, r, g, b, a, self.__resframe(frame))
 		marker.type = Marker.CUBE_LIST
-		marker.pose = ks_to_rosmsg(pose)
-		marker.points = [ks_to_rosmsg(p) for p in positions]
+		marker.pose = auto_encode(pose)
+		marker.points = [auto_encode(p) for p in positions]
 		marker.colors = [] if colors is None else [color(*c) for c in colors]
 		marker.scale.x = size
 		marker.scale.y = size
@@ -157,7 +156,7 @@ class ROSVisualizer():
 		marker.type = Marker.ARROW
 		marker.scale.x = width
 		marker.scale.y = 2 * width
-		marker.points.extend([ks_to_rosmsg(start), ks_to_rosmsg(end)])
+		marker.points.extend([auto_encode(start), auto_encode(end)])
 		self.current_msg[namespace].markers.append(marker)
 
 	def draw_vector(self, namespace, position, vector, r=1, g=1, b=1, a=1, width=0.01, frame=None):
@@ -166,7 +165,7 @@ class ROSVisualizer():
 	def draw_text(self, namespace, position, text, r=1, g=1, b=1, a=1, height=0.08, frame=None):
 		marker = blank_marker(self.consume_id(namespace), namespace, r, g, b, a, self.__resframe(frame))
 		marker.type = Marker.TEXT_VIEW_FACING
-		marker.pose.position = ks_to_rosmsg(position)
+		marker.pose.position = auto_encode(position)
 		marker.scale.z = height
 		marker.text = text
 		self.current_msg[namespace].markers.append(marker)
@@ -174,15 +173,15 @@ class ROSVisualizer():
 	def draw_shape(self, namespace, pose, scale, shape, r=1, g=1, b=1, a=1, frame=None):
 		marker = blank_marker(self.consume_id(namespace), namespace, r, g, b, a, self.__resframe(frame))
 		marker.type = shape
-		marker.pose = ks_to_rosmsg(pose)
-		marker.scale = ks_to_rosmsg(scale)
+		marker.pose = auto_encode(pose)
+		marker.scale = encode_vector(scale)
 		self.current_msg[namespace].markers.append(marker)
 
 	def draw_mesh(self, namespace, pose, scale, resource, frame=None, r=0, g=0, b=0, a=0, use_mat=True):
 		marker = blank_marker(self.consume_id(namespace), namespace, r, g, b, a, self.__resframe(frame))
 		marker.type = Marker.MESH_RESOURCE
-		marker.pose = ks_to_rosmsg(pose)
-		marker.scale = ks_to_rosmsg(scale)
+		marker.pose = auto_encode(pose)
+		marker.scale = encode_vector(scale)
 		marker.mesh_resource = resource
 		marker.mesh_use_embedded_materials = use_mat
 		self.current_msg[namespace].markers.append(marker)

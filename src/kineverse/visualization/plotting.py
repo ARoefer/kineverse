@@ -102,6 +102,7 @@ class ValueRecorder(object):
         self.data     = {a: [] for a, _ in group_colors}
         self.data_lim = {a: (1e20, -1e20) for a, _ in group_colors}
         self.colors   = dict(group_colors)
+        self.thresholds = {}
 
     def log_data(self, group, value):
         if group not in self.data:
@@ -115,9 +116,18 @@ class ValueRecorder(object):
             self.data_lim[a] = (min(d), max(d))
 
     def plot(self, ax):
-        self.patches = [ax.plot(d, self.colors[n], label=n)[0] for n, d in self.data.items()]
+        self.patches = [ax.plot(d, self.colors[n], label=n)[0] for n, d in sorted(self.data.items())]
+        
+        for n, (y, c) in self.thresholds.items():
+            ax.axhline(y, color=c)
+
         ax.legend(handles=self.patches, loc='center right')
         ax.set_title(self.title)
+
+    def add_threshold(self, name, value, color=None):
+        if color is None:
+            color = COLORS[len(self.thresholds) % len(COLORS)]
+        self.thresholds[name] = (value, color)
 
 
 class SymbolicRecorder(ValueRecorder):
