@@ -2,6 +2,8 @@ import symengine as sp
 import yaml
 from kineverse.type_sets import symengine_matrix_types, symengine_types, GC, GM
 
+loaders = [yaml.BaseLoader, yaml.SafeLoader, yaml.FullLoader, yaml.UnsafeLoader]
+
 def nested_list_to_sym(l):
     if type(l) == list:
         return [nested_list_to_sym(x) for x in l]
@@ -27,8 +29,9 @@ def yaml_sym_constructor(loader, node):
     return sp.sympify(str(loader.construct_scalar(node)))
 
 def yaml_wrap_symengine_types():
-    yaml.add_constructor('!SymExpr',   yaml_sym_constructor, Loader=yaml.FullLoader)
-    yaml.add_constructor('!SymMatrix', yaml_matrix_constructor, Loader=yaml.FullLoader)
+    for loader in loaders:
+        yaml.add_constructor('!SymExpr',   yaml_sym_constructor, Loader=loader)
+        yaml.add_constructor('!SymMatrix', yaml_matrix_constructor, Loader=loader)
 
     for t in symengine_types:
         if t in symengine_matrix_types:
@@ -56,5 +59,6 @@ def yaml_gm_constructor(loader, node):
 yaml.add_representer(GC, yaml_gc_representer)
 yaml.add_representer(GM, yaml_gm_representer)
 
-yaml.add_constructor('!GradientContainer', yaml_gc_constructor, Loader=yaml.FullLoader)
-yaml.add_constructor('!GradientMatrix',    yaml_gm_constructor, Loader=yaml.FullLoader)
+for loader in loaders:
+    yaml.add_constructor('!GradientContainer', yaml_gc_constructor, Loader=loader)
+    yaml.add_constructor('!GradientMatrix',    yaml_gm_constructor, Loader=loader)
