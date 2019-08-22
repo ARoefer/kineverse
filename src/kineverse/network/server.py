@@ -1,214 +1,201 @@
 import rospy
+import traceback
+import datetime
 
-from kineverse.model.tardis_wrapper import TARDIS
-from kineverse.model.history        import Timeline, StampedData
-from kineverse.utils                import import_class
-from kineverse.yaml_wrapper         import yaml
+from multiprocessing import RLock
 
-from kineverse.msg import Constraint    as ConstraintMsg
-from kineverse.msg import OperationCall as OperationCallMsg 
-from kineverse.msg import ModelUpdate   as ModelUpdateMsg
+import kineverse.network.names as stdn 
 
-from kineverse.srv import GetModel               as GetModelSrv
-from kineverse.srv import GetModelResponse       as GetModelResponseMsg 
-from kineverse.srv import GetConstraints         as GetConstraintsSrv
-from kineverse.srv import GetConstraintsResponse as GetConstraintsResponseMsg 
+from kineverse.model.paths             import Path, PathDict, collect_paths
+from kineverse.model.tardis_wrapper    import TARDIS
+from kineverse.model.event_model       import EventModel
+from kineverse.model.kinematic_model   import ApplyAt, ApplyBefore, ApplyAfter, RemoveOp
+from kineverse.model.history           import Timeline, StampedData
+from kineverse.gradients.gradient_math import spw
+from kineverse.utils                   import import_class, res_pkg_path
+from kineverse.network.ros_conversion  import json, encode_constraint, decode_op_msg,encode_operation_update, decode_operation_instruction
+from kineverse.time_wrapper            import Time
+from kineverse.visualization.graph_generator import generate_modifications_graph, generate_dependency_graph, plot_graph
 
-operations_registry = {}
+from kineverse.msg import ModelUpdate      as ModelUpdateMsg 
+from kineverse.msg import OperationCall    as OperationCallMsg 
+from kineverse.msg import OperationsUpdate as OperationsUpdateMsg 
 
+from kineverse.srv import ApplyOperations         as ApplyOperationsSrv
+from kineverse.srv import ApplyOperationsResponse as ApplyOperationsResponseMsg 
+from kineverse.srv import DebugInfo               as DebugInfoSrv
+from kineverse.srv import DebugInfoResponse       as DebugInfoResponseMsg
+from kineverse.srv import GetModel                as GetModelSrv
+from kineverse.srv import GetModelResponse        as GetModelResponseMsg 
+from kineverse.srv import GetHistory              as GetHistorySrv
+from kineverse.srv import GetHistoryResponse      as GetHistoryResponseMsg 
+from kineverse.srv import GetConstraints          as GetConstraintsSrv
+from kineverse.srv import GetConstraintsResponse  as GetConstraintsResponseMsg 
+from kineverse.srv import ListPaths               as ListPathsSrv
+from kineverse.srv import ListPathsResponse       as ListPathsResponseMsg 
 
-def decode_op_msg(msg):
-    if op_msg.operation_type not in operations_registry:
-        if op_msg.operation_type[:8] == '<class \'' and op_msg.operation_type[-2:] == '\'>':
-            operations_registry[op_msg.operation_type] = import_class(op_msg.operation_type[8:-2])
-        else:
-            raise Exception('Operation type "{}" does not match the pattern "<class \'TYPE\'>"'.format(op_msg.operation_type))
-    return operations_registry[op_msg.operation_type](*[yaml.full_load(x) for x in msg.operations])    
+# Server without any ROS attachements for testing
+class ModelServer_NoROS(object):
+    def __init__(self, model_type=None, *args):
+        self.km = model_type(*args) if model_type is not None else EventModel() #TARDIS(model_type, *args) if model_type is not None else TARDIS(EventModel, *args)
 
-
-class TagNode(StampedData):
-    def __init__(self, stamp, tag, op):
-        super(TagNode, self).__init__(stamp, tag=tag, op=op, before=[], after=[])
-
-
-class ModelServer(object):
-    def __init__(self, model_type, *args):
-        self.km = TARDIS(model_type, *args)
-
-        self.pub_model = rospy.Publisher('/km', ModelUpdateMsg, queue_size=1)
-        self.pub_ops   = rospy.Publisher('/ko', OperationCallMsg, queue_size=1)
-
-        self.services  = [
-            rospy.Service('get_model', GetModelSrv, self.srv_get_model),
-            rospy.Service('get_constraints', GetConstraintsSrv, self.srv_get_constraints)]
-
-        self._changed_set = set()
+        self._changed_set = {}
         self._changed_constraints = set()
-
-    def _apply_tag_node(self, node):
-        if node.op == False: # Removal
-            for b in node.before:
-                self._apply_tag_node_before(b, node.tag)
-            op = self.km.get_operation(node.tag)
-            self._changed_set.update(op._root_set.values())
-            self._changed_constraints.update(op._constraint_memento.keys())
-            self.km.remove_operation(node.tag)
-        else:
-            if node.op is not None:
-                if not self.km.has_tag(node.tag): # The operation is new: Execute linearely
-                    for b in node.before:
-                        self._apply_tag_node(b)
-                    
-                    op = decode_op_msg(node.op)
-                    self.km.apply_operation(op, node.tag)
-                    self._changed_set.update(op._root_set.values())
-                    self._changed_constraints.update(op._constraint_memento.keys())
-
-                    for a in reversed(node.after):
-                        self._apply_tag_node(a)
-                else: # Operation is old
-                    for b in node.before:
-                        self._apply_tag_node_before(b, node.tag)
-                    
-                    op = decode_op_msg(node.op)
-                    self.km.apply_operation(op, node.tag)
-                    self._changed_set.update(op._root_set.values())
-                    self._changed_constraints.update(op._constraint_memento.keys())
-
-                    for a in node.after:
-                        self._apply_tag_node_after(a, node.tag_node)
-            else: # There is no main operation
-                for b in node.before:
-                        self._apply_tag_node_before(b, node.tag)
-                
-                for a in node.after:
-                    self._apply_tag_node_after(a, node.tag_node)
-
-    def _apply_tag_node_before(self, node, before):
-        op = decode_op_msg(node.op)
-        self.km.apply_operation_before(op, node.tag, before)
-        self._changed_set.update(op._root_set.values())
-
-        for b in node.before:
-            self._apply_tag_node_before(b, node.tag)
-        for a in node.after:
-            self._apply_tag_node_after(a, node.tag)
-
-    def _apply_tag_node_after(self, node, after):
-        op = decode_op_msg(node.op)
-        self.km.apply_operation_after(op, node.tag, after)
-        self._changed_set.update(op._root_set.values())
-
-        for b in node.before:
-            self._apply_tag_node_before(b, node.tag)
-        for a in node.after:
-            self._apply_tag_node_after(a, node.tag)
+        self.lock = RLock()
 
 
-    def process_operations_msg(self, msg):
-        old_ops    = Timeline()
-        tag_nodes  = {}
-        new_ops    = []
-        removals   = set()
-        for op in msg.operations:
-            if op.call_mode == OperationCallMsg.REMOVE_OP:
-                tag_node = TagNode(self.km.get_tag_stamp(op.tag), op.tag, False)
-                old_ops.add(tag_node)
-                removals.add(op.tag)
-            elif op.call_mode == OperationCallMsg.INSERT_AT:
-                if op.tag in tag_nodes:
-                    if op.tag not in removals:
-                        tag_nodes[op.tag].op = op
-                    else:
-                        tag_node = TagNode(0, op.tag, op)
-                        tag_nodes[tag_node.tag] = tag_node
-                        new_ops.append(tag_node)
-                else:
-                    if self.km.has_tag(op) and op.tag not in removals:
-                        tag_node = TagNode(self.km.get_tag_stamp(op.tag), op.tag, op_msg)
-                        old_ops.add(tag_node)
-                    else:
-                        tag_node = TagNode(0, op.tag, op_msg)
-                        removals.discard(op.tag)
-                        new_ops.append(tag_node)
-
-                    tag_nodes[tag_node.tag] = tag_node
-            elif op.call_mode == OperationCallMsg.INSERT_BEFORE:
-                if self.km.has_tag(op.tag):
-                    raise Exception('Insertion before operations is only supported for new operations. Tag "{}" is already taken.'.format(op.tag))
-
-                tag_node = TagNode(0, op.tag, op_msg)
-                if op.reference_tag in tag_nodes:
-                    ref_node = tag_nodes[op.reference_tag]  
-                else:
-                    ref_node = TagNode(self.km.get_tag_stamp(op.reference_tag), op.reference_tag, None)
-                    tag_nodes[ref_node.tag] = ref_node
-                    old_ops.add(ref_node)
-                ref_node.before.append(tag_node)
-                tag_nodes[tag_node.tag] = tag_node
-            elif op.call_mode == OperationCallMsg.INSERT_AFTER:
-                if self.km.has_tag(op.tag):
-                    raise Exception('Insertion after operations is only supported for new operations. Tag "{}" is already taken.'.format(op.tag))
-
-                tag_node = TagNode(0, op.tag, op_msg)
-                if op.reference_tag in tag_nodes:
-                    ref_node = tag_nodes[op.reference_tag]
-                    if ref_node.op is False:
-                        raise Exception('Can not execute operation based on removed operations. Operation "{}" is based on "{}"'.format(tag_node.tag, ref_node.tag))
-                else:
-                    ref_node = TagNode(self.km.get_tag_stamp(op.reference_tag), op.reference_tag, None)
-                    tag_nodes[ref_node.tag] = ref_node
-                    old_ops.add(ref_node)
-                ref_node.after.append(tag_node)
-                tag_nodes[tag_node.tag] = tag_node
-
-        for node in list(old_ops) + new_ops:
-            self._apply_tag_node(node)
-
+    def process_operations_msgs(self, operation_msgs):
+        batch = []
+        changed_ops = {}
+        removed_ops = set()
+        for call_msg in operation_msgs:
+            if call_msg.call_mode == OperationCallMsg.REMOVE:
+                batch.append(RemoveOp(call_msg.tag))
+                removed_ops.add(call_msg.tag)
+            else: 
+                changed_ops[call_msg.tag] = call_msg.operation
+                removed_ops.discard(call_msg.tag)
+                instr = decode_operation_instruction(call_msg)
+                for p in instr.op._root_set.values():
+                    if p[0] not in self._changed_set:
+                        self._changed_set[p[0]] = PathDict(False, default_factory=lambda: False)
+                    self._changed_set[p[0]][p[1:]] = True
+                # FIXME: self._changed_constraints.update(op._root_set.values())
+                batch.append(instr)
 
         self.km.clean_structure()
-        self.km.dispatch_events()
+        self.km.apply_instructions(batch)
+        self.km.clean_structure()
 
         model_update_msg = ModelUpdateMsg()
-        model_update_msg.stamp = rospy.Time.now()
-        for p in self._changed_set:
-            if self.km.has_data(p):
-                model_update_msg.update.paths.append(str(p))
-                model_update_msg.update.data.append(yaml.full_dump(self.km.get_data(p)))
-            else:
-                model_update_msg.deleted_paths.append(str(p))
+        for p, d in self._changed_set.items():
+            self._write_updates(Path(p), d, model_update_msg)
 
         for k in self._changed_constraints:
             if self.km.has_constraint(k):
-                cm = ConstraintMsg()
-                c  = km.get_constraint(k)
-                cm.name  = k
-                cm.lower = yaml.full_dump(c.lower)
-                cm.upper = yaml.full_dump(c.upper)
-                cm.expr  = yaml.full_dump(c.expr)
-                model_update_msg.update.constraints.append(cm)
+                model_update_msg.update.constraints.append(encode_constraint(k, km.get_constraint(k)))
             else:
                 cm.deleted_constraints.append(k)
 
-        self.pub_model.publish(model_update_msg)
+        self._changed_set         = {}
+        self._changed_constraints = {}
 
+        operations_update_msg = OperationsUpdateMsg()
+        for tag, op in changed_ops.items():
+            stamp = self.km.get_tag_stamp(tag)
+            operations_update_msg.tags.append(tag)
+            operations_update_msg.stamps.append(stamp)
+            operations_update_msg.operations.append(op)
+
+        operations_update_msg.deleted = list(removed_ops)
+
+        model_update_msg.stamp      = Time.now()
+        operations_update_msg.stamp = model_update_msg.stamp
+        self.km.dispatch_events()
+        self._publish_updates(operations_update_msg, model_update_msg)
+
+    def _write_updates(self, path, path_dict, model_update_msg):
+        if path_dict.value:
+            if self.km.has_data(path):
+                model_update_msg.update.paths.append(str(path))
+                model_update_msg.update.data.append(json.dumps(self.km.get_data(path)))
+            else:
+                model_update_msg.deleted_paths.append(str(path))
+        else:
+            for a, pd in path_dict.items():
+                self._write_updates(path + (a,), pd, model_update_msg)
+
+    def _publish_updates(self, operations_update_msg, model_update_msg):
+        raise NotImplementedError
 
     def srv_get_model(self, req):
         res = GetModelResponseMsg()
-        for p in req.paths:
-            if self.km.has_data(p):
-                res.model.paths.append(p)
-                res.model.data.append(yaml.dump(self.km.get_data(p)))
+        with self.lock:
+            for p in req.paths:
+                if self.km.has_data(p):
+                    res.model.paths.append(p)
+                    res.model.data.append(json.dumps(self.km.get_data(p)))
 
         return res
 
     def srv_get_constraints(self, req):
         res = GetConstraintsResponseMsg()
-        for k, c in self.km.get_constraints_by_symbols({spw.Symbol(s) for s in req.symbols}).items():
-            cm = ConstraintMsg()
-            cm.name  = k
-            cm.lower = yaml.full_dump(c.lower)
-            cm.upper = yaml.full_dump(c.upper)
-            cm.expr  = yaml.full_dump(c.expr)
-            res.constraints.append(cm)
+        with self.lock:
+            for k, c in self.km.get_constraints_by_symbols({spw.Symbol(s) for s in req.symbols}).items():
+                res.constraints.append(encode_constraint(k, c))
         return res
+
+    def srv_get_history(self, req):
+        res = GetHistoryResponseMsg()
+        res.stamp = Time.now()
+
+        with self.lock:
+            res.history = encode_operation_update(res.stamp, self.km.get_history_of([Path(x) for x in req.paths]))
+        return res
+
+    def srv_apply_operations(self, req):
+        res = ApplyOperationsResponseMsg()
+        res.success = False
+        print('Received new operation instructions.')
+        try:
+            with self.lock:
+                self.process_operations_msgs(req.operations)
+                res.success = True
+                print('Done processing.')
+        except Exception as e:
+            print(traceback.format_exc())
+            res.error_msg = str(e)
+
+        return res
+
+
+    def srv_debug_info(self, req):
+        prefix = res_pkg_path(req.path)
+
+        stamp  = datetime.date.today()
+        with self.lock:
+            plot_graph(generate_dependency_graph(self.km), '{}/{}_dep_graph.pdf'.format(prefix, stamp))
+            plot_graph(generate_modifications_graph(self.km), '{}/{}_mod_graph.pdf'.format(prefix, stamp))
+
+        out = DebugInfoResponseMsg()
+        out.prefix = str(stamp)
+        return out
+
+    def srv_list_paths(self, req):
+        res = ListPathsResponseMsg()
+        
+        data_root = self.km.data_tree.data_tree
+        if req.root != '':
+            with self.lock:
+                if self.km.has_data(req.root):
+                    data_root = self.km.get_data(req.root)
+                else:
+                    raise Exception('Data "{}" does not exist.'.format(req.root))
+
+        depth = req.depth if req.depth > 0 else 10000
+        with self.lock:
+            res.paths = sorted([str(p) for p in collect_paths(data_root, Path(req.root), depth)])
+        return res
+
+
+# Server with ROS-topics and services
+class ModelServer(ModelServer_NoROS):
+    def __init__(self, model_type=None, *args):
+        super(ModelServer, self).__init__(model_type, *args)
+
+
+        self.pub_model = rospy.Publisher(stdn.topic_update_model, ModelUpdateMsg, queue_size=1)
+        self.pub_ops   = rospy.Publisher(stdn.topic_update_ops, OperationsUpdateMsg, queue_size=1)
+
+        self.services  = [
+            rospy.Service(stdn.srv_apply_op, ApplyOperationsSrv, self.srv_apply_operations),
+            rospy.Service(stdn.srv_get_model,        GetModelSrv,        self.srv_get_model),
+            rospy.Service(stdn.srv_get_constraints,  GetConstraintsSrv,  self.srv_get_constraints),
+            rospy.Service(stdn.srv_get_history,      GetHistorySrv,      self.srv_get_history),
+            rospy.Service(stdn.srv_debug_info,       DebugInfoSrv,       self.srv_debug_info),
+            rospy.Service(stdn.srv_list_paths,       ListPathsSrv,       self.srv_list_paths)
+            ]
+
+    def _publish_updates(self, operations_update_msg, model_update_msg):
+        self.pub_ops.publish(operations_update_msg)
+        self.pub_model.publish(model_update_msg)
