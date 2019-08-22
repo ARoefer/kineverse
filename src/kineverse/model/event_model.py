@@ -30,6 +30,10 @@ class EventModel(KinematicModel):
 
         self.tag_callbacks = {}
         self._callback_matcher_registry = {}
+        self.__in_dispatch_mode = False
+        self.__callback_additions = []
+        self.__callback_removals  = []
+
 
     def apply_operation(self, op, tag):
         super(EventModel, self).apply_operation(op, tag)
@@ -102,65 +106,88 @@ class EventModel(KinematicModel):
 
 
     def register_on_operation_changed(self, pattern, callback):
-        matcher = re.compile(pattern)
-        if matcher not in self.tag_callbacks:
-            self.tag_callbacks[matcher] = set()
-        self.tag_callbacks[matcher].add(callback)
+        if self.__in_dispatch_mode:
+            self.__callback_additions.append((pattern, callback))
+        else:
+            matcher = re.compile(pattern)
+            if matcher not in self.tag_callbacks:
+                self.tag_callbacks[matcher] = set()
+            self.tag_callbacks[matcher].add(callback)
 
-        if callback not in self._callback_matcher_registry:
-            self._callback_matcher_registry[callback] = set()
-        self._callback_matcher_registry[callback].add(matcher)
+            if callback not in self._callback_matcher_registry:
+                self._callback_matcher_registry[callback] = set()
+            self._callback_matcher_registry[callback].add(matcher)
 
 
     def deregister_on_operation_changed(self, callback):
-        if callback in self._callback_matcher_registry:
-            for m in self._callback_matcher_registry[callback]:
-                self.tag_callbacks[m].remove(callback)
-            del self._callback_matcher_registry[callback]
+        if self.__in_dispatch_mode:
+            self.__callback_removals.append(('o', callback))
+        else:
+            if callback in self._callback_matcher_registry:
+                for m in self._callback_matcher_registry[callback]:
+                    self.tag_callbacks[m].remove(callback)
+                del self._callback_matcher_registry[callback]
 
 
     def register_on_model_changed(self, path, callback):
-        if path not in self.model_change_callbacks:
-            self.model_change_callbacks[path] = set()
-        self.model_change_callbacks[path].add(callback)
-        
-        if callback not in self._callback_path_registry:
-            self._callback_path_registry[callback] = set()
-        self._callback_path_registry[callback].add(path)
+        if type(path) is str:
+            path = Path(path)
+
+        if self.__in_dispatch_mode:
+            self.__callback_additions.append((path, callback))
+        else:
+            if path not in self.model_change_callbacks:
+                self.model_change_callbacks[path] = set()
+            self.model_change_callbacks[path].add(callback)
+            
+            if callback not in self._callback_path_registry:
+                self._callback_path_registry[callback] = set()
+            self._callback_path_registry[callback].add(path)
 
 
     def deregister_on_model_changed(self, callback):
-        if callback in self._callback_path_registry:
-            for p in self._callback_path_registry[callback]:
-                self.model_change_callbacks[p].remove(callback)
-            del self._callback_path_registry[callback]
+        if self.__in_dispatch_mode:
+            self.__callback_removals.append(('m', callback))
+        else:
+            if callback in self._callback_path_registry:
+                for p in self._callback_path_registry[callback]:
+                    self.model_change_callbacks[p].remove(callback)
+                del self._callback_path_registry[callback]
 
 
     def register_on_constraints_changed(self, symbols, callback):
-        for s in symbols:
-            if s not in self.constraint_callbacks:
-                self.constraint_callbacks[s] = set()
-            self.constraint_callbacks[s].add(callback)
+        if self.__in_dispatch_mode:
+            self.__callback_additions.append((symbols, callback))
+        else:
+            for s in symbols:
+                if s not in self.constraint_callbacks:
+                    self.constraint_callbacks[s] = set()
+                self.constraint_callbacks[s].add(callback)
 
-        if callback not in self._callback_symbol_registry:
-            self._callback_symbol_registry[callback] = set()
-        self._callback_symbol_registry[callback].update(symbols)
+            if callback not in self._callback_symbol_registry:
+                self._callback_symbol_registry[callback] = set()
+            self._callback_symbol_registry[callback].update(symbols)
 
 
     def deregister_on_constraints_changed(self, callback):
-        if callback in self._callback_symbol_registry:
-            for s in self._callback_symbol_registry:
-                self.constraint_callbacks[s].remove(callback)
-            del self._callback_symbol_registry[callback]
+        if self.__in_dispatch_mode:
+            self.__callback_removals.append(('c', callback))
+        else:
+            if callback in self._callback_symbol_registry:
+                for s in self._callback_symbol_registry:
+                    self.constraint_callbacks[s].remove(callback)
+                del self._callback_symbol_registry[callback]
 
 
     def dispatch_events(self):
+        self.__in_dispatch_mode = True
+
         # Model Updates
         call_tracker = set()
 
         for p in self._callback_batch:
-            if p[0] in self.model_change_callbacks:
-                _dispatch_model_events(self.model_change_callbacks.get_sub_dict(p[0]), 
+            if p[:1] in self.model_change_callbacks:
+                _dispatch_model_events(self.model_change_callbacks.get_sub_dict(p[:1]), 
                                        p[:1].get_data_no_throw(self.data_tree.data_tree),
                                        p[1:], call_tracker)
 
@@ -181,3 +208,24 @@ class EventModel(KinematicModel):
         self._callback_batch = PathSet()
         self._constraint_callback_batch = {}
         self._constraint_discard_batch  = {}
+
+        self.__in_dispatch_mode = False
+
+        for param, cb in self.__callback_additions:
+            if isinstance(param, set):
+                self.register_on_constraints_changed(param, cb)
+            elif isinstance(param, Path):
+                self.register_on_model_changed(param, cb)
+            else:
+                self.register_on_operation_changed(param, cb)
+
+        for t, cb in self.__callback_removals:
+            if t == 'o':
+                self.deregister_on_operation_changed(cb)
+            elif t == 'c':
+                self.deregister_on_constraints_changed(cb)
+            else:
+                self.deregister_on_model_changed(cb)
+
+        self.__callback_additions = []
+        self.__callback_removals  = []

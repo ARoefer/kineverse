@@ -59,6 +59,12 @@ class History(object):
             self.modification_history = modification_history
         self.dirty_chunks  = SortedSet()
 
+    def __iter__(self):
+        return iter(self.chunk_history)
+
+    def __len__(self):
+        return len(self.modification_history)
+
     def get_time_stamp(self, before=None, after=None):
         if before is not None:
             pos, succ = self.chunk_history.get_ceil(before) if type(before) != Chunk else self.chunk_history.get_ceil(before.stamp)
@@ -138,13 +144,13 @@ class History(object):
 
         for p in overlap:
             pos, _ = self.modification_history[p].get_floor(c_old.stamp)
-            self.modification_history[p].remove(c_old)
-            self.modification_history[p].add(c_new)
             # If we are already here, we might as well remove old and establish new deps
             if p in c_old.dependencies:
-                self.modification_history[p][pos - 1].dependents.remove(c_old)
+                self.modification_history[p][pos - 1].dependents.discard(c_old)
             if p in c_new.dependencies:
                 self.modification_history[p][pos - 1].dependents.add(c_new)
+            self.modification_history[p].remove(c_old)
+            self.modification_history[p].add(c_new)
         
         c_new.dependents = c_old.dependents.copy()
         self.flag_dirty(*c_new.dependents)
@@ -164,9 +170,15 @@ class History(object):
         self.chunk_history.add(c_new)
 
 
+    def get_chunk_by_index(self, idx):
+        return self.chunk_history[idx]
+
     def get_chunk(self, stamp):
+        return self.get_chunk_pos(stamp)[0]
+
+    def get_chunk_pos(self, stamp):
         pos, chunk = self.chunk_history.get_floor(stamp)
-        return chunk if chunk is None or chunk.stamp == stamp else None
+        return (chunk, pos) if chunk is None or chunk.stamp == stamp else (None, None)
 
     def flag_dirty(self, *chunks):
         self.dirty_chunks.update(chunks)
@@ -192,6 +204,27 @@ class History(object):
             mod_history = {p: Timeline(h[:h.get_floor(time)]) for p, h in self.modification_history.items() if h[0].stamp >= time}
             return History(chunks, mod_history)
         return History()
+
+    def get_history_of(self, *paths):
+        out = set()
+        remaining = set()
+        for p in paths:
+            if p in self.modification_history:
+                remaining.update(self.modification_history[p])
+
+        while len(remaining) > 0:
+            chunk = remaining.pop()
+            out.add(chunk)
+            for p in chunk.dependencies:
+                pos, dep = self.modification_history[p].get_floor(chunk.stamp)
+                if dep == chunk: # Catch if predecessor is chunk itself
+                    dep = self.modification_history[p][pos - 1]
+                if dep not in out:
+                    remaining.add(dep)
+
+        return Timeline(out)
+
+
 
     def str_history_of(self, p):
         if p not in self.modification_history:

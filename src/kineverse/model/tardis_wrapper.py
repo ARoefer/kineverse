@@ -1,5 +1,4 @@
-import rospy
-
+from kineverse.time_wrapper          import Time
 from kineverse.model.history         import Timeline, StampedData
 from kineverse.model.kinematic_model import KinematicModel
 
@@ -15,20 +14,20 @@ def TARDIS(super_type, *args):
 
     def apply_operation(self, op, tag):
         super_type.apply_operation(self, op, tag)
-        self.operations_timeline.add(StampedData(rospy.Time.now(), operation=op, tag=tag))
+        self.operations_timeline.add(StampedData(Time.now(), operation=op, tag=tag))
 
     def apply_operation_before(self, op, tag, before_tag):
         super_type.apply_operation_before(self, op, tag, before_tag)
-        self.operations_timeline.add(StampedData(rospy.Time.now(), operation=op, tag=tag))    
+        self.operations_timeline.add(StampedData(Time.now(), operation=op, tag=tag))    
 
     def apply_operation_after(self, op, tag, after_tag):
         super_type.apply_operation_after(self, op, tag, after_tag)
-        self.operations_timeline.add(StampedData(rospy.Time.now(), operation=op, tag=tag))    
+        self.operations_timeline.add(StampedData(Time.now(), operation=op, tag=tag))    
 
     def remove_operation(self, tag):
         super_type.remove_operation(self, tag)
         rem_set = self.removal_timeline[-1] if len(self.removal_timeline) > 0 else set()
-        self.removal_timeline.add(StampedData(rospy.Time.now(), rem_set.union({tag})))
+        self.removal_timeline.add(StampedData(Time.now(), rem_set.union({tag})))
 
     def get_model_at_time(self, time):
         idx, f = self.operations_timeline.get_floor(time)

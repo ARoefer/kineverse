@@ -1,3 +1,4 @@
+from kineverse.json_wrapper            import JSONSerializable
 from kineverse.gradients.gradient_math import spw
 from kineverse.type_sets               import atomic_types, matrix_types, symengine_types
 
@@ -8,7 +9,7 @@ class PathException(Exception):
         self.obj  = obj
 
 
-class Path(tuple):
+class Path(tuple, JSONSerializable):
     def __new__(cls, path):
         if type(path) == str:
             return super(Path, cls).__new__(Path, path.split('/'))
@@ -47,6 +48,12 @@ class Path(tuple):
     def __repr__(self):
         return 'P{}'.format(super(Path, self).__repr__())
 
+    def _json_data(self, json_dict):
+        json_dict.update({'path': str(self)})
+
+    def for_json(self):
+        return self.json_data()
+
     def get_data(self, obj):
         try:
             for x in range(len(self)):
@@ -69,12 +76,20 @@ class Path(tuple):
 
 stopping_set = atomic_types.union(matrix_types).union(symengine_types)
 
-def collect_paths(obj, root):
+def collect_paths(obj, root, depth=10000):
     t = type(obj)
     out = {root}
-    if t not in stopping_set:
-        for a in [a for a in dir(obj) if a[0] != '_' and not callable(getattr(obj, a))]:
-            out.update(collect_paths(getattr(obj, a), root + Path(a,)))
+    if depth > 0 and t not in stopping_set:
+        if t is dict:
+            for k, v in obj.items():
+                if type(k) is str:
+                    out.update(collect_paths(v, root + (k,), depth - 1))
+        elif t is list:
+            for x, d in enumerate(obj):
+                out.update(collect_paths(d, root + (x,), depth - 1))
+        else:
+            for a in [a for a in dir(obj) if a[0] != '_' and not callable(getattr(obj, a))]:
+                out.update(collect_paths(getattr(obj, a), root + Path(a,), depth - 1))
     return out
 
 def find_common_root(paths):
@@ -108,6 +123,12 @@ class PathDict(dict):
         for p, v in paths:
             self[p] = v
 
+    def copy(self):
+        out = PathDict(self.value, [], self._default_factory)
+        for k, v in self.items():
+            super(PathDict, out).__setitem__(k, v.copy())
+        return out
+
     # True contains
     def __contains__(self, key):
         return len(key) == 0 or (super(PathDict, self).__contains__(key[0]) and key[1:] in super(PathDict, self).__getitem__(key[0]))
@@ -121,7 +142,7 @@ class PathDict(dict):
         if len(key) > 0:
             k, v = t.get_with_key(key[1:])
             return key[:1] + k, v
-        return tuple(), self.value
+        return Path(), self.value
 
     # Sets a value while creating the path to it
     def __setitem__(self, key, value):
@@ -155,13 +176,18 @@ class PathDict(dict):
             return [self.value] + self.get_all_under(key)
         return [self.value] + self[key[0]].get_all_on_and_under(key[1:])
 
+    def __str__(self):
+        return '{} [{}]'.format(str(self.value), ' '.join(self.keys()))
+
+    def __repr__(self):
+        return '{}\n{}'.format(str(self.value), '\n -'.join(['{}: {}'.format(k, repr(c).replace('\n', '\n  ')) for k, c in self.items()]))
+
 
 class PathSet(set):
     # Tests whether a path or any of its prefixes are covered by this set
     def __contains__(self, key):
         for x in range(len(key)):
-            if super(PathSet, self).__contains__(key[:x + 1]):
-                return True
+            return super(PathSet, self).__contains__(key[:x + 1])
         return False
 
     # Tests whether the given key is a prefix of any element in the set
