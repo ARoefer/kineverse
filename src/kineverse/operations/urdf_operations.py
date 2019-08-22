@@ -1,3 +1,5 @@
+import urdf_parser_py.urdf as urdf
+
 from kineverse.gradients.gradient_math     import frame3_rpy,           \
                                                   get_diff,             \
                                                   matrix_wrapper,       \
@@ -7,6 +9,7 @@ from kineverse.gradients.gradient_math     import frame3_rpy,           \
                                                   translation3,         \
                                                   vector3
 from kineverse.gradients.diff_logic        import create_symbol, TYPE_POSITION
+from kineverse.json_wrapper                import JSONSerializable
 from kineverse.operations.basic_operations import Operation,           \
                                                   CreateComplexObject, \
                                                   Path,                \
@@ -15,6 +18,7 @@ from kineverse.operations.operation        import op_construction_wrapper
 from kineverse.model.kinematic_model       import Constraint
 from kineverse.model.frames                import Frame
 from kineverse.type_sets                   import matrix_types
+
 
 def urdf_origin_to_transform(origin):
     if origin is not None:
@@ -26,85 +30,66 @@ def urdf_origin_to_transform(origin):
 def urdf_axis_to_vector(axis):
     return vector3(*axis) if axis is not None else vector3(1,0,0)
 
-class URDFInertial(object):
-    def __init__(self, origin, mass, ixx, ixy, ixz, iyy, iyz, izz):
-        self.pose   = origin if type(origin) in matrix_types else frame3_rpy(origin.rpy[0], origin.p[1], origin.rpy[2], origin.xyz)
-        self.mass   = mass
-        self.tensor = matrix_wrapper([[ixx, ixy, ixz], 
-                                      [ixy, iyy, iyz],
-                                      [ixz, iyz, izz]])
 
-class URDFGeometry(object):
-    def __init__(self, shape, size):
-        self.shape = shape
-        self.size  = size if type(size) in matrix_types else matrix_wrapper(*size)
-
-class URDFVisual(object):
-    def __init__(self, origin, geometry):
-        self.pose     = origin if type(origin) in matrix_types else frame3_rpy(origin.rpy[0], origin.p[1], origin.rpy[2], origin.xyz)
-        self.geometry = URDFGeometry()
-
-class URDFCollision(object):
-    def __init__(self, origin, geometry):
-        self.pose     = origin if type(origin) in matrix_types else frame3_rpy(origin.rpy[0], origin.p[1], origin.rpy[2], origin.xyz)
-        self.geometry = URDFGeometry()        
-
-class URDFLink(object):
-    def __init__(self, ):
-        self.inertial   = URDFInertial()
-        self.visuals    = {URDFVisual()}
-        self.collisions = {URDFCollision()}
-
-
-class URDFLimit(object):
-    def __init__(self, lower, upper, effort, velocity):
-        self.lower    = lower
-        self.upper    = upper
-        self.effort   = effort
-        self.velocity = velocity
-
-class URDFJoint(object):
-    def __init__(self, ):
-        self.pose   = origin if type(origin) in matrix_types else frame3_rpy(origin.rpy[0], origin.p[1], origin.rpy[2], origin.xyz)
-        self.parent = parent_str
-        self.child  = child_str
-        self.axis   = axis if type(axis) in matrix_types else vector3(*origin.xyz)
-        # self.calibration = URDFCalibration() Not for now, too control specific
-        self.damping  = damping
-        self.friction = friction
-        self.limit    = URDFLimit()
-        self.mimic    = mimic_term
-
-
-class KinematicJoint(object):
+class KinematicJoint(JSONSerializable):
     def __init__(self, jtype, parent, child):
         self.type     = jtype
         self.parent   = parent
         self.child    = child
+
+    def _json_data(self, json_dict):
+        json_dict.update({'jtype':  self.type,
+                          'parent': self.parent,
+                          'child':  self.child})
+
 
 class Kinematic1DofJoint(KinematicJoint):
     def __init__(self, jtype, parent, child, position):
         super(Kinematic1DofJoint, self).__init__(jtype, parent, child)
         self.position = position
 
+    def _json_data(self, json_dict):
+        super(Kinematic1DofJoint, self)._json_data(json_dict)
+        json_dict.update({'position': self.position})
+
+
 class FixedJoint(KinematicJoint):
     def __init__(self, parent, child):
         super(FixedJoint, self).__init__('fixed', parent, child)   
+
+    def _json_data(self, json_dict):
+        super(FixedJoint, self)._json_data(json_dict)
+        del json_dict['jtype']
 
 class PrismaticJoint(KinematicJoint):
     def __init__(self, parent, child, position):
         super(PrismaticJoint, self).__init__('prismatic', parent, child)   
         self.position = position
 
+    def _json_data(self, json_dict):
+        super(PrismaticJoint, self)._json_data(json_dict)
+        del json_dict['jtype']
+        json_dict.update({'position': self.position})
+
 class ContinuousJoint(KinematicJoint):
     def __init__(self, parent, child, position):
         super(ContinuousJoint, self).__init__('continuous', parent, child)   
         self.position = position
 
+    def _json_data(self, json_dict):
+        super(ContinuousJoint, self)._json_data(json_dict)
+        del json_dict['jtype']
+        json_dict.update({'position': self.position})
+
 class RevoluteJoint(KinematicJoint):
     def __init__(self, parent, child, position):
         super(RevoluteJoint, self).__init__('revolute', parent, child)   
         self.position = position
+
+    def _json_data(self, json_dict):
+        super(RevoluteJoint, self)._json_data(json_dict)
+        del json_dict['jtype']
+        json_dict.update({'position': self.position})
 
 # class PrismaticJoint(Kinematic1DofJoint):
 #     def __init__(self, parent, child, axis, position, lower_limit=-1e9, upper_limit=1e9):
@@ -122,22 +107,72 @@ class RevoluteJoint(KinematicJoint):
 #         self.lower_limit = lower_limit
 #         self.upper_limit = upper_limit
 
-class KinematicLink(Frame):
-    def __init__(self, parent, pose):
-        super(KinematicLink, self).__init__(parent, pose)
-        self.geometry  = None
-        self.collision = None
+class Geometry(Frame):
+    def __init__(self, parent_path, pose, geom_type, scale=None, mesh=None):
+        super(Geometry, self).__init__(parent_path, pose)
+        self.type  = geom_type
+        self.scale = scale if scale is not None else vector3(1,1,1)
+        self.mesh  = mesh
 
-class URDFRobot(object):
+    def _json_data(self, json_dict):
+        super(Geometry, self)._json_data(json_dict)
+        del json_dict['to_parent']
+        json_dict.update({'geom_type': self.type,
+                          'scale':     self.scale,
+                          'mesh':      self.mesh})
+
+class InertialData(Frame):
+    def __init__(self, parent_path, pose, mass=1, inertia_matrix=spw.eye(3)):
+        super(InertialData, self).__init__(parent_path, pose)
+        if mass < 0:
+            raise Exception('Mass can not be negative!')
+
+        self.mass = mass
+        self.inertia_matrix = inertia_matrix
+
+    def _json_data(self, json_dict):
+        super(InertialData, self)._json_data(json_dict)
+        del json_dict['to_parent']
+        json_dict.update({'mass':           self.mass,
+                          'inertia_matrix': self.inertia_matrix})
+
+class KinematicLink(Frame):
+    def __init__(self, parent_path, pose, geometry=None, collision=None, inertial=None):
+        super(KinematicLink, self).__init__(parent_path, pose)
+        self.geometry  = geometry
+        self.collision = collision
+        self.inertial  = inertial
+
+    def _json_data(self, json_dict):
+        super(KinematicLink, self)._json_data(json_dict)
+        del json_dict['to_parent']
+        json_dict.update({'collision': self.collision,
+                          'geometry':  self.geometry,
+                          'inertial':  self.inertial})
+
+
+class URDFRobot(JSONSerializable):
     def __init__(self, name):
         self.name   = name
         self.links  = {}
         self.joints = {}
 
+    def _json_data(self, json_dict):
+        json_dict.update({'name':   self.name,
+                          'links':  self.links, 
+                          'joints': self.joints})
+
+    @classmethod
+    def json_factory(cls, name, links, joints):
+        out = cls(name)
+        out.links  = links
+        out.joints = joints
+        return out
+
 class SetConnection(Operation):
-    def __init__(self, name, joint_obj, parent_pose, child_pose, connection_path, connection_tf):
+    def init(self, name, joint_obj, parent_pose, child_pose, connection_path, connection_tf):
         self.joint_obj = joint_obj
-        op_construction_wrapper(super(SetConnection, self).__init__,
+        op_construction_wrapper(super(SetConnection, self).init,
                                 name, 
                                 ['child_pose', 'child_parent', 'child_parent_tf'],
                                 (connection_path, 'connection', self.joint_obj),
@@ -154,17 +189,17 @@ class SetConnection(Operation):
                 'connection': self.joint_obj}, {}
 
 class SetFixedJoint(SetConnection):
-    def __init__(self, parent_pose, child_pose, connection_path, connection_tf):
-        super(SetFixedJoint, self).__init__('Fixed Joint', 
-                                            FixedJoint(str(parent_pose[:-1]), 
-                                                       str(child_pose[:-1])),
+    def init(self, parent_pose, child_pose, connection_path, connection_tf):
+        super(SetFixedJoint, self).init('Fixed Joint', 
+                                        FixedJoint(str(parent_pose[:-1]), 
+                                                   str(child_pose[:-1])),
                                             parent_pose, child_pose, connection_path, connection_tf)
 
 class SetPrismaticJoint(Operation):
-    def __init__(self, parent_pose, child_pose, connection_path, connection_tf, axis, position, lower_limit, upper_limit, vel_limit, mimic_m=None, mimic_o=None):
+    def init(self, parent_pose, child_pose, connection_path, connection_tf, axis, position, lower_limit, upper_limit, vel_limit, mimic_m=None, mimic_o=None):
         self.joint_obj = PrismaticJoint(str(parent_pose[:-1]), str(child_pose[:-1]), position)
         self.conn_path = connection_path
-        op_construction_wrapper(super(SetPrismaticJoint, self).__init__, 
+        op_construction_wrapper(super(SetPrismaticJoint, self).init, 
                                 'Prismatic Joint',            
                                 ['child_pose', 'child_parent', 'child_parent_tf'], 
                                 (connection_path, 'connection', self.joint_obj),
@@ -182,18 +217,19 @@ class SetPrismaticJoint(Operation):
                                 mimic_o=mimic_o)
 
     def _apply(self, ks, parent_pose, child_pose, child_parent_tf, connection_tf, axis, position, lower_limit, upper_limit, vel_limit, mimic_m, mimic_o):
+        vel = get_diff(position)
         return {'child_parent': self.joint_obj.parent,
                 'child_parent_tf': connection_tf * child_parent_tf,
                 'child_pose': parent_pose * connection_tf * translation3(*(axis[:,:3] * position)) * child_pose,
                 'connection': self.joint_obj}, \
-               {'{}_position'.format(self.conn_path): Constraint(lower_limit, upper_limit, get_diff(position)),
-                '{}_velocity'.format(self.conn_path): Constraint(-vel_limit, vel_limit, get_diff(position))}
+               {'{}_position'.format(self.conn_path): Constraint(lower_limit - position, upper_limit - position, vel),
+                '{}_velocity'.format(self.conn_path): Constraint(-vel_limit, vel_limit, vel)}
 
 class SetRevoluteJoint(Operation):
-    def __init__(self, parent_pose, child_pose, connection_path, connection_tf, axis, position, lower_limit, upper_limit, vel_limit, mimic_m=None, mimic_o=None):
+    def init(self, parent_pose, child_pose, connection_path, connection_tf, axis, position, lower_limit, upper_limit, vel_limit, mimic_m=None, mimic_o=None):
         self.joint_obj = RevoluteJoint(str(parent_pose[:-1]), str(child_pose[:-1]), position)
         self.conn_path = connection_path
-        op_construction_wrapper(super(SetRevoluteJoint, self).__init__,
+        op_construction_wrapper(super(SetRevoluteJoint, self).init,
                                 'Revolute Joint', 
                                 ['child_pose', 'child_parent', 'child_parent_tf'], 
                                 (connection_path, 'connection', self.joint_obj),
@@ -212,18 +248,19 @@ class SetRevoluteJoint(Operation):
 
     def _apply(self, ks, parent_pose, child_pose, child_parent_tf, connection_tf, axis, position, lower_limit, upper_limit, vel_limit, mimic_m, mimic_o):
         position = position if mimic_m is None or mimic_o is None else position * mimic_m + mimic_o
+        vel = get_diff(position)
         return {'child_parent': self.joint_obj.parent,
                 'child_parent_tf': connection_tf * child_parent_tf,
                 'child_pose': parent_pose * connection_tf * rotation3_axis_angle(axis, position) * child_pose,
                 'connection': self.joint_obj}, \
-               {'{}_position'.format(self.conn_path): Constraint(lower_limit, upper_limit, get_diff(position)),
-               '{}_velocity'.format(self.conn_path): Constraint(-vel_limit, vel_limit, get_diff(position))}
+               {'{}_position'.format(self.conn_path): Constraint(lower_limit - position, upper_limit - position, vel),
+               '{}_velocity'.format(self.conn_path): Constraint(-vel_limit, vel_limit, vel)}
 
 class SetContinuousJoint(Operation):
-    def __init__(self, parent_pose, child_pose, connection_path, connection_tf, axis, position,vel_limit, mimic_m=None, mimic_o=None):
+    def init(self, parent_pose, child_pose, connection_path, connection_tf, axis, position,vel_limit, mimic_m=None, mimic_o=None):
         self.joint_obj = ContinuousJoint(str(parent_pose[:-1]), str(child_pose[:-1]), position)
         self.conn_path = connection_path
-        op_construction_wrapper(super(SetContinuousJoint, self).__init__,
+        op_construction_wrapper(super(SetContinuousJoint, self).init,
                                 'Continuous Joint', 
                                 ['child_pose', 'child_parent', 'child_parent_tf'],
                                 (connection_path, 'connection', self.joint_obj),
@@ -247,12 +284,59 @@ class SetContinuousJoint(Operation):
                {'{}_velocity'.format(self.conn_path): Constraint(-vel_limit, vel_limit, get_diff(position))}
 
 
+urdf_geom_types = {urdf.Mesh:     'mesh',
+                   urdf.Box:      'box',
+                   urdf.Cylinder: 'cylinder',
+                   urdf.Sphere:   'sphere'}
+
+
+def urdf_to_geometry(urdf_geom, to_modify):
+    to_modify.type = urdf_geom_types[type(urdf_geom)]
+    if to_modify.type == 'mesh':
+        to_modify.mesh = urdf_geom.filename
+        if urdf_geom.scale is not None:
+            to_modify.scale = vector3(*urdf_geom.scale)
+    elif to_modify.type == 'box':
+        to_modify.scale = vector3(*urdf_geom.size)
+    elif to_modify.type == 'cylinder':
+        to_modify.scale = vector3(urdf_geom.radius * 2, urdf_geom.radius * 2, urdf_geom.length)
+    elif to_modify.type == 'sphere':
+        to_modify.scale = vector3(urdf_geom.radius * 2, urdf_geom.radius * 2, urdf_geom.radius * 2)
+    else:
+        raise Exception('Can not convert geometry of type "{}"'.format(to_modify.type))
+        
+
 def load_urdf(ks, prefix, urdf, reference_frame='map'):
+    if type(prefix) == str:
+        prefix = Path(prefix)
+        
     ks.apply_operation(CreateComplexObject(prefix, URDFRobot(urdf.name)), 'create {}'.format(str(prefix)))
 
     for u_link in urdf.links:
-        ks.apply_operation(CreateComplexObject(prefix + Path(['links', u_link.name]), 
-                                               KinematicLink(reference_frame, urdf_origin_to_transform(u_link.origin))),
+        link_path = prefix + Path(['links', u_link.name])
+        collision = None
+        geometry  = None
+        inertial  = InertialData(link_path, spw.eye(4))
+        if u_link.collision is not None:
+            collision = Geometry(str(link_path), urdf_origin_to_transform(u_link.collision.origin), '')
+            urdf_to_geometry(u_link.collision.geometry, collision)
+
+        if u_link.visual is not None:
+            geometry = Geometry(str(link_path), urdf_origin_to_transform(u_link.visual.origin), '')
+            urdf_to_geometry(u_link.visual.geometry, geometry)            
+
+        if u_link.inertial is not None:
+            if u_link.inertial.origin is not None:
+                inertial.pose = urdf_origin_to_transform(u_link.inertial.origin)
+                inertial.to_parent = inertial.pose
+            inertial.mass = u_link.inertial.mass
+            uin = u_link.inertial.inertia # Just for readability
+            inertial.inertia_matrix = matrix_wrapper([[uin.ixx, uin.ixy, uin.ixz], 
+                                                      [uin.ixy, uin.iyy, uin.iyz],
+                                                      [uin.ixz, uin.iyz, uin.izz]])
+
+        ks.apply_operation(CreateComplexObject(link_path, 
+                                               KinematicLink(reference_frame, urdf_origin_to_transform(u_link.origin), geometry, collision, inertial)),
                                                'create {}'.format(str(prefix + Path(u_link.name))))
 
     links_left = [urdf.get_root()]

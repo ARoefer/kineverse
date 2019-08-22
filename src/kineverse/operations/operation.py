@@ -13,7 +13,11 @@ def op_construction_wrapper(init_fn, name, mod_list, *written_objs, **kwargs):
 
 # Every action needs to declare the fields it depends on and the ones it modifies
 class Operation(object):
-    def __init__(self, name, modifications, **kwargs):
+    def __init__(self, *args):
+        self._construction_args = args
+        self.init(*args)
+
+    def init(self, name, modifications, **kwargs):
         self.name = name
         args = self._apply.func_code.co_varnames[2:self._apply.func_code.co_argcount]
         self.args_paths = {a : kwargs[a] for a in args}
@@ -70,8 +74,8 @@ class Operation(object):
         raise NotImplementedError
 
     def revoke(self, ks):
-        for p, e in self._memento.items():
-            ks.set_data(p, e)
+        for m, e in self._memento.items():
+            ks.set_data(self._root_set[m], e)
         for p in {p for k, p in self._root_set.items() if k not in self._memento}:
             ks.remove_data(p)
         for k, c in self._constraint_memento.items():
