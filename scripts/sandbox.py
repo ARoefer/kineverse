@@ -3,6 +3,8 @@ import subprocess
 import os
 import tf
 
+import kineverse.json_wrapper as json
+
 from kineverse.gradients.gradient_math       import *
 from kineverse.model.kinematic_model         import KinematicModel, Path
 from kineverse.model.frames                  import Frame
@@ -12,9 +14,12 @@ from kineverse.motion.min_qp_builder         import SoftConstraint, ControlledVa
 from kineverse.operations.basic_operations   import CreateComplexObject
 from kineverse.operations.urdf_operations    import load_urdf
 from kineverse.operations.special_kinematics import create_roomba_joint_with_symbols
+from kineverse.time_wrapper                  import Time
 from kineverse.type_sets                     import atomic_types
 from kineverse.utils                         import res_pkg_path
-from kineverse.visualization.graph_generator import generate_dependency_graph, plot_graph
+from kineverse.visualization.graph_generator import generate_modifications_graph,\
+                                                    generate_dependency_graph,   \
+                                                    plot_graph
 from kineverse.visualization.plotting        import draw_recorders, split_recorders
 
 from sensor_msgs.msg     import JointState as JointStateMsg
@@ -31,7 +36,7 @@ if __name__ == '__main__':
     pub_path = '/opt/ros/{}/lib/robot_state_publisher/robot_state_publisher'.format(os.environ['ROS_DISTRO'])
 
     with open(res_pkg_path('package://fetch_description/robots/fetch.urdf'), 'r') as urdf_file:
-        urdf_str = urdf_file.read()
+        urdf_str = urdf_file.read() 
 
     rospy.set_param('/robot_description', urdf_str)
     
@@ -52,7 +57,7 @@ if __name__ == '__main__':
     km = KinematicModel()
     load_urdf(km, Path('fetch'), urdf_model)
 
-
+    km.clean_structure()
     km.apply_operation_before(CreateComplexObject(Path('map'), Frame('')), 'create map', 'create fetch')
 
     roomba_op = create_roomba_joint_with_symbols(Path('map/pose'), 
@@ -63,8 +68,16 @@ if __name__ == '__main__':
                                                  1.0, 0.6, Path('fetch'))
     km.apply_operation_after(roomba_op, 'connect map base_link', 'create fetch/base_link')
     km.clean_structure()
+
+    with open(res_pkg_path('package://kineverse/test/fetch.json'), 'w') as fetch_json:
+        start = Time.now()
+        print('Starting to write JSON')
+        json.dump(km.get_data('fetch'), fetch_json)#, sort_keys=True, indent='    ')    
+        print('Writing JSON done. Time taken: {} seconds'.format((Time.now() - start).to_sec()))
+
     print('Plotting dependency graph...')
     plot_graph(generate_dependency_graph(km, {'connect': 'blue'}), '{}/sandbox_dep_graph.pdf'.format(plot_dir))
+    plot_graph(generate_modifications_graph(km, {'connect': 'blue'}), '{}/sandbox_mod_graph.pdf'.format(plot_dir))
     print('Done plotting.')
 
     # GOAL DEFINITION

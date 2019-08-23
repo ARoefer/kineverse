@@ -3,14 +3,17 @@ import os
 import tf
 import subprocess
 
-from kineverse.model.kinematic_model      import KinematicModel, Path
+from kineverse.model.kinematic_model      import Path
+from kineverse.model.geometry_model       import GeometryModel   
 from kineverse.operations.urdf_operations import load_urdf
 from kineverse.utils                      import res_pkg_path
 from kineverse.visualization.graph_generator import generate_dependency_graph, plot_graph
 from kineverse.visualization.plotting        import draw_recorders, split_recorders
+from kineverse.urdf_fix import urdf_filler
 
 from sensor_msgs.msg     import JointState as JointStateMsg
 from urdf_parser_py.urdf import URDF
+
 
 
 if __name__ == '__main__':
@@ -19,20 +22,20 @@ if __name__ == '__main__':
     plot_dir = res_pkg_path('package://kineverse/test/plots')
     pub_path = '/opt/ros/{}/lib/robot_state_publisher/robot_state_publisher'.format(os.environ['ROS_DISTRO'])
 
-    with open(res_pkg_path('package://iai_kitchen/urdf_obj/IAI_kitchen.urdf'), 'r') as urdf_file:
+    with open(res_pkg_path('package://faculty_lounge_kitchen_description/urdfs/kitchen.urdf'), 'r') as urdf_file:
         kitchen_urdf_str = urdf_file.read()
 
     with open(res_pkg_path('package://fetch_description/robots/fetch.urdf'), 'r') as urdf_file:
         fetch_urdf_str = urdf_file.read()
 
-    kitchen_urdf_model = URDF.from_xml_string(kitchen_urdf_str)
+    kitchen_urdf_model = urdf_filler(URDF.from_xml_string(kitchen_urdf_str))
     rospy.set_param('/{}/robot_description'.format(kitchen_urdf_model.name), kitchen_urdf_str)
     
     kitchen_js_pub = rospy.Publisher('/{}/joint_states'.format(kitchen_urdf_model.name), JointStateMsg, queue_size=1)
     tf_broadcaster = tf.TransformBroadcaster()
 
     # KINEMATIC MODEL
-    km = KinematicModel()
+    km = GeometryModel()
     kitchen_prefix = Path(kitchen_urdf_model.name)
     load_urdf(km, kitchen_prefix, kitchen_urdf_model)
 
@@ -54,7 +57,7 @@ if __name__ == '__main__':
         now = rospy.Time.now()
         if (now - jsmsg.header.stamp).to_sec() >= int_factor:
             jsmsg.header.stamp = now
-            #jsmsg.position = [trajectory[j][x] for j in jsmsg.name] 
+            jsmsg.position = [trajectory[j][x] for j in jsmsg.name] 
             kitchen_js_pub.publish(jsmsg)
 
     sp_p.terminate()
