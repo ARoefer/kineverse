@@ -59,9 +59,9 @@ class TestOperations(ut.TestCase):
         ks.apply_operation(CreateSingleValue('vec_b', spw.vector3(0,1,0)),  'create vec_b')
 
         with self.assertRaises(Exception):
-            op = CallFunctionOperator('sin_of_my_var', sin, lol=Path('my_var'))
+            op = CallFunctionOperator('sin_of_my_var', sin)
 
-        op = CallFunctionOperator('sin_of_my_var', sin, expr=Path('my_var'))
+        op = CallFunctionOperator('sin_of_my_var', sin, Path('my_var'))
         self.assertIn('expr', op.args_paths)
         self.assertEquals(op.args_paths['expr'], 'my_var')
         ks.apply_operation(op, 'compute sin of my_var')
@@ -71,9 +71,9 @@ class TestOperations(ut.TestCase):
         self.assertFalse(ks.has_data('sin_of_my_var'))
 
         with self.assertRaises(Exception):
-            op = CallFunctionOperator('cross_of_a_b', cross, u=Path('vec_a'), c=Path('lol'))
+            op = CallFunctionOperator('cross_of_a_b', cross, Path('vec_a'))
 
-        op = CallFunctionOperator('cross_of_a_b', cross, u=Path('vec_a'), v=Path('vec_b'))
+        op = CallFunctionOperator('cross_of_a_b', cross, Path('vec_a'), Path('vec_b'))
         self.assertIn('u', op.args_paths)
         self.assertEquals(op.args_paths['u'], 'vec_a')
         self.assertIn('v', op.args_paths)
