@@ -1,4 +1,6 @@
 import re
+import numpy as np
+
 from giskardpy import BACKEND
 from kineverse.gradients.diff_logic    import create_pos
 from kineverse.gradients.gradient_math import *
@@ -104,6 +106,8 @@ class GeometryModel(EventModel):
         super(GeometryModel, self).remove_data(key)
 
     def dispatch_events(self):
+        static_objects = []
+        static_poses   = []
         for str_k in self._collision_objects:
             k = Path(str_k)
             if k in self._callback_batch:
@@ -116,13 +120,19 @@ class GeometryModel(EventModel):
                         pose_expr = pose_expr.to_sym_matrix()
                     self._co_pose_expr[str_k]  = pose_expr
                     self._co_symbol_map[str_k] = pose_expr.free_symbols
-                    for s in pose_expr.free_symbols:
-                        if s not in self._symbol_co_map:
-                            self._symbol_co_map[s] = set()
-                        self._symbol_co_map[s].add(str_k)
+                    if len(pose_expr.free_symbols) > 0:
+                        for s in pose_expr.free_symbols:
+                            if s not in self._symbol_co_map:
+                                self._symbol_co_map[s] = set()
+                            self._symbol_co_map[s].add(str_k)
+                    else:
+                        print('{} is static, setting its pose.'.format(k))
+                        static_objects.append(self._collision_objects[str_k])
+                        static_poses.append(np.array(pose_expr.tolist()))
                 else:
-                    #print('{} was removed'.format(k))
                     self._process_link_removal(k)
+        if len(static_objects) > 0:
+            self.kw.batch_set_transforms(static_objects, np.vstack(static_poses))
         super(GeometryModel, self).dispatch_events()
 
 
