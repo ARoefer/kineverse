@@ -9,7 +9,7 @@ import importlib
 from collections                  import namedtuple
 from giskardpy.symengine_wrappers import *
 from kineverse.time_wrapper       import Time
-from kineverse.type_sets          import symengine_types
+from kineverse.symengine_types    import symengine_types
 from sensor_msgs.msg              import JointState as JointStateMsg
 from iai_bullet_sim.utils         import Frame, Vector3, Point3
 from visualization_msgs.msg       import Marker as MarkerMsg
