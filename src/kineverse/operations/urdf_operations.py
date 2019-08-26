@@ -18,7 +18,7 @@ from kineverse.operations.operation        import op_construction_wrapper
 from kineverse.model.kinematic_model       import Constraint
 from kineverse.model.frames                import Frame
 from kineverse.type_sets                   import matrix_types
-
+from kineverse.utils                       import deepcopy
 
 def urdf_origin_to_transform(origin):
     if origin is not None:
@@ -41,6 +41,11 @@ class KinematicJoint(JSONSerializable):
         json_dict.update({'jtype':  self.type,
                           'parent': self.parent,
                           'child':  self.child})
+
+    def __deepcopy__(self, memo):
+        out = KinematicLink(self.type, self.parent, self.child)
+        memo[id(self)] = out
+        return out
 
 
 class Kinematic1DofJoint(KinematicJoint):
@@ -71,6 +76,11 @@ class PrismaticJoint(KinematicJoint):
         del json_dict['jtype']
         json_dict.update({'position': self.position})
 
+    def __deepcopy__(self, memo):
+        out = PrismaticJoint(self.parent, self.child, self.position)
+        memo[id(self)] = out
+        return out
+
 class ContinuousJoint(KinematicJoint):
     def __init__(self, parent, child, position):
         super(ContinuousJoint, self).__init__('continuous', parent, child)   
@@ -81,6 +91,11 @@ class ContinuousJoint(KinematicJoint):
         del json_dict['jtype']
         json_dict.update({'position': self.position})
 
+    def __deepcopy__(self, memo):
+        out = ContinuousJoint(self.parent, self.child, self.position)
+        memo[id(self)] = out
+        return out
+
 class RevoluteJoint(KinematicJoint):
     def __init__(self, parent, child, position):
         super(RevoluteJoint, self).__init__('revolute', parent, child)   
@@ -90,6 +105,11 @@ class RevoluteJoint(KinematicJoint):
         super(RevoluteJoint, self)._json_data(json_dict)
         del json_dict['jtype']
         json_dict.update({'position': self.position})
+
+    def __deepcopy__(self, memo):
+        out = RevoluteJoint(self.parent, self.child, self.position)
+        memo[id(self)] = out
+        return out
 
 # class PrismaticJoint(Kinematic1DofJoint):
 #     def __init__(self, parent, child, axis, position, lower_limit=-1e9, upper_limit=1e9):
@@ -150,6 +170,11 @@ class KinematicLink(Frame):
                           'geometry':  self.geometry,
                           'inertial':  self.inertial})
 
+    def __deepcopy__(self, memo):
+        out = KinematicLink(self.parent, self.pose * 1, self.geometry, self.collision, self.inertial)
+        memo[id(self)] = out
+        return out
+
 
 class URDFRobot(JSONSerializable):
     def __init__(self, name):
@@ -168,6 +193,14 @@ class URDFRobot(JSONSerializable):
         out.links  = links
         out.joints = joints
         return out
+
+    def __deepcopy__(self, memo):
+        out = URDFRobot(self.name)
+        memo[id(self)] = out
+        out.links  = {k: deepcopy(v) for k, v in self.links.items()}
+        out.joints = {k: deepcopy(v) for k, v in self.joints.items()}
+        return out
+
 
 class SetConnection(Operation):
     def init(self, name, joint_obj, parent_pose, child_pose, connection_path, connection_tf):
