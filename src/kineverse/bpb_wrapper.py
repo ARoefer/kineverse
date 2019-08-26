@@ -22,7 +22,7 @@ def create_cube_shape(extents):
 
 @track_shape
 def create_cylinder_shape(diameter, height):
-    return pb.CylinderShape(pb.Vector3(0.5 * diameter, 0.5 * diameter, height))
+    return pb.CylinderShapeZ(pb.Vector3(0.5 * diameter, 0.5 * diameter, height))
 
 @track_shape
 def create_sphere_shape(diameter):
