@@ -8,7 +8,7 @@ DT_SYM = sp.symbols('T_p')
 class CommandIntegrator(object):
     def __init__(self, qp_builder, integration_rules=None, start_state=None, recorded_terms={}):
         self.qp_builder = qp_builder
-        if type(qp_builder) is TQPB:
+        if isinstance(qp_builder, TQPB):
             self.integration_rules = {}
             for c in qp_builder.cv:
                 for s in qp_builder.free_symbols:
@@ -41,7 +41,7 @@ class CommandIntegrator(object):
             for s, v in str_state.items():
                 self.recorder.log_data(s, v)
 
-            cmd = self.qp_builder.get_cmd(str_state)
+            cmd = self.qp_builder.get_cmd(self.state)
             #print(self.qp_builder.last_matrix_str())
             #if self.qp_builder.equilibrium_reached(1e-1, -1e-1):
             #    print('Equilibrium point reached after {} iterations'.format(x))
