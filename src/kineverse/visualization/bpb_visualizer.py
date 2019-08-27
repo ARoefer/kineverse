@@ -47,18 +47,18 @@ class ROSBPBVisualizer(ROSVisualizer):
 
 
     def draw_collision_object(self, namespace, obj, r=1, g=1, b=1, a=1, frame=None):
-        if namespace not in self.layer_drawn_objects or obj not in self.layer_drawn_objects[namespace]:
+        #if namespace not in self.layer_drawn_objects or obj not in self.layer_drawn_objects[namespace]:
 
-            self.draw_collision_shape(namespace, obj.collision_shape, obj.transform, r, g, b, a, frame)
+        self.draw_collision_shape(namespace, obj.collision_shape, obj.transform, r, g, b, a, frame)
 
-            if not namespace in self.layer_drawn_objects:
-                self.layer_drawn_objects[namespace] = set()
-            self.layer_drawn_objects[namespace].add(obj)
+        if not namespace in self.layer_drawn_objects:
+            self.layer_drawn_objects[namespace] = set()
+        self.layer_drawn_objects[namespace].add(obj)
 
 
-    def draw_world(self, namespace, world, frame=None):
+    def draw_world(self, namespace, world, r=1, g=1, b=1, a=1, frame=None):
         for obj in world.collision_objects:
-            self.draw_collision_object(namespace, obj, frame=frame)
+            self.draw_collision_object(namespace, obj, r, g, b, a, frame=frame)
 
 
     # def draw_subworld(self, namespace, sub_world, frame=None):
