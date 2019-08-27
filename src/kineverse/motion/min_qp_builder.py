@@ -156,8 +156,7 @@ class MinimalQPBuilder(object):
         self.big_ass_M = self.A.row_join(self.lbA).row_join(self.ubA).col_join(self.H.row_join(self.lb).row_join(self.ub))
 
         self.free_symbols     = self.big_ass_M.free_symbols
-        self.cython_big_ass_M = spw.speed_up(self.big_ass_M, self.free_symbols, backend=BACKEND)        
-        self.qp_solver        = QPSolver(self.A.shape[1], self.A.shape[0])
+        self.cython_big_ass_M = spw.speed_up(self.big_ass_M, self.free_symbols, backend=BACKEND)
 
         self.shape1    = self.A.shape[0]
         self.shape2    = self.A.shape[1]
@@ -165,6 +164,10 @@ class MinimalQPBuilder(object):
         self.np_col_header = np.array([''] + self.col_names).reshape((1, len(self.col_names) + 1))
         self.np_row_header = np.array(self.row_names).reshape((len(self.row_names), 1))
 
+        self.reset_solver()
+
+    def reset_solver(self):
+        self.qp_solver = QPSolver(self.A.shape[1], self.A.shape[0])
 
     @profile
     def get_cmd(self, substitutions, nWSR=None, deltaT=None):
@@ -183,7 +186,7 @@ class MinimalQPBuilder(object):
             xdot_full = self.qp_solver.solve(self.np_H, self.np_g, self.np_A, self.np_lb,  self.np_ub, 
                                                                     self.np_lbA, self.np_ubA, nWSR)
         except QPSolverException as e:
-            print('INFEASIBLE CONFIGURATION!\n{}'.format(self._create_display_string(self.np_H, self.np_A, self.np_lb, self.np_ub, self.np_lbA, self.np_ubA)))
+            #print('INFEASIBLE CONFIGURATION!\n{}'.format(''))#self._create_display_string(self.np_H, self.np_A, self.np_lb, self.np_ub, self.np_lbA, self.np_ubA)))
             raise e
         if xdot_full is None:
             return None
@@ -359,19 +362,19 @@ class GeomQPBuilder(TypedQPBuilder):
         closest = self.collision_world.closest_distances(self.closest_query_batch)
 
         if self.visualizer is not None:
-            self.visualizer.begin_draw_cycle()
+            self.visualizer.begin_draw_cycle('debug')
             self.visualizer.draw_world('debug', self.collision_world)
-            #for contacts in closest.values():
-            #    self.visualizer.draw_contacts('debug', contacts, 0.05)
-            self.visualizer.render()
+            for contacts in closest.values():
+                self.visualizer.draw_contacts('debug', contacts, 0.05)
+            self.visualizer.render('debug')
 
         for obj, contacts in closest.items():
             if obj in self.collision_handlers:
                 handler = self.collision_handlers[obj]
                 handler.handle_contacts(contacts, self.name_resolver)
                 substitutions.update(handler.state)
-            # else:
-            #     raise Exception('A result for collision object {} was returned, even though this object has no handler.'.format(obj))
+            else:
+                 print('A result for collision object {} was returned, even though this object has no handler.'.format(obj))
 
         return super(GeomQPBuilder, self).get_cmd(substitutions, nWSR, deltaT)
 
