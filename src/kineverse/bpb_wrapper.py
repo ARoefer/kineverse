@@ -18,11 +18,11 @@ def track_shape(f):
 
 @track_shape
 def create_cube_shape(extents):
-    return pb.BoxShape(pb.Vector3(*extents[:3])) if type(extents) is not pb.Vector3 else pb.BoxShape(extents)
+    return pb.BoxShape(pb.Vector3(*[x * 0.5 for x in extents[:3]])) if type(extents) is not pb.Vector3 else pb.BoxShape(extents)
 
 @track_shape
 def create_cylinder_shape(diameter, height):
-    return pb.CylinderShapeZ(pb.Vector3(0.5 * diameter, 0.5 * diameter, height))
+    return pb.CylinderShapeZ(pb.Vector3(0.5 * diameter, 0.5 * diameter, height * 0.5))
 
 @track_shape
 def create_sphere_shape(diameter):
