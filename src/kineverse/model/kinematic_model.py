@@ -194,6 +194,9 @@ class KinematicModel(object):
     def get_constraint(self, key):
         return self.constraints[key]
 
+    def list_constraints(self):
+        return sorted(self.constraints.keys())
+
     def remove_constraint(self, key):
         c = self.constraints[key]
         for s in c.expr.free_symbols:
