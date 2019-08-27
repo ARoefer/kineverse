@@ -64,6 +64,9 @@ class Constraint(object):
             out.update(self.expr.free_symbols)
         return out
 
+    def __str__(self):
+        return '{} <= {} <= {}'.format(self.lower, self.expr, self.upper)
+
 
 class KinematicModel(object):
     def __init__(self):

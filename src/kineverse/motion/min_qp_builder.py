@@ -24,6 +24,9 @@ class SoftConstraint(Constraint):
     def from_constraint(cls, constraint, weight=1):
         return cls(constraint.lower, constraint.upper, weight, constraint.expr)
 
+    def __str__(self):
+        return '{} @ {}'.format(super(SoftConstraint, self).__str__(), self.weight)
+
 class ControlledValue(object):
     def __init__(self, lower, upper, symbol, weight=1):
         self.lower  = lower
