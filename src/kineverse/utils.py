@@ -48,10 +48,10 @@ def res_pkg_path(rpath):
     return rpath
 
 def make_pkg_path(path):
-    paths = os.environ['ROS_PACKAGE_PATH'].split(':')
-    for p in paths:
-        if path[:len(p)] == p:
-            return 'package://{}/{}'.format(p[p.rfind('/') + 1:], path[len(p) + 1:])
+    parts = path.split('/')[1:]
+    for x in reversed(range(len(parts) + 1)):
+        if os.path.isfile('/{}/package.xml'.format('/'.join(parts[:x]))):
+            return 'package://{}'.format('/'.join(parts[x-1:]))
     return path
 
 def import_class(class_path):
