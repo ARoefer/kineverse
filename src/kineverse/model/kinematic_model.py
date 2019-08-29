@@ -1,3 +1,4 @@
+import traceback 
 from kineverse.model.data_tree import DataTree
 from kineverse.model.history   import History, Timeline, StampedData, Chunk
 from kineverse.model.paths     import Path
@@ -99,7 +100,7 @@ class KinematicModel(object):
                 self.operation_history.insert_chunk(Chunk(time, op))
                 op.apply(self)
             except Exception as e:
-                raise OperationException('Failed to apply operation "{}" tagged "{}" at time "{}". Error:\n  {}'.format(op.name, tag, time, e))
+                raise OperationException('Failed to apply operation "{}" tagged "{}" at time "{}". Traceback:\n  {}\nError: \n{}'.format(op.name, tag, time, traceback.print_exc(), e))
 
     def apply_operation_before(self, op, tag, before_tag):
         if before_tag not in self.timeline_tags:
@@ -114,7 +115,7 @@ class KinematicModel(object):
             self.operation_history.insert_chunk(Chunk(time, op))
             op.apply(self)
         except Exception as e:
-            raise OperationException('Failed to apply operation "{}" tagged "{}" at time "{}". Error:\n  {}'.format(op.name, tag, time, e))
+            raise OperationException('Failed to apply operation "{}" tagged "{}" at time "{}". Traceback:\n  {}\nError: \n{}'.format(op.name, tag, time, traceback.print_exc(), e))
 
     def apply_operation_after(self, op, tag, after_tag):
         if after_tag not in self.timeline_tags:
@@ -129,7 +130,7 @@ class KinematicModel(object):
             self.operation_history.insert_chunk(Chunk(time, op))
             op.apply(self)
         except Exception as e:
-            raise OperationException('Failed to apply operation "{}" tagged "{}" at time "{}". Error:\n  {}'.format(op.name, tag, time, e))
+            raise OperationException('Failed to apply operation "{}" tagged "{}" at time "{}". Traceback:\n  {}\nError: \n{}'.format(op.name, tag, time, traceback.print_exc(), e))
 
     def remove_operation(self, tag):
         if tag not in self.timeline_tags:
