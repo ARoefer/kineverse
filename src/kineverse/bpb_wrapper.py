@@ -15,6 +15,10 @@ def track_shape(f):
         return out
     return wrapper
 
+def matrix_to_transform(matrix):
+    quat = real_quat_from_matrix(matrix)
+    pos  = matrix[:3,3]
+    return pb.Transform(pb.Quaternion(*quat), pb.Vector3(*pos))
 
 @track_shape
 def create_cube_shape(extents):
@@ -28,6 +32,13 @@ def create_cylinder_shape(diameter, height):
 def create_sphere_shape(diameter):
     return pb.SphereShape(0.5 * diameter)
 
+@track_shape
+def create_compound_shape(shapes_poses=[]):
+    out = pb.CompoundShape()
+    for t, s in shapes_poses:
+        out.add_child(t, s)
+    return out
+
 # Technically the tracker is not required here, 
 # since the loader keeps references to the loaded shapes.
 @track_shape
@@ -39,9 +50,7 @@ def create_object(shape, transform=pb.Transform.identity()):
     if type(transform) is not pb.Transform:
         if type(transform) is GM:
             transform = transform.to_sym_matrix()
-        quat = real_quat_from_matrix(transform)
-        pos  = pos_of(transform)[:3]
-        transform = pb.Transform(pb.Quaternion(*quat), pb.Vector3(*pos))
+        transform = matrix_to_transform(transform)
     out = pb.CollisionObject()
     out.set_collision_shape(shape)
     out.collision_flags = pb.CollisionObject.KinematicObject
@@ -56,6 +65,9 @@ def create_sphere(diameter, transform=pb.Transform.identity()):
 
 def create_cylinder(diameter, height, transform=pb.Transform.identity()):
     return create_object(create_cylinder_shape(diameter, height), transform)
+
+def create_compund_object(shapes_transforms, transform=pb.Transform.identity()):
+    return create_object(create_compound_shape(shapes_transforms), transform)
 
 def create_convex_mesh(pkg_filename, transform=pb.Transform.identity()):
     return create_object(load_convex_mesh_shape(pkg_filename), transform)
