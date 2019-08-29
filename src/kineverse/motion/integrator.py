@@ -6,7 +6,7 @@ from kineverse.motion.min_qp_builder  import TypedQPBuilder as TQPB
 DT_SYM = sp.symbols('T_p')
 
 class CommandIntegrator(object):
-    def __init__(self, qp_builder, integration_rules=None, start_state=None, recorded_terms={}):
+    def __init__(self, qp_builder, integration_rules=None, start_state=None, recorded_terms={}, equilibrium=0):
         self.qp_builder = qp_builder
         if isinstance(qp_builder, TQPB):
             self.integration_rules = {}
@@ -26,6 +26,7 @@ class CommandIntegrator(object):
         if start_state is not None:
             self.start_state.update(start_state)
         self.recorded_terms = recorded_terms
+        self.equilibrium = equilibrium
 
     def restart(self, title='Integrator'):
         self.state    = self.start_state.copy()
@@ -43,9 +44,9 @@ class CommandIntegrator(object):
 
             cmd = self.qp_builder.get_cmd(self.state)
             #print(self.qp_builder.last_matrix_str())
-            #if self.qp_builder.equilibrium_reached(1e-1, -1e-1):
-            #    print('Equilibrium point reached after {} iterations'.format(x))
-            #    return
+            if self.qp_builder.equilibrium_reached(self.equilibrium, -self.equilibrium):
+                #print('Equilibrium point reached after {} iterations'.format(x))
+                return
 
             # print('---\n{}'.format('\n'.join(['{:>35}: {:>12.4f}'.format(k, v) for k, v in cmd.items()])))
             for s, i in self.integration_rules.items():

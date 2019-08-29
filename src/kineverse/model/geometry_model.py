@@ -134,13 +134,14 @@ class GeometryModel(EventModel):
                                 self._symbol_co_map[s] = set()
                             self._symbol_co_map[s].add(str_k)
                     else:
-                        print('{} is static, setting its pose.'.format(k))
+                        #print('{} is static, setting its pose to:\n{}'.format(k, pose_expr))
                         static_objects.append(self._collision_objects[str_k])
                         static_poses.append(np.array(pose_expr.tolist()))
                 else:
                     self._process_link_removal(k)
         if len(static_objects) > 0:
             self.kw.batch_set_transforms(static_objects, np.vstack(static_poses))
+            # print('\n  '.join(['{}: {}'.format(n, c.transform) for n, c in self._collision_objects.items()]))
         super(GeometryModel, self).dispatch_events()
 
 
