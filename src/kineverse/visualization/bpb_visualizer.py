@@ -38,7 +38,7 @@ class ROSBPBVisualizer(ROSVisualizer):
                 self.draw_mesh(namespace, transform, [1]*3, self._cached_file_paths[shape.file_path], frame, r, g, b, a)
             else:
                 for x in range(shape.nchildren):
-                    self.draw_collision_shape(namespace, shape.get_child(x), shape.get_child_transform(x), r, g, b, a, frame)
+                    self.draw_collision_shape(namespace, shape.get_child(x), transform * shape.get_child_transform(x), r, g, b, a, frame)
         elif isinstance(shape, pb.ConvexHullShape):
             if shape.file_path != '':
                 if shape.file_path not in self._cached_file_paths:
