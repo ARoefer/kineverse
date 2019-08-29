@@ -8,7 +8,7 @@ from kineverse.model.paths             import Path, PathSet, PathDict
 from kineverse.model.kinematic_model   import Constraint
 from kineverse.model.event_model       import EventModel
 from kineverse.operations.urdf_operations import KinematicLink, KinematicJoint, URDFRobot
-from kineverse.bpb_wrapper import pb, create_cube, create_sphere, create_cylinder, create_convex_mesh
+from kineverse.bpb_wrapper import pb, create_object, create_cube_shape, create_sphere_shape, create_cylinder_shape, create_compound_shape, load_convex_mesh_shape, matrix_to_transform
 
 obj_to_obj_prefix = 'distance_obj_to_obj'
 obj_to_obj_infix  = 'UND'
@@ -16,6 +16,7 @@ obj_to_world_prefix = 'distance_obj_to_world'
 
 def create_distance_symbol(obj_path, other_path=None):
     return '{}{}{}{}'.format(obj_to_obj_prefix, str(obj_path), obj_to_obj_infix, str(other_path)) if other_path is not None else '{}{}'.format(obj_to_world_prefix, str(obj_path))
+
 
 class GeometryModel(EventModel):
     def __init__(self):
@@ -32,20 +33,27 @@ class GeometryModel(EventModel):
 
     def _process_link_insertion(self, key, link):
         if link.collision is not None and str(key) not in self._collision_objects:
-            if link.collision.type == 'mesh':
-                body = create_convex_mesh(link.collision.mesh)
-            elif link.collision.type == 'box':
-                body = create_cube(link.collision.scale)
-            elif link.collision.type == 'cylinder':
-                body = create_cylinder(link.collision.scale[0], link.collision.scale[2])
-            elif link.collision.type == 'sphere':
-                body = create_sphere(link.collision.scale[0])
-            else:
-                raise Exception('Unrecognized geometry type in collision of link {}. Type is "{}"'.format(str(key), link.collision.type))
+            shape = create_compound_shape()
+            for c in link.collision.values():
+                if c.type == 'mesh':
+                    sub_shape = load_convex_mesh_shape(c.mesh)
+                    shape.add_child(matrix_to_transform(c.to_parent), sub_shape)
+                elif c.type == 'box':
+                    sub_shape = create_cube_shape(c.scale)
+                    shape.add_child(matrix_to_transform(c.to_parent), sub_shape)
+                elif c.type == 'cylinder':
+                    sub_shape = create_cylinder_shape(c.scale[0], c.scale[2])
+                    shape.add_child(matrix_to_transform(c.to_parent), sub_shape)
+                elif c.type == 'sphere':
+                    sub_shape = create_sphere_shape(c.scale[0])
+                    shape.add_child(matrix_to_transform(c.to_parent), sub_shape)
+                else:
+                    raise Exception('Unrecognized geometry type in collision of link {}. Type is "{}"'.format(str(key), c.type))
+            body = create_object(shape)
             self.kw.add_collision_object(body)
             self._collision_objects[str(key)] = body
             self._co_symbol_map[str(key)] = set()
-            #print('Created collision representation for {}'.format(key))
+            print('Created collision representation for {}'.format(key))
 
             #self.register_on_model_changed(key, update_collision_object)
 
@@ -115,7 +123,7 @@ class GeometryModel(EventModel):
                 if self.has_data(k):
                     #print('{} was changed'.format(k))
                     link = self.get_data(k)
-                    pose_expr = link.pose * link.collision.to_parent
+                    pose_expr = link.pose # * link.collision.to_parent
                     if type(pose_expr) is GM:
                         pose_expr = pose_expr.to_sym_matrix()
                     self._co_pose_expr[str_k]  = pose_expr
