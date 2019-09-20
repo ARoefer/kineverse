@@ -1,5 +1,6 @@
 import giskardpy.symengine_wrappers as spw
-import numpy as np
+import numpy  as np
+import pandas as pd
 
 from giskardpy import BACKEND
 from giskardpy.exceptions import QPSolverException
@@ -34,6 +35,9 @@ class ControlledValue(object):
         self.symbol = symbol
         self.weight = weight
 
+    def __str__(self):
+        return '{} <= {} <= {} @ {}'.format(self.lower, self.symbol, self.upper, self.weight)
+
 def extract_expr(expr):
     return expr if type(expr) != GC else expr.expr
 
@@ -62,6 +66,9 @@ class MinimalQPBuilder(object):
         self.n_sc      = len(sc)
         self.row_names = [k for k, _ in hc + sc]
         self.col_names = [k for k, _ in cv + sc]
+        self.A_dfs     = []
+        self.H_dfs     = []
+        self._cmd_log  = []
         
         self._build_M()
 
@@ -161,9 +168,6 @@ class MinimalQPBuilder(object):
         self.shape1    = self.A.shape[0]
         self.shape2    = self.A.shape[1]
 
-        self.np_col_header = np.array([''] + self.col_names).reshape((1, len(self.col_names) + 1))
-        self.np_row_header = np.array(self.row_names).reshape((len(self.row_names), 1))
-
         self.reset_solver()
 
     def reset_solver(self):
@@ -182,11 +186,28 @@ class MinimalQPBuilder(object):
 
         self._post_process_matrices(deltaT)
 
+        dfH = pd.DataFrame(np.vstack((self.np_lb, self.np_ub, self.np_H.diagonal())), index=['lb', 'ub', 'weight'], columns=self.col_names)
+        dfA = pd.DataFrame(np.hstack((self.np_lbA.reshape((self.shape1, 1)), 
+                                      self.np_ubA.reshape((self.shape1, 1)), 
+                                      self.np_A[:, :-self.n_sc])), 
+                                      index=self.row_names, columns=['lbA', 'ubA'] + self.col_names[:self.n_cv])
+
         try:
             xdot_full = self.qp_solver.solve(self.np_H, self.np_g, self.np_A, self.np_lb,  self.np_ub, 
                                                                     self.np_lbA, self.np_ubA, nWSR)
+            self.A_dfs.append(dfA)
+            self.H_dfs.append(dfH)
+            self._cmd_log.append(xdot_full[:self.n_cv])
         except QPSolverException as e:
-            #print('INFEASIBLE CONFIGURATION!\n{}'.format(''))#self._create_display_string(self.np_H, self.np_A, self.np_lb, self.np_ub, self.np_lbA, self.np_ubA)))
+            print('INFEASIBLE CONFIGURATION!\nH:{}\nA:\n{}'.format(dfH, dfA))
+            b_comp  = np.greater(self.np_lb,  self.np_ub)
+            bA_comp = np.greater(self.np_lbA, self.np_ubA)
+            if b_comp.max() or bA_comp.max():
+                print('Overlapping boundary conditions:\n{}\n{}'.format('\n'.join(['{}:\n  lb: {}\n  ub: {}'.format(n, lb, ub) for n, lb, ub, c in zip(self.col_names, self.np_lb, self.np_ub, b_comp) if c]),
+                     '\n'.join(['{}:\n  lbA: {}\n  ubA: {}'.format(n, lbA, ubA) for n, lbA, ubA, c in zip(self.row_names, self.np_lbA, self.np_ubA, bA_comp) if c])))
+            else:
+                print('Boundaries are not overlapping. Error must be more complex.')
+
             raise e
         if xdot_full is None:
             return None
@@ -197,18 +218,16 @@ class MinimalQPBuilder(object):
         return (self.np_lb <= low_eq).min() and (self.np_lbA <= low_eq).min() and (self.np_ub >= up_eq).min() and (self.np_ubA >= up_eq).min()
 
     def last_matrix_str(self):
-        return self._create_display_string(self.np_H, self.np_A, self.np_lb, self.np_ub, self.np_lbA, self.np_ubA)
-
-    def _create_display_string(self, np_H, np_A, np_lb, np_ub, np_lbA, np_ubA):
-        h_str  = np.array_str(np.vstack((self.np_col_header, np.hstack((self.np_col_header.T[1:], np_H)))), precision=4)
-        a_str  = np.array_str(np.vstack((self.np_col_header[:, :self.n_cv + 1], np.hstack((self.np_row_header, np_A[:, :self.n_cv])))), precision=4)
-        b_str  = np.array_str(np.vstack((np.array([['', 'lb', 'ub']]), np.hstack((self.np_col_header.T[1:], np_lb.reshape((np_lb.shape[0], 1)), np_ub.reshape((np_ub.shape[0], 1)))))))
-        bA_str = np.array_str(np.vstack((np.array([['', 'lbA', 'ubA']]), np.hstack((self.np_row_header, np_lbA.reshape((np_lbA.shape[0], 1)), np_ubA.reshape((np_ubA.shape[0], 1)))))))
-
-        return 'H =\n{}\nlb, ub =\n{}\nA =\n{}\nlbA, ubA =\n{}\n'.format(h_str, b_str, a_str, bA_str)
+        if len(self.A_dfs) > 0:
+            return str(self.A_dfs[-1])
+        return ''
 
     def _post_process_matrices(self, deltaT):
         pass
+
+    @property
+    def cmd_df(self):
+        return pd.DataFrame(self._cmd_log, columns=[str(s) for s in self.cv])
 
 
 class TypedQPBuilder(MinimalQPBuilder):
@@ -362,19 +381,22 @@ class GeomQPBuilder(TypedQPBuilder):
         closest = self.collision_world.closest_distances(self.closest_query_batch)
 
         if self.visualizer is not None:
-            self.visualizer.begin_draw_cycle('debug')
-            self.visualizer.draw_world('debug', self.collision_world)
-            for contacts in closest.values():
-                self.visualizer.draw_contacts('debug', contacts, 0.05)
-            self.visualizer.render('debug')
+            self.visualizer.begin_draw_cycle('debug_world', 'debug_contacts')
+            self.visualizer.draw_world('debug_world', self.collision_world.world)
 
         for obj, contacts in closest.items():
             if obj in self.collision_handlers:
                 handler = self.collision_handlers[obj]
                 handler.handle_contacts(contacts, self.name_resolver)
+                if self.visualizer is not None:
+                    filtered_contacts = [cp for cp in contacts if cp.obj_b in self.name_resolver and self.name_resolver[cp.obj_b] in handler.var_map]
+                    self.visualizer.draw_contacts('debug_contacts', filtered_contacts, 0.01)
                 substitutions.update(handler.state)
             else:
                  print('A result for collision object {} was returned, even though this object has no handler.'.format(obj))
+
+        if self.visualizer is not None:
+            self.visualizer.render('debug_world', 'debug_contacts')
 
         return super(GeomQPBuilder, self).get_cmd(substitutions, nWSR, deltaT)
 

@@ -3,7 +3,7 @@ import matplotlib.pyplot as plt
 from collections import namedtuple
 from math import ceil, sqrt
 
-COLORS = ['r', 'g', 'b', 'c', 'm', 'y', 'k', 'w']
+COLORS = ['r', 'g', 'b', 'c', 'm', 'y', 'k']
 
 def draw_recorders(recorders, ratio=1.0, plot_width=3, plot_height=2, sizes=[]):
     #max_w = max([t[0] for t in sizes if t != None])
