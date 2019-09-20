@@ -9,16 +9,20 @@ from kineverse.gradients.gradient_math     import frame3_rpy,           \
                                                   translation3,         \
                                                   vector3
 from kineverse.gradients.diff_logic        import create_symbol, TYPE_POSITION
-from kineverse.json_wrapper                import JSONSerializable
 from kineverse.operations.basic_operations import Operation,           \
                                                   CreateComplexObject, \
                                                   Path,                \
                                                   collect_paths#,       \
 from kineverse.operations.operation        import op_construction_wrapper
 from kineverse.model.kinematic_model       import Constraint
-from kineverse.model.frames                import Frame
+from kineverse.model.geometry_model        import RigidBody, \
+                                                  KinematicJoint, \
+                                                  Geometry, \
+                                                  InertialData, \
+                                                  ArticulatedObject
 from kineverse.type_sets                   import matrix_types
 from kineverse.utils                       import deepcopy
+
 
 def urdf_origin_to_transform(origin):
     if origin is not None:
@@ -30,22 +34,6 @@ def urdf_origin_to_transform(origin):
 def urdf_axis_to_vector(axis):
     return vector3(*axis) if axis is not None else vector3(1,0,0)
 
-
-class KinematicJoint(JSONSerializable):
-    def __init__(self, jtype, parent, child):
-        self.type     = jtype
-        self.parent   = parent
-        self.child    = child
-
-    def _json_data(self, json_dict):
-        json_dict.update({'jtype':  self.type,
-                          'parent': self.parent,
-                          'child':  self.child})
-
-    def __deepcopy__(self, memo):
-        out = KinematicLink(self.type, self.parent, self.child)
-        memo[id(self)] = out
-        return out
 
 
 class Kinematic1DofJoint(KinematicJoint):
@@ -127,79 +115,12 @@ class RevoluteJoint(KinematicJoint):
 #         self.lower_limit = lower_limit
 #         self.upper_limit = upper_limit
 
-class Geometry(Frame):
-    def __init__(self, parent_path, pose, geom_type, scale=None, mesh=None):
-        super(Geometry, self).__init__(parent_path, pose)
-        self.type  = geom_type
-        self.scale = scale if scale is not None else vector3(1,1,1)
-        self.mesh  = mesh
 
-    def _json_data(self, json_dict):
-        super(Geometry, self)._json_data(json_dict)
-        del json_dict['to_parent']
-        json_dict.update({'geom_type': self.type,
-                          'scale':     self.scale,
-                          'mesh':      self.mesh})
+class KinematicLink(RigidBody):
+    pass
 
-class InertialData(Frame):
-    def __init__(self, parent_path, pose, mass=1, inertia_matrix=spw.eye(3)):
-        super(InertialData, self).__init__(parent_path, pose)
-        if mass < 0:
-            raise Exception('Mass can not be negative!')
-
-        self.mass = mass
-        self.inertia_matrix = inertia_matrix
-
-    def _json_data(self, json_dict):
-        super(InertialData, self)._json_data(json_dict)
-        del json_dict['to_parent']
-        json_dict.update({'mass':           self.mass,
-                          'inertia_matrix': self.inertia_matrix})
-
-class KinematicLink(Frame):
-    def __init__(self, parent_path, pose, geometry=None, collision=None, inertial=None):
-        super(KinematicLink, self).__init__(parent_path, pose)
-        self.geometry  = geometry
-        self.collision = collision
-        self.inertial  = inertial
-
-    def _json_data(self, json_dict):
-        super(KinematicLink, self)._json_data(json_dict)
-        del json_dict['to_parent']
-        json_dict.update({'collision': self.collision,
-                          'geometry':  self.geometry,
-                          'inertial':  self.inertial})
-
-    def __deepcopy__(self, memo):
-        out = KinematicLink(self.parent, self.pose * 1, self.geometry, self.collision, self.inertial)
-        memo[id(self)] = out
-        return out
-
-
-class URDFRobot(JSONSerializable):
-    def __init__(self, name):
-        self.name   = name
-        self.links  = {}
-        self.joints = {}
-
-    def _json_data(self, json_dict):
-        json_dict.update({'name':   self.name,
-                          'links':  self.links, 
-                          'joints': self.joints})
-
-    @classmethod
-    def json_factory(cls, name, links, joints):
-        out = cls(name)
-        out.links  = links
-        out.joints = joints
-        return out
-
-    def __deepcopy__(self, memo):
-        out = URDFRobot(self.name)
-        memo[id(self)] = out
-        out.links  = {k: deepcopy(v) for k, v in self.links.items()}
-        out.joints = {k: deepcopy(v) for k, v in self.joints.items()}
-        return out
+class URDFRobot(ArticulatedObject):
+    pass
 
 
 class SetConnection(Operation):
@@ -343,18 +264,28 @@ def load_urdf(ks, prefix, urdf, reference_frame='map'):
     if type(prefix) == str:
         prefix = Path(prefix)
         
-    ks.apply_operation(CreateComplexObject(prefix, URDFRobot(urdf.name)), 'create {}'.format(str(prefix)))
+    ks.apply_operation('create {}'.format(str(prefix)), CreateComplexObject(prefix, URDFRobot(urdf.name)))
 
     for u_link in urdf.links:
         link_path = prefix + Path(['links', u_link.name])
         collision = None
         geometry  = None
         inertial  = InertialData(link_path, spw.eye(4))
-        if u_link.collision is not None:
+        if hasattr(u_link, 'collisions') and u_link.collisions is not None and len(u_link.collisions) > 0:
+            collision = {}
+            for x, c in enumerate(u_link.collisions):
+                collision[x] = Geometry(str(link_path), urdf_origin_to_transform(c.origin), '') 
+                urdf_to_geometry(c.geometry, collision[x])
+        elif u_link.collision is not None:
             collision = {'0': Geometry(str(link_path), urdf_origin_to_transform(u_link.collision.origin), '')}
             urdf_to_geometry(u_link.collision.geometry, collision.values()[0])
 
-        if u_link.visual is not None:
+        if hasattr(u_link, 'visuals') and u_link.visuals is not None and len(u_link.visuals) > 0:
+            geometry = {}
+            for x, v in enumerate(u_link.visuals):
+                geometry[x] = Geometry(str(link_path), urdf_origin_to_transform(v.origin), '') 
+                urdf_to_geometry(v.geometry, geometry[x])
+        elif u_link.visual is not None:
             geometry = {'0': Geometry(str(link_path), urdf_origin_to_transform(u_link.visual.origin), '')}
             urdf_to_geometry(u_link.visual.geometry, geometry.values()[0])            
 
@@ -368,9 +299,9 @@ def load_urdf(ks, prefix, urdf, reference_frame='map'):
                                                       [uin.ixy, uin.iyy, uin.iyz],
                                                       [uin.ixz, uin.iyz, uin.izz]])
 
-        ks.apply_operation(CreateComplexObject(link_path, 
-                                               KinematicLink(reference_frame, urdf_origin_to_transform(u_link.origin), geometry, collision, inertial)),
-                                               'create {}'.format(str(prefix + Path(u_link.name))))
+        ks.apply_operation('create {}'.format(str(prefix + Path(u_link.name))),
+                            CreateComplexObject(link_path, 
+                                                KinematicLink(reference_frame, urdf_origin_to_transform(u_link.origin), geometry, collision, inertial)))
 
     links_left = [urdf.get_root()]
     joint_set  = set()
@@ -443,7 +374,7 @@ def load_urdf(ks, prefix, urdf, reference_frame='map'):
                                        offset)
             else:
                 raise Exception('Joint type "{}" is currently not covered.'.format(u_joint.type))
-            ks.apply_operation(op, 'connect {} {}'.format(str(prefix + ('links', u_joint.parent)), str(prefix + ('links', u_joint.child)))) 
+            ks.apply_operation('connect {} {}'.format(str(prefix + ('links', u_joint.parent)), str(prefix + ('links', u_joint.child))), op) 
 
             joint_set.add(n_joint)
             if n_link in urdf.child_map:

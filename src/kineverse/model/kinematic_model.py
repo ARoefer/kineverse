@@ -1,7 +1,8 @@
 import traceback 
-from kineverse.model.data_tree import DataTree
-from kineverse.model.history   import History, Timeline, StampedData, Chunk
-from kineverse.model.paths     import Path
+from kineverse.model.data_tree      import DataTree
+from kineverse.model.history        import History, Timeline, StampedData, Chunk
+from kineverse.model.paths          import Path
+from kineverse.operations.operation import Operation
 
 class ApplicationInstruction(object):
     def __init__(self, op, tag):
@@ -38,9 +39,9 @@ class TaggedOperation(StampedData):
     def __init__(self, stamp, tag, op):
         super(TaggedOperation, self).__init__(stamp, tag=tag, op=op)
 
-class TaggedIOOperaation(StampedData):
+class TaggedIOOperation(StampedData):
     def __init__(self, stamp, tag, op):
-        super(TaggedIOOperaation, self).__init__(stamp, tag=tag, 
+        super(TaggedIOOperation, self).__init__(stamp, tag=tag, 
                                                  inputs=[p for p in op.args_paths.values() if type(p) is Path],
                                                  outputs=op._root_set.values())
 
@@ -80,7 +81,8 @@ class KinematicModel(object):
         self._touched_stamp    = 0
 
 
-    def apply_operation(self, op, tag):
+    @type_check(str, Operation)
+    def apply_operation(self, tag, op):
         time = self.timeline_tags[tag] if tag in self.timeline_tags else self.operation_history.get_time_stamp()
         self.clean_structure(time)
 
@@ -102,7 +104,8 @@ class KinematicModel(object):
             except Exception as e:
                 raise OperationException('Failed to apply operation "{}" tagged "{}" at time "{}". Traceback:\n  {}\nError: \n{}'.format(op.name, tag, time, traceback.print_exc(), e))
 
-    def apply_operation_before(self, op, tag, before_tag):
+    @type_check(str, str, Operation)
+    def apply_operation_before(self, tag, before_tag, op):
         if before_tag not in self.timeline_tags:
             raise Exception('History does not contain a timestamp for tag "{}"'.format(before_tag))
         if tag in self.timeline_tags:
@@ -117,7 +120,8 @@ class KinematicModel(object):
         except Exception as e:
             raise OperationException('Failed to apply operation "{}" tagged "{}" at time "{}". Traceback:\n  {}\nError: \n{}'.format(op.name, tag, time, traceback.print_exc(), e))
 
-    def apply_operation_after(self, op, tag, after_tag):
+    @type_check(str, str, Operation)
+    def apply_operation_after(self, tag, after_tag, op):
         if after_tag not in self.timeline_tags:
             raise Exception('History does not contain a timestamp for tag "{}"'.format(after_tag))
         if tag in self.timeline_tags:    
@@ -132,6 +136,7 @@ class KinematicModel(object):
         except Exception as e:
             raise OperationException('Failed to apply operation "{}" tagged "{}" at time "{}". Traceback:\n  {}\nError: \n{}'.format(op.name, tag, time, traceback.print_exc(), e))
 
+    @type_check(str)
     def remove_operation(self, tag):
         if tag not in self.timeline_tags:
             raise Exception('Tag "{}" not found in time line.'.format(tag))
@@ -142,6 +147,7 @@ class KinematicModel(object):
         self.operation_history.remove_chunk(chunk)
         del self.timeline_tags[tag]
 
+    @type_check(str)
     def get_operation(self, tag):
         if tag not in self.timeline_tags:
             raise Exception('Tag "{}" not found in time line.'.format(tag))
@@ -229,7 +235,7 @@ class KinematicModel(object):
 
     def get_data_chain(self):
         inv_tags = {s: t for t, s in self.timeline_tags.items()}
-        return [TaggedIOOperaation(c.stamp, inv_tags[c.stamp], c.operation) for c in self.operation_history]
+        return [TaggedIOOperation(c.stamp, inv_tags[c.stamp], c.operation) for c in self.operation_history]
 
     def str_op_history(self):
         return '\n'.join(['{:>9.4f}: {}'.format(s, t) for s, t in sorted([(s, t) for t, s in self.timeline_tags.items()])])

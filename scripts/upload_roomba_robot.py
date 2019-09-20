@@ -30,7 +30,7 @@ if __name__ == '__main__':
     op_client = OperationsClient(EventModel, True)
 
     load_urdf(op_client, urdf_model.name, urdf_model)
-    op_client.apply_operation_before(CreateComplexObject(Path('map'), Frame('')), 'create map', 'create {}'.format(urdf_model.name))
+    op_client.apply_operation_before(CreateComplexObject('create map', 'create {}'.format(urdf_model.name), Path('map'), Frame('')))
 
     roomba_op = create_roomba_joint_with_symbols(Path('map/pose'), 
                                                  Path('{}/links/base_link/pose'.format(urdf_model.name)),
@@ -38,7 +38,7 @@ if __name__ == '__main__':
                                                  vector3(0,0,1),
                                                  vector3(1,0,0),
                                                  1.0, 0.6, Path(urdf_model.name))
-    op_client.apply_operation_after(roomba_op, 'connect map base_link', 'create {}/base_link'.format(urdf_model.name))
+    op_client.apply_operation_after('connect map base_link', 'create {}/base_link'.format(urdf_model.name), roomba_op)
 
     op_client.apply_changes()
 

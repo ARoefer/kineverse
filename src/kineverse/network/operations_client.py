@@ -117,13 +117,13 @@ class OperationsClient_NoROS(object):
                 self.apply_changes()
 
 
-    def apply_operation(self, op, tag):
+    def apply_operation(self, tag, op,):
         self._add_instruction(ApplyAt(op, tag))
 
-    def apply_operation_before(self, op, tag, before):
+    def apply_operation_before(self, tag, before, op):
         self._add_instruction(ApplyBefore(op, tag, before))
 
-    def apply_operation_after(self, op, tag, after):
+    def apply_operation_after(self, tag, after, op):
         self._add_instruction(ApplyAfter(op, tag, after))
 
     def remove_operation(self, tag):

@@ -58,7 +58,7 @@ if __name__ == '__main__':
     load_urdf(km, Path('fetch'), urdf_model)
 
     km.clean_structure()
-    km.apply_operation_before(CreateComplexObject(Path('map'), Frame('')), 'create map', 'create fetch')
+    km.apply_operation_before('create map', 'create fetch', CreateComplexObject(Path('map'), Frame('')))
 
     roomba_op = create_roomba_joint_with_symbols(Path('map/pose'), 
                                                  Path('fetch/links/base_link/pose'),
@@ -66,7 +66,7 @@ if __name__ == '__main__':
                                                  vector3(0,0,1),
                                                  vector3(1,0,0),
                                                  1.0, 0.6, Path('fetch'))
-    km.apply_operation_after(roomba_op, 'connect map base_link', 'create fetch/base_link')
+    km.apply_operation_after('connect map base_link', 'create fetch/base_link', roomba_op)
     km.clean_structure()
 
     with open(res_pkg_path('package://kineverse/test/fetch.json'), 'w') as fetch_json:

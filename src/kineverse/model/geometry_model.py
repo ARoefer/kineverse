@@ -4,11 +4,105 @@ import numpy as np
 from giskardpy import BACKEND
 from kineverse.gradients.diff_logic    import create_pos
 from kineverse.gradients.gradient_math import *
+from kineverse.json_wrapper            import JSONSerializable
 from kineverse.model.paths             import Path, PathSet, PathDict
 from kineverse.model.kinematic_model   import Constraint
 from kineverse.model.event_model       import EventModel
-from kineverse.operations.urdf_operations import KinematicLink, KinematicJoint, URDFRobot
-from kineverse.bpb_wrapper import pb, create_object, create_cube_shape, create_sphere_shape, create_cylinder_shape, create_compound_shape, load_convex_mesh_shape, matrix_to_transform
+from kineverse.model.frames            import Frame
+from kineverse.bpb_wrapper             import pb, create_object, create_cube_shape, create_sphere_shape, create_cylinder_shape, create_compound_shape, load_convex_mesh_shape, matrix_to_transform
+
+
+class KinematicJoint(JSONSerializable):
+    def __init__(self, jtype, parent, child):
+        self.type     = jtype
+        self.parent   = parent
+        self.child    = child
+
+    def _json_data(self, json_dict):
+        json_dict.update({'jtype':  self.type,
+                          'parent': self.parent,
+                          'child':  self.child})
+
+    def __deepcopy__(self, memo):
+        out = KinematicLink(self.type, self.parent, self.child)
+        memo[id(self)] = out
+        return out
+
+class Geometry(Frame):
+    def __init__(self, parent_path, pose, geom_type, scale=None, mesh=None):
+        super(Geometry, self).__init__(parent_path, pose)
+        self.type  = geom_type
+        self.scale = scale if scale is not None else vector3(1,1,1)
+        self.mesh  = mesh
+
+    def _json_data(self, json_dict):
+        super(Geometry, self)._json_data(json_dict)
+        del json_dict['to_parent']
+        json_dict.update({'geom_type': self.type,
+                          'scale':     self.scale,
+                          'mesh':      self.mesh})
+
+class InertialData(Frame):
+    def __init__(self, parent_path, pose, mass=1, inertia_matrix=spw.eye(3)):
+        super(InertialData, self).__init__(parent_path, pose)
+        if mass < 0:
+            raise Exception('Mass can not be negative!')
+
+        self.mass = mass
+        self.inertia_matrix = inertia_matrix
+
+    def _json_data(self, json_dict):
+        super(InertialData, self)._json_data(json_dict)
+        del json_dict['to_parent']
+        json_dict.update({'mass':           self.mass,
+                          'inertia_matrix': self.inertia_matrix})
+
+
+class RigidBody(Frame):
+    def __init__(self, parent_path, pose, geometry=None, collision=None, inertial=None):
+        super(RigidBody, self).__init__(parent_path, pose)
+        self.geometry  = geometry
+        self.collision = collision
+        self.inertial  = inertial
+
+    def _json_data(self, json_dict):
+        super(RigidBody, self)._json_data(json_dict)
+        del json_dict['to_parent']
+        json_dict.update({'collision': self.collision,
+                          'geometry':  self.geometry,
+                          'inertial':  self.inertial})
+
+    def __deepcopy__(self, memo):
+        out = RigidBody(self.parent, self.pose * 1, self.geometry, self.collision, self.inertial)
+        memo[id(self)] = out
+        return out
+
+
+class ArticulatedObject(JSONSerializable):
+    def __init__(self, name):
+        self.name   = name
+        self.links  = {}
+        self.joints = {}
+
+    def _json_data(self, json_dict):
+        json_dict.update({'name':   self.name,
+                          'links':  self.links, 
+                          'joints': self.joints})
+
+    @classmethod
+    def json_factory(cls, name, links, joints):
+        out = cls(name)
+        out.links  = links
+        out.joints = joints
+        return out
+
+    def __deepcopy__(self, memo):
+        out = ArticulatedObject(self.name)
+        memo[id(self)] = out
+        out.links  = {k: deepcopy(v) for k, v in self.links.items()}
+        out.joints = {k: deepcopy(v) for k, v in self.joints.items()}
+        return out
+
 
 obj_to_obj_prefix = 'distance_obj_to_obj'
 obj_to_obj_infix  = 'UND'
@@ -88,11 +182,11 @@ class GeometryModel(EventModel):
         if type(key) is str:
             key = Path(key)
 
-        if isinstance(value, KinematicLink):
+        if isinstance(value, RigidBody):
             self._process_link_insertion(key, value)
         elif isinstance(value, KinematicJoint):
             self._process_joint_insertion(key, value)
-        elif isinstance(value, URDFRobot):
+        elif isinstance(value, ArticulatedObject):
             for lname, link in value.links.items():
                 self._process_link_insertion(key + ('links', lname,), link)
             for jname, joint in value.joints.items():

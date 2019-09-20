@@ -50,12 +50,12 @@ class TestURDF(ut.TestCase):
         joint_transform = translation3(7, -5, 33)
         child_pose      = parent_pose * joint_transform
 
-        ks.apply_operation(CreateComplexObject(Path('parent'), KinematicLink('', parent_pose)), 'create parent')
-        ks.apply_operation(CreateComplexObject(Path('child'),  KinematicLink('', spw.eye(4))), 'create child')
+        ks.apply_operation('create parent', CreateComplexObject(Path('parent'), KinematicLink('', parent_pose)))
+        ks.apply_operation('create child', CreateComplexObject(Path('child'),  KinematicLink('', spw.eye(4))))
         self.assertTrue(ks.has_data('parent/pose'))
         self.assertTrue(ks.has_data('child/pose'))
 
-        ks.apply_operation(SetFixedJoint(Path('parent/pose'), Path('child/pose'), Path('fixed_joint'), joint_transform), 'connect parent child')
+        ks.apply_operation('connect parent child', SetFixedJoint(Path('parent/pose'), Path('child/pose'), Path('fixed_joint'), joint_transform))
         self.assertTrue(ks.has_data('fixed_joint'))
         self.assertEquals(ks.get_data('child/pose'), child_pose)
 
@@ -71,18 +71,19 @@ class TestURDF(ut.TestCase):
         position        = c
         child_pose      = parent_pose * joint_transform * translation3(*(axis[:,:3] * position))
 
-        ks.apply_operation(CreateComplexObject(Path('parent'), KinematicLink('', parent_pose)), 'create parent')
-        ks.apply_operation(CreateComplexObject(Path('child'),  KinematicLink('', spw.eye(4))), 'create child')
+        ks.apply_operation('create parent', CreateComplexObject(Path('parent'), KinematicLink('', parent_pose)))
+        ks.apply_operation('create child', CreateComplexObject(Path('child'),  KinematicLink('', spw.eye(4))))
         self.assertTrue(ks.has_data('parent/pose'))
         self.assertTrue(ks.has_data('child/pose'))
 
-        ks.apply_operation(SetPrismaticJoint(Path('parent/pose'), 
+        ks.apply_operation('connect parent child', 
+                           SetPrismaticJoint(Path('parent/pose'), 
                                              Path('child/pose'), 
                                              Path('fixed_joint'), 
                                              joint_transform,
                                              axis,
                                              position,
-                                             -1, 2, 0.5), 'connect parent child')
+                                             -1, 2, 0.5))
         self.assertTrue(ks.has_data('fixed_joint'))
         self.assertEquals(ks.get_data('child/pose'), child_pose)
 
@@ -99,27 +100,29 @@ class TestURDF(ut.TestCase):
         position        = c
         child_pose      = parent_pose * joint_transform * rotation3_axis_angle(axis, position)
 
-        ks.apply_operation(CreateComplexObject(Path('parent'), KinematicLink('', parent_pose)), 'create parent')
-        ks.apply_operation(CreateComplexObject(Path('child'),  KinematicLink('', spw.eye(4))), 'create child')
+        ks.apply_operation('create parent', CreateComplexObject(Path('parent'), KinematicLink('', parent_pose)))
+        ks.apply_operation('create child', CreateComplexObject(Path('child'),  KinematicLink('', spw.eye(4))))
         self.assertTrue(ks.has_data('parent/pose'))
         self.assertTrue(ks.has_data('child/pose'))
 
-        ks.apply_operation(SetRevoluteJoint(Path('parent/pose'), 
+        ks.apply_operation('connect parent child', 
+                           SetRevoluteJoint(Path('parent/pose'), 
                                             Path('child/pose'), 
                                             Path('fixed_joint'), 
                                             joint_transform,
                                             axis,
                                             position,
-                                            -1, 2, 0.5), 'connect parent child')
+                                            -1, 2, 0.5))
         self.assertTrue(ks.has_data('fixed_joint'))
         self.assertEquals(ks.get_data('child/pose'), child_pose)
         ks.remove_operation('connect parent child')
-        ks.apply_operation(SetContinuousJoint(Path('parent/pose'), 
+        ks.apply_operation('connect parent child',
+                           SetContinuousJoint(Path('parent/pose'), 
                                               Path('child/pose'), 
                                               Path('fixed_joint'), 
                                               joint_transform,
                                               axis,
-                                              position, 0.5), 'connect parent child')
+                                              position, 0.5))
 
     def test_model_reform(self):
         ks = KinematicModel()
@@ -136,21 +139,22 @@ class TestURDF(ut.TestCase):
         child_pose_a    = parent_pose_a * joint_transform * translation3(*(axis[:,:3] * position))
         child_pose_b    = parent_pose_b * joint_transform * translation3(*(axis[:,:3] * position))
 
-        ks.apply_operation(CreateComplexObject(Path('parent'), KinematicLink('', parent_pose_a)), 'create parent')
-        ks.apply_operation(CreateComplexObject(Path('child'),  KinematicLink('', spw.eye(4))), 'create child')
+        ks.apply_operation('create parent', CreateComplexObject(Path('parent'), KinematicLink('', parent_pose_a)))
+        ks.apply_operation('create child', CreateComplexObject(Path('child'),  KinematicLink('', spw.eye(4))))
         self.assertTrue(ks.has_data('parent/pose'))
         self.assertTrue(ks.has_data('child/pose'))
 
-        ks.apply_operation(SetPrismaticJoint(Path('parent/pose'), 
+        ks.apply_operation('connect parent child', 
+                           SetPrismaticJoint(Path('parent/pose'), 
                                              Path('child/pose'), 
                                              Path('fixed_joint'), 
                                              joint_transform,
                                              axis,
                                              position,
-                                             -1, 2, 0.5), 'connect parent child')
+                                             -1, 2, 0.5))
         self.assertTrue(ks.has_data('fixed_joint'))
         self.assertEquals(ks.get_data('child/pose'), child_pose_a)
-        ks.apply_operation(CreateComplexObject(Path('parent'), KinematicLink('', parent_pose_b)), 'create parent')
+        ks.apply_operation('create parent', CreateComplexObject(Path('parent'), KinematicLink('', parent_pose_b)))
         ks.clean_structure()
         self.assertTrue(ks.has_data('fixed_joint'))
         self.assertEquals(ks.get_data('child/pose'), child_pose_b)        

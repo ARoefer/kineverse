@@ -19,13 +19,12 @@ class TestGeometryModel(ut.TestCase):
         box_shape  = Geometry('my_box', spw.eye(4), 'box')
         mesh_shape = Geometry('my_mesh', spw.eye(4), 'mesh', mesh='package://kineverse/meshes/suzanne.obj')
 
-        box_link  = KinematicLink('map', translation3(sym_a, 1, 0), box_shape,  box_shape)
-        mesh_link = KinematicLink('map', translation3(1, sym_b, 0), mesh_shape, mesh_shape) 
+        box_link  = KinematicLink('map', translation3(sym_a, 1, 0), {'0' : box_shape}, {'0' : box_shape})
+        mesh_link = KinematicLink('map', translation3(1, sym_b, 0), {'0' : mesh_shape}, {'0' : mesh_shape}) 
 
         gm.set_data('my_box', box_link)
         gm.set_data('my_mesh', mesh_link)
         gm.clean_structure()
-        print('LLALALALALALLALALALLA')
         gm.dispatch_events() # Generates the pose expressions for links
 
         sub_world = gm.get_active_geometry({sym_a})
@@ -54,8 +53,8 @@ class TestGeometryModel(ut.TestCase):
         box_shape  = Geometry('my_box', spw.eye(4), 'box')
         mesh_shape = Geometry('my_mesh', spw.eye(4), 'mesh', mesh='package://kineverse/meshes/suzanne.obj')
 
-        box_link  = KinematicLink('map', translation3(sym_a, 1, 0), box_shape,  box_shape)
-        mesh_link = KinematicLink('map', translation3(1, sym_b, 0), mesh_shape, mesh_shape) 
+        box_link  = KinematicLink('map', translation3(sym_a, 1, 0), {'0' : box_shape}, {'0' : box_shape})
+        mesh_link = KinematicLink('map', translation3(1, sym_b, 0), {'0' : mesh_shape}, {'0' : mesh_shape}) 
 
         robot = URDFRobot('my_bot')
         robot.links['my_box']  = box_link
@@ -63,7 +62,6 @@ class TestGeometryModel(ut.TestCase):
 
         gm.set_data('my_bot', robot)
         gm.clean_structure()
-        print('BOOBOBOBOBOOOBOBOBO')
         gm.dispatch_events() # Generates the pose expressions for links        
 
         sub_world = gm.get_active_geometry({sym_a})
