@@ -2,7 +2,7 @@ import re
 import numpy as np
 
 from giskardpy import BACKEND
-from kineverse.gradients.diff_logic    import create_pos
+from kineverse.gradients.diff_logic    import Position
 from kineverse.gradients.gradient_math import *
 from kineverse.json_wrapper            import JSONSerializable
 from kineverse.model.paths             import Path, PathSet, PathDict
@@ -343,12 +343,12 @@ def contact_constraint(obj_a_pose, obj_b_pose, obj_a_path, obj_b_path):
 class ContactSymbolContainer(object):
     def __init__(self, path_obj, path_other=0):
         contact_name = ('contact',) + path_obj + (obj_to_obj_infix,) + path_other
-        self.on_a_x = create_pos((contact_name + ('onA', 'x')).to_symbol())
-        self.on_a_y = create_pos((contact_name + ('onA', 'y')).to_symbol())
-        self.on_a_z = create_pos((contact_name + ('onA', 'z')).to_symbol())
-        self.on_b_x = create_pos((contact_name + ('onB', 'x')).to_symbol())
-        self.on_b_y = create_pos((contact_name + ('onB', 'y')).to_symbol())
-        self.on_b_z = create_pos((contact_name + ('onB', 'z')).to_symbol())
+        self.on_a_x = Position((contact_name + ('onA', 'x')).to_symbol())
+        self.on_a_y = Position((contact_name + ('onA', 'y')).to_symbol())
+        self.on_a_z = Position((contact_name + ('onA', 'z')).to_symbol())
+        self.on_b_x = Position((contact_name + ('onB', 'x')).to_symbol())
+        self.on_b_y = Position((contact_name + ('onB', 'y')).to_symbol())
+        self.on_b_z = Position((contact_name + ('onB', 'z')).to_symbol())
 
 pb_zero_vector = pb.Vector3(0,0,0)
 pb_far_away_vector = pb.Vector3(1e8,1e8,-1e8)

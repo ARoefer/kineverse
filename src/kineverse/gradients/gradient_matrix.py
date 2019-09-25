@@ -7,12 +7,15 @@ from kineverse.symengine_types              import symengine_matrix_types
 
 
 def is_scalar(expr):
+    """Checks whether the passed expression is/resolves to a scalar type"""
     return type(expr) == int or type(expr) == float or expr.is_Add or expr.is_AlgebraicNumber or expr.is_Atom or expr.is_Derivative or expr.is_Float or expr.is_Function or expr.is_Integer or expr.is_Mul or expr.is_Number or expr.is_Pow or expr.is_Rational or expr.is_Symbol or expr.is_finite or expr.is_integer or expr.is_number or expr.is_symbol
 
 def copy_nested_list(l):
+    """Helper for creating copies of nested lists."""
     return [copy_nested_list(r) if type(r) is list else r.__copy__() for r in l]
 
 def gradient_from_list(l):
+    """Creates a (nested) list of GradientContainer from the input."""
     if len(l) == 0:
         return [], []
     elif type(l[0]) == list:
@@ -21,6 +24,7 @@ def gradient_from_list(l):
         return [x.expr if type(x) == GC else x for x in l], [x if type(x) == GC else GC(x) for x in l]
 
 def check_correct_matrix(l):
+    """Checks the equal dimensionality of nested lists."""
     if len(l) > 0:
         inner_lists = [type(x) is list for x in l]
         if min(inner_lists) is True:
@@ -30,6 +34,7 @@ def check_correct_matrix(l):
     return True
 
 def collect_free_symbols(l):
+    """Helper function sacking all 'free_symbols' sets from objects in a list, if they exist."""
     out = set()
     for x in l:
         if hasattr(x, 'free_symbols'):
@@ -39,10 +44,15 @@ def collect_free_symbols(l):
     return out
 
 def floatify_nested_list(l):
+    """Extracts the expression member from GradientContainers in a nested list."""
     return [x.expr if type(x) == GC else floatify_nested_list(x) for x in l]
 
 class GradientMatrix(JSONSerializable):
     def __init__(self, expr):
+        """Constructor. Takes a matrix in the form of a symengine.Matrix, or nested list and stores it as matrix of GradientContainer.
+
+        :type expr: symengine.Matrix, list
+        """
         if type(expr) == list:
             if not check_correct_matrix(expr):
                 raise Exception('List passed for Matrix construction is not correctly formed! List: {}'.format(expr))
@@ -92,13 +102,20 @@ class GradientMatrix(JSONSerializable):
         return '\n'.join([str(r) for r in self.expr])
 
     def nrows(self):
+        """Returns the number of rows of the stored matrix.
+        :rtype: int
+        """
         return self._nrows
 
     def ncols(self):
+        """Returns the number of columns of the stored matrix.
+        :rtype: int
+        """
         return self._ncols
 
     @property
     def T(self):
+        """Transpose of the matrix."""
         return GradientMatrix([[self.expr[y][x].__copy__() 
                                 for y in range(self._nrows)] 
                                 for x in range(self._ncols)])
@@ -163,4 +180,7 @@ class GradientMatrix(JSONSerializable):
         return self.__copy__()
 
     def to_sym_matrix(self):
+        """Converts the stored matrix to a symengine.Matrix, erasing all additional gradient information.
+        :rtype: symengine.Matrix
+        """
         return spw.Matrix(floatify_nested_list(self.expr))

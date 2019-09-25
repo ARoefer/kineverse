@@ -1,6 +1,6 @@
 import giskardpy.symengine_wrappers as spw
 
-from kineverse.gradients.diff_logic         import get_diff_symbol
+from kineverse.gradients.diff_logic         import get_diff_symbol, create_symbol, create_pos, create_vel, create_acc, create_jerk, create_snap, Position, Velocity, Acceleration, Jerk, Snap
 from kineverse.gradients.gradient_container import GradientContainer as GC
 from kineverse.gradients.gradient_matrix    import GradientMatrix    as GM
 from kineverse.symengine_types              import symengine_types, symengine_matrix_types
@@ -14,6 +14,7 @@ y_of   = spw.y_of
 z_of   = spw.z_of
 
 def get_diff(term):
+    """Returns the derivative of a passed expression."""
     if type(term) == spw.Symbol:
         return get_diff_symbol(term)
     
@@ -23,125 +24,143 @@ def get_diff(term):
     term.do_full_diff()
     return sum([s * t for s, t in term.gradients.items()])
 
-def sqrt(expr):
-    if type(expr) == GC:
-        raise NotImplementedError
-    return spw.sqrt(expr)
-
 def sin(expr):
+    """Sine"""
     if type(expr) == GC:
         return GC(spw.sin(expr.expr), {s: spw.cos(expr.expr) * d for s, d in expr.gradients.items()})
     return spw.sin(expr)
 
 def cos(expr):
+    """Cosine"""
     if type(expr) == GC:
         return GC(spw.cos(expr.expr), {s: -spw.sin(expr.expr) * d for s, d in expr.gradients.items()})
     return spw.cos(expr)
 
 def tan(expr):
+    """Tangent"""
     if type(expr) == GC:
         return GC(spw.tan(expr.expr), {s: d * (1 + spw.tan(expr.expr)**2) for s, d in expr.gradients.items()})
     return spw.tan(expr)
 
 def asin(expr):
+    """Arcsine"""
     if type(expr) == GC:
         return GC(spw.asin(expr.expr), {s: d / spw.sqrt(1 - expr.expr**2) for s, d in expr.gradients.items()})
     return spw.asin(expr)
 
 def acos(expr):
+    """Arccosine"""
     if type(expr) == GC:
         return GC(spw.acos(expr.expr), {s: -d / spw.sqrt(1 - expr.expr**2) for s, d in expr.gradients.items()})
     return spw.acos(expr)
 
 def atan(expr):
+    """Arctangent"""
     if type(expr) == GC:
         return GC(spw.atan(expr.expr), {s: d / (1 + expr.expr**2) for s, d in expr.gradients.items()})
     return spw.atan(expr)
 
 def sinh(expr):
+    """Hyperbolic sine"""
     if type(expr) == GC:
         return GC(spw.sp.sinh(expr.expr), {s: d * spw.sp.cosh(expr.expr) for s, d in expr.gradients.items()})
     return spw.sp.sinh(expr)
 
 def cosh(expr):
+    """Hyperbolic cosine"""
     if type(expr) == GC:
         return GC(spw.sp.cosh(expr.expr), {s: d * spw.sp.sinh(expr.expr) for s, d in expr.gradients.items()})
     return spw.sp.cosh(expr)
 
 def tanh(expr):
+    """Hyperbolic tangent"""
     if type(expr) == GC:
         return GC(spw.sp.tanh(expr.expr), {s: d * (1 - spw.sp.tanh(expr.expr)**2) for s, d in expr.gradients.items()})
     return spw.sp.tanh(expr)
 
 def asinh(expr):
+    """Hyperbolic arcsine"""
     if type(expr) == GC:
         return GC(spw.sp.asinh(expr.expr), {s: d / spw.sqrt(expr.expr**2 + 1) for s, d in expr.gradients.items()})
     return spw.sp.asinh(expr)
 
 def acosh(expr):
+    """Hyperbolic arccosine"""
     if type(expr) == GC:
         return GC(spw.sp.acosh(expr.expr), {s: d / spw.sqrt(expr.expr**2 - 1) for s, d in expr.gradients.items()})
     return spw.sp.acosh(expr)
 
 def atanh(expr):
+    """Hyperbolic arctangent"""
     if type(expr) == GC:
         return GC(spw.sp.atanh(expr.expr), {s: d / (1 - expr.expr**2) for s, d in expr.gradients.items()})
     return spw.sp.atanh(expr)
 
 
 def exp(expr):
+    """Exponential"""
     if type(expr) == GC:
         return GC(spw.sp.exp(expr.expr), {s: d * spw.sp.exp(expr.expr) for s, d in expr.gradients.items()})
     return spw.exp(expr)
     
 def log(expr):
+    """Logarithm"""
     if type(expr) == GC:
         return GC(spw.log(expr.expr), {s: d / expr.expr for s, d in expr.gradients.items()})
     return spw.log(expr)
 
 def sqrt(expr):
+    """Square root"""
     if type(expr) == GC:
         return GC(spw.sqrt(expr.expr), {s: d / (2 * spw.sqrt(expr.expr)) for s, d in expr.gradients.items()})
     return spw.sqrt(expr)
 
 def abs(expr):
+    """Absolute value"""
     if type(expr) == GC:
         return GC(spw.fake_Abs(expr.expr), {s: d * expr.expr / spw.sqrt(expr.expr ** 2) for s, d in expr.gradients.items()})
     return spw.fake_Abs(expr)
 
 def is_gradient(m_list):
+    """Returns a nested list of booleans indicating which of the original elements are gradient containers."""
     return max([type(x) == GC if type(x) != list and type(x) != tuple else is_gradient(x) for x in m_list])
 
 def matrix_wrapper(m_list):
+    """Converts a nested input list to a GradientMatrix or smyengine.Matrix, depending on whether GradientContainers are in the input."""
     if is_gradient(m_list):
         return GM(m_list)
     return spw.sp.Matrix(m_list)
 
 
 def point3(x, y, z):
+    """Creates a 3d point for homogenous transformations."""
     a = [x, y, z]
     if max([type(v) == GC for v in a]):
         return GM([x, y, z, 1])
     return spw.point3(x, y, z)
 
 def vector3(x, y, z):
+    """Creates a 3d vector for homogenous transformations."""
     a = [x, y, z]
     if max([type(v) == GC for v in a]):
         return GM([x, y, z, 0])
     return spw.vector3(x, y, z)
 
 def norm(v):
+    """Computes the L2 norm (sqrt of sum of squares) of the input iterable."""
     r = 0
     for x in v:
         r += x ** 2
     return sqrt(r)
 
 def cross(u, v):
+    """Computes the cross product between two vecotrs."""
     return matrix_wrapper([u[1] * v[2] - u[2] * v[1],
                            u[2] * v[0] - u[0] * v[2],
                            u[0] * v[1] - u[1] * v[0], 0])
 
 def translation3(x, y, z, w=1):
+    """Creates a homogenous translation transformation."""
     a = [x, y, z, w]
     if max([type(v) == GC for v in a]):
         return GM([[1, 0, 0, x],
@@ -256,6 +275,7 @@ def merge_gradients_add(ga, gb):
 
 
 def greater_than(x, y):
+    """Creates a gradient approximating the :math:`x > y` expression. The gradient contains a fake derivative mapping the velocity of x to True and the velocity of y to False."""
     fake_diffs = {}
     if type(y) == spw.Symbol:
         fake_diffs[get_diff_symbol(y)] = -1
@@ -280,9 +300,11 @@ def greater_than(x, y):
     return GC(0.5 * tanh((x - y) * contrast) + 0.5, fake_diffs)
 
 def less_than(x, y):
+    """Creates a gradient approximating the :math:`x < y` expression. The gradient contains a fake derivative mapping the velocity of x to False and the velocity of y to Ture."""
     return greater_than(y, x)
 
 def alg_and(x, y):
+    """Creates a gradient approximating the :math:`x \wedge y` expression by means of multiplication. x, y are assumed to be boolean approximations resulting in 1 for truth and 0 for falsehood."""
     if type(x) is GC:
         if type(y) in symengine_types:
             y = GC(y)
@@ -302,7 +324,9 @@ def alg_and(x, y):
     return x * y
 
 def alg_not(x):
+    """inverts the truth value of boolean approximation by subtracting it from 1."""
     return 1 - x
 
 def alg_or(x, y):
+    """Creates a gradient approximating the :math:`x \vee y` expression by means of multiplication. x, y are assumed to be boolean approximations resulting in 1 for truth and 0 for falsehood."""
     return alg_not(alg_and(alg_not(x), alg_not(y)))
