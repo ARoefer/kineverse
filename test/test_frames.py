@@ -112,14 +112,14 @@ class TestFrames(ut.TestCase):
         d_in_e = fk_a_in_b(km, f_d, f_e)
         d_in_f = fk_a_in_b(km, f_d, f_f)
 
-        km.apply_operation(CreateRelativeTransform(Path('d_to_e'), Path('d'), Path('e')), 'tf d to e')
+        km.apply_operation('tf d to e', CreateRelativeTransform(Path('d_to_e'), Path('d'), Path('e')))
         self.assertTrue(km.has_data('d_to_e'))
         tf = km.get_data('d_to_e')
         self.assertEquals(tf.from_frame, 'd')
         self.assertEquals(tf.to_frame,   'e')
         self.assertEquals(tf.pose,    d_in_e)
 
-        km.apply_operation(CreateRelativeFrame(Path('c'), f_c2), 'create c')
+        km.apply_operation('create c', CreateRelativeFrame(Path('c'), f_c2))
         km.clean_structure()
         tf = km.get_data('d_to_e')
         self.assertEquals(tf.pose, inverse_frame(f_e.to_parent) * f_c2.to_parent * f_d.to_parent)

@@ -3,9 +3,20 @@ import giskardpy.symengine_wrappers as spw
 from kineverse.gradients.diff_logic import get_diff_symbol, get_int_symbol
 from kineverse.json_serializable    import JSONSerializable
 
+class DerivativeException(Exception):
+    pass
 
 class GradientContainer(JSONSerializable):
+    """Conserves additional derivative information in addition to the one that can be derived from the main experssion.
+    """
     def __init__(self, expr, gradient_exprs=None):
+        """Constructor. Stores given expression an optional gradient information.
+
+        :param           expr: Core expression to be stored.
+        :type            expr: int, float, GradientContainer, symengine type
+        :param gradient_exprs: Dictionary of custom derivatives. Mapping: symengine.Symbol -> Expression
+        :type  gradient_exprs: dict
+        """
         if type(expr) == GradientContainer:
             self.expr      = expr.expr
             self.gradients = expr.gradients.copy()
@@ -18,6 +29,7 @@ class GradientContainer(JSONSerializable):
         self.free_diff_symbols = {get_diff_symbol(s) for s in self.free_symbols if get_diff_symbol(s) not in self.gradients}
 
     def do_full_diff(self):
+        """Computes all derivatives for the expression."""
         for fs in self.free_diff_symbols.copy():
             self[fs]
 
@@ -27,20 +39,42 @@ class GradientContainer(JSONSerializable):
 
     @classmethod
     def json_factory(cls, expr, gradient_exprs):
+        """Instantiates a GradientContainer from a JSON data structure."""
         return cls(expr, {spw.Symbol(k.encode('utf-8')): v for k, v in gradient_exprs.items()})
 
     def __copy__(self):
         return GradientContainer(self.expr, {k: g for k, g in self.gradients.items()})
 
     def subs(self, subs):
+        """Substitutes variables for other expressions. 
+
+        :param subs: Dictionary of substitutions. Mapping: symengine.Symbol -> Expression
+        :type  subs: dict
+        :return: Gradient resulting from substitution
+        :rtype: GradientContainer
+        """
         return GradientContainer(self.expr.subs(subs), 
                                 {s: g.subs(subs) for s, g in self.gradients.items() 
                                                  if get_int_symbol(s) not in subs})
 
     def __contains__(self, symbol):
+        """Checks whether a derivative expression can be derived for the given symbol.
+
+        :param symbol: Symbol to compute derivative for
+        :type  symbol: symengine.Symbol
+        :rtype: bool
+        """
         return symbol in self.gradients or symbol in self.free_diff_symbols
 
     def __getitem__(self, symbol):
+        """Computes the derivative for a given symbol.
+
+        :param symbol: Symbol to compute derivative for
+        :type  symbol: symengine.Symbol
+        :return: Derivative expression for symbol
+        :rtype:  Expression
+        :raises: DerivativeException
+        """
         if symbol in self.gradients:
             return self.gradients[symbol]
         elif symbol in self.free_diff_symbols:
@@ -51,6 +85,13 @@ class GradientContainer(JSONSerializable):
             raise Exception('Cannot reproduce or generate gradient terms for variable "{}".\n  Free symbols: {}\n  Free diff symbols: {}'.format(symbol, self.free_symbols, self.free_diff_symbols))
 
     def __setitem__(self, symbol, expr):
+        """Adds custom derivative for given symbol.
+
+        :param symbol: Symbol to add derivative for
+        :type  symbol: symbol.Symbol
+        :param   expr: Derivative expression for symbol
+        :type    expr: Expression
+        """
         if symbol in self.free_diff_symbols:
             self.free_diff_symbols.remove(symbol)
         self.gradients[symbol] = expr

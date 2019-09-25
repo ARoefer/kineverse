@@ -20,11 +20,16 @@ class Frame(JSONSerializable):
         memo[id(self)] = out
         return out
 
-class Transform(object):
+class Transform(JSONSerializable):
     def __init__(self, from_frame, to_frame, pose):
         self.from_frame = from_frame
         self.to_frame   = to_frame
         self.pose       = pose
+
+    def _json_data(self, json_dict):
+        json_dict.update({'from_frame': self.from_frame,
+                          'to_frame':   self.to_frame,
+                          'pose':       self.pose})
 
     def __copy__(self):
         return Transform(self.from_frame, self.to_frame, self.pose)

@@ -36,15 +36,15 @@ class EventModel(KinematicModel):
 
 
     def apply_operation(self, op, tag):
-        super(EventModel, self).apply_operation(op, tag)
+        super(EventModel, self).apply_operation(tag, op)
         self._on_operation_changed(tag, True)
 
     def apply_operation_before(self, op, tag, before_tag):
-        super(EventModel, self).apply_operation_before(op, tag, before_tag)
+        super(EventModel, self).apply_operation_before(tag, before_tag, op)
         self._on_operation_changed(tag, True)
 
     def apply_operation_after(self, op, tag, after_tag):
-        super(EventModel, self).apply_operation_after(op, tag, after_tag)
+        super(EventModel, self).apply_operation_after(tag, after_tag, op)
         self._on_operation_changed(tag, True)
 
     def remove_operation(self, tag):
