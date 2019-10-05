@@ -7,8 +7,9 @@ import tf
 import kineverse.json_wrapper as json
 
 from kineverse.gradients.gradient_math       import *
-from kineverse.model.kinematic_model         import KinematicModel, Path
+from kineverse.model.paths                   import Path
 from kineverse.model.frames                  import Frame
+from kineverse.model.geometry_model          import GeometryModel, closest_distance
 from kineverse.motion.integrator             import CommandIntegrator, DT_SYM
 from kineverse.motion.min_qp_builder         import TypedQPBuilder as TQPB
 from kineverse.motion.min_qp_builder         import SoftConstraint, ControlledValue
@@ -37,7 +38,10 @@ if __name__ == '__main__':
     pub_path = '/opt/ros/{}/lib/robot_state_publisher/robot_state_publisher'.format(os.environ['ROS_DISTRO'])
 
     with open(res_pkg_path('package://fetch_description/robots/fetch.urdf'), 'r') as urdf_file:
-        urdf_str = urdf_file.read() 
+        urdf_str = urdf_file.read()
+
+    with open(res_pkg_path('package://iai_kitchen/urdf_obj/IAI_kitchen.urdf'), 'r') as urdf_file:
+        urdf_kitchen_str = urdf_file.read() 
 
     rospy.set_param('/robot_description', urdf_str)
     
@@ -45,18 +49,20 @@ if __name__ == '__main__':
     traj_pup   = rospy.Publisher('/fetch/commands/joint_trajectory', JointTrajectoryMsg, queue_size=1)
     tf_broadcaster = tf.TransformBroadcaster()
 
-    urdf_model = URDF.from_xml_string(urdf_str)
+    urdf_model    = URDF.from_xml_string(urdf_str)
+    kitchen_model = URDF.from_xml_string(urdf_kitchen_str)
 
     # ROBOT STATE PUBLISHER
-    # sp_p = subprocess.Popen([pub_path,
-    #                         '__name:={}_state_publisher'.format(urdf_model.name),
-    #                         'robot_description:=/robot_description',
-    #                         '_tf_prefix:={}'.format(urdf_model.name),
-    #                         'joint_states:=/joint_states'])
+    sp_p = subprocess.Popen([pub_path,
+                            '__name:={}_state_publisher'.format(urdf_model.name),
+                            'robot_description:=/robot_description',
+                            '_tf_prefix:={}'.format(urdf_model.name),
+                            'joint_states:=/joint_states'])
 
     # KINEMATIC MODEL
-    km = KinematicModel()
+    km = GeometryModel()
     load_urdf(km, Path('fetch'), urdf_model)
+    load_urdf(km, Path('kitchen'), kitchen_model)
 
     km.clean_structure()
     km.apply_operation_before('create map', 'create fetch', CreateComplexObject(Path('map'), Frame('')))
@@ -70,19 +76,14 @@ if __name__ == '__main__':
     km.apply_operation_after('connect map base_link', 'create fetch/base_link', roomba_op)
     km.clean_structure()
 
-    with open(res_pkg_path('package://kineverse/test/fetch.json'), 'w') as fetch_json:
-        start = Time.now()
-        print('Starting to write JSON')
-        json.dump(km.get_data('fetch'), fetch_json)#, sort_keys=True, indent='    ')    
-        print('Writing JSON done. Time taken: {} seconds'.format((Time.now() - start).to_sec()))
-
     print('Plotting dependency graph...')
-    plot_graph(generate_dependency_graph(km, {'connect': 'blue'}), '{}/sandbox_dep_graph.pdf'.format(plot_dir))
-    plot_graph(generate_modifications_graph(km, {'connect': 'blue'}), '{}/sandbox_mod_graph.pdf'.format(plot_dir))
+    #plot_graph(generate_dependency_graph(km, {'connect': 'blue'}), '{}/sandbox_dep_graph.pdf'.format(plot_dir))
+    #plot_graph(generate_modifications_graph(km, {'connect': 'blue'}), '{}/sandbox_mod_graph.pdf'.format(plot_dir))
     print('Done plotting.')
 
     # GOAL DEFINITION
-    eef_pose = km.get_data('fetch/links/gripper_link/pose')
+    eef_path = Path('fetch/links/gripper_link/pose')
+    eef_pose = km.get_data(eef_path)
     eef_pos  = pos_of(eef_pose)
 
     cam_pose    = km.get_data('fetch/links/head_camera_link/pose')
@@ -90,9 +91,13 @@ if __name__ == '__main__':
     cam_forward = x_of(cam_pose)
     cam_to_eef  = eef_pos - cam_pos
 
+    # kitchen_path = Path('kitchen/links/sink_area_trash_drawer_handle/pose')
+    kitchen_path = Path('kitchen/links/iai_fridge_door_handle/pose')
+    #kitchen_path = Path('kitchen/links/sink_area_dish_washer_door_handle/pose')
+
     look_goal = 1 - (dot(cam_to_eef, cam_forward) / norm(cam_to_eef))
 
-    goal = point3(0.4, 0.4, 1.2)
+    goal = point3(-0.4, 0.4, 1.2)
     dist = norm(goal - eef_pos)
 
     # QP CONFIGURTION
@@ -117,7 +122,9 @@ if __name__ == '__main__':
 
     print('\n'.join(controlled_values.keys()))
 
-    goal_constraints = {'reach_point': SoftConstraint(-dist, -dist, 1, dist),
+    geom_distance = closest_distance(eef_pose, km.get_data(kitchen_path), eef_path[:-1], kitchen_path[:-1])
+
+    goal_constraints = {'reach_point': SoftConstraint(-geom_distance, -geom_distance, 1, geom_distance),
                         'look_at_eef': SoftConstraint(-look_goal, -look_goal, 1, look_goal)}
 
     base_link  = km.get_data('fetch/links/base_link') 
@@ -147,7 +154,7 @@ if __name__ == '__main__':
                                integrator.sym_recorder.data['location_y'],
                                integrator.sym_recorder.data['location_z'],
                                integrator.sym_recorder.data['rotation_a']))
-    if False:
+    if True:
         x = 0
         jsmsg      = JointStateMsg()
         jsmsg.name = trajectory.keys()
@@ -157,9 +164,9 @@ if __name__ == '__main__':
                 jsmsg.header.stamp = now
                 jsmsg.position = [trajectory[j][x] for j in jsmsg.name] 
                 js_pub.publish(jsmsg)
-                # tf_broadcaster.sendTransform(base_trajectory[x][:3], 
-                #                              tf.transformations.quaternion_from_euler(0,0, base_trajectory[x][3]), 
-                #                              now, 'fetch/base_link', 'map')
+                tf_broadcaster.sendTransform(base_trajectory[x][:3], 
+                                              tf.transformations.quaternion_from_euler(0,0, base_trajectory[x][3]), 
+                                              now, 'fetch/base_link', 'map')
                 x += 1 
     else:
         trajmsg = JointTrajectoryMsg()
@@ -174,5 +181,5 @@ if __name__ == '__main__':
         while (rospy.Time.now() - trajmsg.header.stamp).to_sec() > 0.5:
             pass 
 
-    # sp_p.terminate()
-    # sp_p.wait()
+    sp_p.terminate()
+    sp_p.wait()

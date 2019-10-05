@@ -40,7 +40,7 @@ def generate_dependency_graph(km, prefix_colors={}):
 
 
 def plot_graph(dot_graph, file):
-    graphs = pydot.graph_from_dot_data(dot_graph)
+    graphs = pydot.graph_from_dot_data(dot_graph)[0]
     if file[-4:].lower() == '.png':
         graphs.write_png(file)
     else:
