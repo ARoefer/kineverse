@@ -81,6 +81,7 @@ class KinematicModel(object):
         self._touched_stamp    = 0
 
 
+    @profile
     @type_check(str, Operation)
     def apply_operation(self, tag, op):
         time = self.timeline_tags[tag] if tag in self.timeline_tags else self.operation_history.get_time_stamp()
@@ -104,6 +105,8 @@ class KinematicModel(object):
             except Exception as e:
                 raise OperationException('Failed to apply operation "{}" tagged "{}" at time "{}". Traceback:\n  {}\nError: \n{}'.format(op.name, tag, time, traceback.print_exc(), e))
 
+
+    @profile
     @type_check(str, str, Operation)
     def apply_operation_before(self, tag, before_tag, op):
         if before_tag not in self.timeline_tags:
@@ -120,6 +123,8 @@ class KinematicModel(object):
         except Exception as e:
             raise OperationException('Failed to apply operation "{}" tagged "{}" at time "{}". Traceback:\n  {}\nError: \n{}'.format(op.name, tag, time, traceback.print_exc(), e))
 
+
+    @profile
     @type_check(str, str, Operation)
     def apply_operation_after(self, tag, after_tag, op):
         if after_tag not in self.timeline_tags:
@@ -136,6 +141,8 @@ class KinematicModel(object):
         except Exception as e:
             raise OperationException('Failed to apply operation "{}" tagged "{}" at time "{}". Traceback:\n  {}\nError: \n{}'.format(op.name, tag, time, traceback.print_exc(), e))
 
+
+    @profile
     @type_check(str)
     def remove_operation(self, tag):
         if tag not in self.timeline_tags:
@@ -147,12 +154,15 @@ class KinematicModel(object):
         self.operation_history.remove_chunk(chunk)
         del self.timeline_tags[tag]
 
+
+    @profile
     @type_check(str)
     def get_operation(self, tag):
         if tag not in self.timeline_tags:
             raise Exception('Tag "{}" not found in time line.'.format(tag))
         return self.operation_history.get_chunk(self.timeline_tags[tag]).operation
 
+    @profile
     def clean_structure(self, until=2e9):
         while len(self.operation_history.dirty_chunks) > 0 and self.operation_history.dirty_chunks[0].stamp <= until:
             chunk = self.operation_history.dirty_chunks[0]
@@ -164,26 +174,31 @@ class KinematicModel(object):
             self.operation_history.flag_clean(chunk)
             self.operation_history.flag_dirty(*chunk.dependents)            
 
+    @profile
     def has_data(self, key):
         if type(key) == str:
             key = Path(key.split('/'))
         return key in self.data_tree
 
+    @profile
     def get_data(self, key):
         if type(key) == str:
             key = Path(key.split('/'))
         return self.data_tree[key]
 
+    @profile
     def set_data(self, key, value):
         if type(key) == str:
             key = Path(key.split('/'))
         self.data_tree[key] = value
 
+    @profile
     def remove_data(self, key):
         if type(key) == str:
             key = Path(key.split('/'))
         self.data_tree.remove_data(key)
 
+    @profile
     def add_constraint(self, key, constraint):
         if key in self.constraints:
             c = self.constraints[key]
@@ -210,6 +225,7 @@ class KinematicModel(object):
             self.constraint_symbol_map[s].remove(key)
         del self.constraints[key]
 
+    @profile
     def get_constraints_by_symbols(self, symbol_set):
         out = {}
         for s in symbol_set:
@@ -240,6 +256,7 @@ class KinematicModel(object):
     def str_op_history(self):
         return '\n'.join(['{:>9.4f}: {}'.format(s, t) for s, t in sorted([(s, t) for t, s in self.timeline_tags.items()])])
 
+    @profile
     def merge_operations_timeline(self, timeline, deleted_tags=[]):
         if not isinstance(timeline, Timeline):
             raise Exception('Merging only works with timeline type.')
@@ -266,7 +283,7 @@ class KinematicModel(object):
 
                 tagged_op.op.apply(self)
 
-
+    @profile
     def apply_instructions(self, instructions):
         mods     = Timeline()
         nodes    = {}
@@ -329,7 +346,7 @@ class KinematicModel(object):
         for n in list(mods) + new_ops:
             self._apply_tag_node(n)
 
-
+    @profile
     def _apply_tag_node(self, node):
         if node.remove:
             for b in node.before:
@@ -355,6 +372,7 @@ class KinematicModel(object):
                 for a in reversed(node.after):
                     self._apply_tag_node(a)
 
+    @profile
     def _apply_tag_node_before(self, node, before_tag):
         if node.remove:
             raise Exception('"Before"-semantic is non-sensical for remove operations. Node-tag: "{}"'.format(node.tag))
@@ -374,6 +392,7 @@ class KinematicModel(object):
         for a in node.after:
             self._apply_tag_node_after(a, node.tag)
 
+    @profile
     def _apply_tag_node_after(self, node, after_tag):
         if node.remove:
             raise Exception('"After"-semantic is non-sensical for remove operations. Node-tag: "{}"'.format(node.tag))
