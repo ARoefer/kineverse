@@ -24,7 +24,7 @@ class KinematicJoint(JSONSerializable):
                           'child':  self.child})
 
     def __deepcopy__(self, memo):
-        out = KinematicLink(self.type, self.parent, self.child)
+        out = KinematicJoint(self.type, self.parent, self.child)
         memo[id(self)] = out
         return out
 

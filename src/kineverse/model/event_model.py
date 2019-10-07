@@ -35,15 +35,15 @@ class EventModel(KinematicModel):
         self.__callback_removals  = []
 
 
-    def apply_operation(self, op, tag):
+    def apply_operation(self, tag, op):
         super(EventModel, self).apply_operation(tag, op)
         self._on_operation_changed(tag, True)
 
-    def apply_operation_before(self, op, tag, before_tag):
+    def apply_operation_before(self, tag, before_tag, op):
         super(EventModel, self).apply_operation_before(tag, before_tag, op)
         self._on_operation_changed(tag, True)
 
-    def apply_operation_after(self, op, tag, after_tag):
+    def apply_operation_after(self, tag, after_tag, op):
         super(EventModel, self).apply_operation_after(tag, after_tag, op)
         self._on_operation_changed(tag, True)
 
