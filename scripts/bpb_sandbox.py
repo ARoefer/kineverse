@@ -38,8 +38,8 @@ if __name__ == '__main__':
 
     kw.add_collision_object(cube_body)
     kw.add_collision_object(cube2_body)
-    kw.add_collision_object(obj_body)
-    kw.add_collision_object(stl_body)
+    #kw.add_collision_object(obj_body)
+    #kw.add_collision_object(stl_body)
     
     cube_body.activate(True)
     cube2_body.activate(True)
@@ -57,29 +57,29 @@ if __name__ == '__main__':
             last_time = now
             y = math.sin(now.to_sec())
             vis.begin_draw_cycle('objects', 'contacts')
-            pose_array = np.array([[1,0,0,-y - 1], 
-                                   [0,1,0,0], 
-                                   [0,0,1,0], 
-                                   [0,0,0,1],
-                                   [1,0,0,y + 1], 
-                                   [0,1,0,0], 
-                                   [0,0,1,0], 
-                                   [0,0,0,1],
-                                   [1,0,0,0], 
-                                   [0,1,0,y + 1], 
-                                   [0,0,1,0], 
-                                   [0,0,0,1],
-                                   [1,0,0,0], 
-                                   [0,1,0,-y - 1], 
-                                   [0,0,1,0], 
-                                   [0,0,0,1]])
+            # pose_array = np.array([[1,0,0,-y - 1], 
+            #                        [0,1,0,0], 
+            #                        [0,0,1,0], 
+            #                        [0,0,0,1],
+            #                        [1,0,0,y + 1], 
+            #                        [0,1,0,0], 
+            #                        [0,0,1,0], 
+            #                        [0,0,0,1],
+            #                        [1,0,0,0], 
+            #                        [0,1,0,y + 1], 
+            #                        [0,0,1,0], 
+            #                        [0,0,0,1],
+            #                        [1,0,0,0], 
+            #                        [0,1,0,-y - 1], 
+            #                        [0,0,1,0], 
+            #                        [0,0,0,1]])
 
-            # cube2_body.transform = pb.Transform(-y - 1, 0, 0)
-            # cube_body.transform = pb.Transform(y + 1, 0, 0)
+            cube2_body.transform = pb.Transform(-y - 1, 0, 0)
+            cube_body.transform = pb.Transform(y + 1, 0, 0)
             # obj_body.transform = pb.Transform(0,  y + 1, 0)
             # stl_body.transform = pb.Transform(0, -y - 1, 0)
 
-            kw.batch_set_transforms([obj_body, cube2_body, cube_body, stl_body], pose_array)
+            #kw.batch_set_transforms([obj_body, cube2_body, cube_body, stl_body], pose_array)
 
             kw.update_aabbs()
             vis.draw_world('objects', kw)
