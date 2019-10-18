@@ -401,7 +401,24 @@ class GeomQPBuilder(TypedQPBuilder):
         return super(GeomQPBuilder, self).get_cmd(substitutions, nWSR, deltaT)
 
 
-        
+@profile
+def generate_controlled_values(constraints, symbols, weights={}, bounds={}, default_weight=0.01, default_bounds=(-1e9, 1e9)):
+    controlled_values = {}
+    to_remove = set()
+    for k, c in constraints.items():
+        if type(c.expr) is spw.Symbol and c.expr in symbols:
+            weight = default_weight if c.expr not in weights else weights[c.expr] 
+            controlled_values[str(c.expr)] = ControlledValue(c.lower, c.upper, c.expr, weight)
+            to_remove.add(k)
+
+    new_constraints = {k: c for k, c in constraints.items() if k not in to_remove}
+    for s in symbols:
+        if str(s) not in controlled_values:
+            lower, upper = default_bounds if s not in bounds else bounds[s]
+            weight = default_weight if c.expr not in weights else weights[c.expr] 
+            controlled_values[str(s)] = ControlledValue(lower, upper, s, weight)
+
+    return controlled_values, new_constraints
 
 
 

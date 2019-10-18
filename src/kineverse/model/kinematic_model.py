@@ -3,6 +3,7 @@ from kineverse.model.data_tree      import DataTree
 from kineverse.model.history        import History, Timeline, StampedData, Chunk
 from kineverse.model.paths          import Path
 from kineverse.operations.operation import Operation
+from kineverse.type_sets            import is_symbolic
 
 class ApplicationInstruction(object):
     def __init__(self, op, tag):
@@ -67,7 +68,7 @@ class Constraint(object):
         return out
 
     def __str__(self):
-        return '{} <= {} <= {}'.format(self.lower, self.expr, self.upper)
+        return '{}\n  >= {}\n  <= {}'.format(self.expr, self.lower, self.upper)
 
 
 class KinematicModel(object):
@@ -233,6 +234,15 @@ class KinematicModel(object):
                 out.update({k: self.constraints[k] for k in self.constraint_symbol_map[s]})
         return out
 
+    def get_constant_constraints(self, symbol):
+        out = {}
+        if symbol in self.constraint_symbol_map:
+            for k in self.constraint_symbol_map[symbol]:
+                c = self.constraints[k]
+                if not is_symbolic(c.lower) and not is_symbolic(c.upper) and c.expr == symbol:
+                    out[k] = c
+        return out
+
     def has_tag(self, tag):
         return tag in self.timeline_tags
 
@@ -358,7 +368,7 @@ class KinematicModel(object):
                     self._apply_tag_node_before(b, node.tag)
 
                 if node.op is not None:
-                    self.apply_operation(node.op, node.tag)
+                    self.apply_operation(node.tag, node.op)
 
                 for a in node.after:
                     self._apply_tag_node_after(a, node.tag)
@@ -366,7 +376,7 @@ class KinematicModel(object):
                 for b in node.before:
                     self._apply_tag_node(b)
 
-                self.apply_operation(node.op, node.tag)
+                self.apply_operation(node.tag, node.op)
 
                 # Performance gain
                 for a in reversed(node.after):
@@ -385,7 +395,7 @@ class KinematicModel(object):
 
         # n_ops = len(node)
         
-        self.apply_operation_before(node.op, node.tag, before_tag)
+        self.apply_operation_before(node.tag, before_tag, node.op)
         for b in node.before:
             self._apply_tag_node_before(b, node.tag)
 
@@ -402,13 +412,13 @@ class KinematicModel(object):
             for b in node.before:
                 self._apply_tag_node(b)
             
-            self.apply_operation(node.op, node.tag)
+            self.apply_operation(node.tag, node.op)
 
             for a in reversed(node.after):
                 self._apply_tag_node(a)
         else:
             # This can all be accelerated quite a bit
-            self.apply_operation_after(node.op, node.tag, after_tag)
+            self.apply_operation_after(node.tag, after_tag, node.op)
             for b in node.before:
                 self._apply_tag_node_before(b, node.tag)
 
