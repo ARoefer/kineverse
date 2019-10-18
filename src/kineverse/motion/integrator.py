@@ -1,7 +1,9 @@
 from giskardpy.symengine_wrappers     import *
 from kineverse.visualization.plotting import ValueRecorder, SymbolicRecorder
 from kineverse.gradients.diff_logic   import get_symbol_type
-from kineverse.motion.min_qp_builder  import TypedQPBuilder as TQPB
+from kineverse.motion.min_qp_builder  import TypedQPBuilder as TQPB, \
+                                             extract_expr
+from kineverse.type_sets              import is_symbolic
 
 DT_SYM = sp.symbols('T_p')
 
@@ -31,7 +33,7 @@ class CommandIntegrator(object):
     def restart(self, title='Integrator'):
         self.state    = self.start_state.copy()
         self.recorder = ValueRecorder(title, *[str(s) for s in self.state.keys()])
-        self.sym_recorder = SymbolicRecorder(title, **self.recorded_terms)
+        self.sym_recorder = SymbolicRecorder(title, **{k: extract_expr(s) for k, s in self.recorded_terms.items() if is_symbolic(s)})
 
     def run(self, dt=0.02, max_iterations=200):
         self.state[DT_SYM] = dt
@@ -40,7 +42,8 @@ class CommandIntegrator(object):
             self.sym_recorder.log_symbols(self.state)
             str_state = {str(s): v for s, v in self.state.items() if s != DT_SYM}
             for s, v in str_state.items():
-                self.recorder.log_data(s, v)
+                if s in self.recorder.data:
+                    self.recorder.log_data(s, v)
 
             cmd = self.qp_builder.get_cmd(self.state)
             #print(self.qp_builder.last_matrix_str())
