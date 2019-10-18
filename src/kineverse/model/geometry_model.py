@@ -124,6 +124,7 @@ class GeometryModel(EventModel):
         self._co_symbol_map = {}
         self._symbol_co_map = {}
         self._co_callbacks  = {}
+        self._static_objects = []
 
     def _process_link_insertion(self, key, link):
         if link.collision is not None and str(key) not in self._collision_objects:
@@ -235,6 +236,7 @@ class GeometryModel(EventModel):
                     self._process_link_removal(k)
         if len(static_objects) > 0:
             self.kw.batch_set_transforms(static_objects, np.vstack(static_poses))
+            self.static_objects = static_objects
             # print('\n  '.join(['{}: {}'.format(n, c.transform) for n, c in self._collision_objects.items()]))
         super(GeometryModel, self).dispatch_events()
 
@@ -266,7 +268,7 @@ class GeometryModel(EventModel):
         return out
 
 
-    def get_active_geometry(self, symbols, static_state=None):
+    def get_active_geometry(self, symbols, static_state=None, include_static=True):
         coll_obj_keys = set()
         for s in symbols:
             if s in self._symbol_co_map:
@@ -286,7 +288,12 @@ class GeometryModel(EventModel):
 
         cythonized_matrix = spw.speed_up(pose_matrix, pose_matrix.free_symbols, backend=BACKEND)
 
-        return CollisionSubworld(self.kw, obj_names, objs, pose_matrix.free_symbols, cythonized_matrix)
+        world = pb.KineverseWorld()
+        filtered_objs = objs if not include_static else objs + self.static_objects
+        for obj in filtered_objs:
+            world.add_collision_object(obj)
+
+        return CollisionSubworld(world, obj_names, objs, pose_matrix.free_symbols, cythonized_matrix)
 
 
 class CollisionSubworld(object):
@@ -321,6 +328,7 @@ class CollisionSubworld(object):
     def closest_distances(self, query_batch):
         if self._needs_update:
             self.world.update_aabbs()
+            self.world.perform_discrete_collision_detection()
         return self.world.get_closest_batch(query_batch)
 
 
