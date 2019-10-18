@@ -38,6 +38,7 @@ class Operation(object):
         self._memento   = {} 
         self._constraint_memento = {}
 
+    @profile
     def apply(self, ks, touched_set=set()):
         args = {}
         # Cover the case that it can be possible to depend on values which one also modifies
@@ -73,6 +74,7 @@ class Operation(object):
     def _apply(self, ks, **kwargs):
         raise NotImplementedError
 
+    @profile
     def revoke(self, ks):
         for m, e in self._memento.items():
             ks.set_data(self._root_set[m], e)

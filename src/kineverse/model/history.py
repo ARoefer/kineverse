@@ -74,6 +74,7 @@ class History(object):
             return 0.5 * (succ.stamp + self.chunk_history[pos + 1].stamp) if pos < len(self.chunk_history) - 1 else succ.stamp + 1
         return self.chunk_history[-1].stamp + 1 if len(self.chunk_history) > 0 else 1
 
+    @profile
     def _insert_modification(self, chunk, path):
             if path not in self.modification_history:
                 self.modification_history[path] = Timeline()
@@ -90,6 +91,7 @@ class History(object):
                 pred.dependents -= to_remove
             self.modification_history[path].add(chunk)
 
+    @profile
     def insert_chunk(self, chunk):
         for p in chunk.dependencies:
             if p not in self.modification_history:

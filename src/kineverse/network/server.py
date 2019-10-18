@@ -43,7 +43,7 @@ class ModelServer_NoROS(object):
         self._changed_constraints = set()
         self.lock = RLock()
 
-
+    @profile
     def process_operations_msgs(self, operation_msgs):
         batch = []
         changed_ops = {}
@@ -108,6 +108,7 @@ class ModelServer_NoROS(object):
     def _publish_updates(self, operations_update_msg, model_update_msg):
         raise NotImplementedError
 
+    @profile
     def srv_get_model(self, req):
         res = GetModelResponseMsg()
         with self.lock:
@@ -118,6 +119,7 @@ class ModelServer_NoROS(object):
 
         return res
 
+    @profile
     def srv_get_constraints(self, req):
         res = GetConstraintsResponseMsg()
         with self.lock:
@@ -133,6 +135,7 @@ class ModelServer_NoROS(object):
             res.history = encode_operation_update(res.stamp, self.km.get_history_of([Path(x) for x in req.paths]))
         return res
 
+    @profile
     def srv_apply_operations(self, req):
         res = ApplyOperationsResponseMsg()
         res.success = False
