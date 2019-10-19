@@ -1,0 +1,52 @@
+<robot name="microwave">
+    <link name="body">
+        <visual>
+            <geometry>
+                <mesh filename="package://kineverse/meshes/microwave/microwave_body.obj" scale="1 1 1"/>
+            </geometry>
+        </visual>
+        <collision>
+            <geometry>
+                <mesh filename="package://kineverse/meshes/microwave/microwave_body.obj" scale="1 1 1"/>
+            </geometry>
+        </collision>
+    </link>
+    <link name="door">
+        <visual>
+            <geometry>
+                <mesh filename="package://kineverse/meshes/microwave/microwave_door.obj" scale="1 1 1"/>
+            </geometry>
+        </visual>
+        <collision>
+            <geometry>
+                <mesh filename="package://kineverse/meshes/microwave/microwave_door.obj" scale="1 1 1"/>
+            </geometry>
+        </collision>
+    </link>
+    <link name="button">
+        <visual>
+            <geometry>
+                <mesh filename="package://kineverse/meshes/microwave/microwave_button.obj" scale="1 1 1"/>
+            </geometry>
+        </visual>
+        <collision>
+            <geometry>
+                <mesh filename="package://kineverse/meshes/microwave/microwave_button.obj" scale="1 1 1"/>
+            </geometry>
+        </collision>
+    </link>
+    <joint name="door_joint" type="revolute">
+        <origin xyz="0.15 -0.225 0.0"/>
+        <parent link="body"/>
+        <child  link="door"/>
+        <axis   xyz="0 0 -1"/>
+        <limit  lower="0" upper="1.57" velocity="100" effort="100"/>
+    </joint>
+    <joint name="button_joint" type="prismatic">
+        <origin xyz="0.1768 0.18 -0.1222"/>
+        <parent link="body"/>
+        <child  link="button"/>
+        <axis   xyz="1 0 0"/>
+        <limit lower="-0.02" upper="0.0" velocity="2.0" effort="100"/>
+    </joint>
+</robot>
