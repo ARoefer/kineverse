@@ -10,3 +10,10 @@ class Time(object):
         if rospy.rostime.is_rostime_initialized():
             return rospy.Time.now()
         return rospy.Time(time.time())
+
+    @classmethod
+    def sleep(cls, duration):
+        if rospy.rostime.is_rostime_initialized():
+            rospy.sleep(duration)
+        else:
+            time.sleep(duration)
