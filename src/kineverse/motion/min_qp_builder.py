@@ -6,7 +6,7 @@ from giskardpy import BACKEND
 from giskardpy.exceptions import QPSolverException
 from giskardpy.qp_solver  import QPSolver
 
-from kineverse.gradients.diff_logic         import get_symbol_type
+from kineverse.gradients.diff_logic         import get_symbol_type, get_int_symbol, Symbol
 from kineverse.gradients.gradient_container import GradientContainer as GC
 from kineverse.model.kinematic_model        import Constraint, Path
 from kineverse.model.geometry_model         import CollisionSubworld, ContactHandler, obj_to_obj_infix

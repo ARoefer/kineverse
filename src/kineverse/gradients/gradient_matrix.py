@@ -43,6 +43,15 @@ def collect_free_symbols(l):
             out |= collect_free_symbols(x)
     return out
 
+def collect_diff_symbols(l):
+    out = set()
+    for x in l:
+        if type(x) == list:
+            out |= collect_diff_symbols(x)
+        else:
+            out |= x.diff_symbols
+    return out
+
 def floatify_nested_list(l):
     """Extracts the expression member from GradientContainers in a nested list."""
     return [x.expr if type(x) == GC else floatify_nested_list(x) for x in l]
@@ -72,6 +81,10 @@ class GradientMatrix(JSONSerializable):
         
         self.free_symbols = collect_free_symbols(self.expr)
         #self.free_diff_symbols = {get_diff_symbol(s) for s in self.free_symbols if get_diff_symbol(s) not in self.gradients}
+
+    @property
+    def diff_symbols(self):
+        return collect_diff_symbols(self.expr)
 
     def _json_data(self, json_dict):
         json_dict.update({'expr': self.expr})

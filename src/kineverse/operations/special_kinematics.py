@@ -64,12 +64,13 @@ class SetRoombaJoint(Operation):
 
 def create_roomba_joint_with_symbols(parent_pose, child_pose, connection_path, rot_axis, lin_axis, lin_vel_limit, ang_vel_limit, var_prefix):
     return SetRoombaJoint(parent_pose, child_pose, connection_path, rot_axis, lin_axis,
-                create_symbol((var_prefix + ('localization_x',)).to_symbol(), TYPE_POSITION),
-                create_symbol((var_prefix + ('localization_y',)).to_symbol(), TYPE_POSITION),
-                create_symbol((var_prefix + ('localization_z',)).to_symbol(), TYPE_POSITION),
-                create_symbol((var_prefix + ('localization_a',)).to_symbol(), TYPE_POSITION),
-                create_symbol((var_prefix + ('linear_joint',)).to_symbol(), TYPE_VELOCITY),
-                create_symbol((var_prefix + ('angular_joint',)).to_symbol(), TYPE_VELOCITY),
+                create_pos((var_prefix + ('localization_x',)).to_symbol()),
+                create_pos((var_prefix + ('localization_y',)).to_symbol()),
+                create_pos((var_prefix + ('localization_z',)).to_symbol()),
+                create_pos((var_prefix + ('localization_a',)).to_symbol()),
+                create_vel((var_prefix + ('linear_joint',)).to_symbol()),
+                create_vel((var_prefix + ('angular_joint',)).to_symbol()),
+                lin_vel_limit, ang_vel_limit)
                 lin_vel_limit, ang_vel_limit)
 
 

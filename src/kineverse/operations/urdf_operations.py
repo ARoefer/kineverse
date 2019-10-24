@@ -8,7 +8,7 @@ from kineverse.gradients.gradient_math     import frame3_rpy,           \
                                                   spw,                  \
                                                   translation3,         \
                                                   vector3
-from kineverse.gradients.diff_logic        import create_symbol, TYPE_POSITION
+from kineverse.gradients.diff_logic        import create_pos
 from kineverse.operations.basic_operations import Operation,           \
                                                   CreateComplexObject, \
                                                   Path,                \
@@ -320,7 +320,7 @@ def load_urdf(ks, prefix, urdf, reference_frame='map'):
                 offset     = u_joint.mimic.offset
                 position   = prefix + ('joints', u_joint.mimic.joint, 'position')
             else:
-                position   = create_symbol((prefix + (u_joint.name, )).to_symbol(), TYPE_POSITION)
+                position   = create_pos((prefix + (u_joint.name, )).to_symbol())
                 multiplier = None
                 offset     = None
 

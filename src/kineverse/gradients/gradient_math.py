@@ -1,6 +1,6 @@
 import giskardpy.symengine_wrappers as spw
 
-from kineverse.gradients.diff_logic         import get_diff_symbol, create_symbol, create_pos, create_vel, create_acc, create_jerk, create_snap, Position, Velocity, Acceleration, Jerk, Snap
+from kineverse.gradients.diff_logic         import get_diff_symbol, create_symbol, create_pos, create_vel, create_acc, create_jerk, create_snap, Position, Velocity, Acceleration, Jerk, Snap, Symbol
 from kineverse.gradients.gradient_container import GradientContainer as GC
 from kineverse.gradients.gradient_matrix    import GradientMatrix    as GM
 from kineverse.symengine_types              import symengine_types, symengine_matrix_types
@@ -13,16 +13,25 @@ x_of   = spw.x_of
 y_of   = spw.y_of
 z_of   = spw.z_of
 
-def get_diff(term):
+def extract_expr(expr):
+    return expr if type(expr) != GC else expr.expr
+
+def wrap_expr(expr):
+    return expr if type(expr) == GC else GC(expr)
+
+def get_diff(term, symbols=None):
     """Returns the derivative of a passed expression."""
-    if type(term) == spw.Symbol:
+    if type(term) == Symbol:
         return get_diff_symbol(term)
     
     if type(term) != GC:
         term = GC(term)
 
-    term.do_full_diff()
-    return sum([s * t for s, t in term.gradients.items()])
+    if symbols is None:
+        term.do_full_diff()
+        return sum([s * t for s, t in term.gradients.items()])
+    else:
+        return sum([s * term[s] for s in symbols if s in term])
 
 def sin(expr):
     """Sine"""
@@ -277,7 +286,7 @@ def merge_gradients_add(ga, gb):
 def greater_than(x, y):
     """Creates a gradient approximating the :math:`x > y` expression. The gradient contains a fake derivative mapping the velocity of x to True and the velocity of y to False."""
     fake_diffs = {}
-    if type(y) == spw.Symbol:
+    if type(y) == Symbol:
         fake_diffs[get_diff_symbol(y)] = -1
     else:
         if type(y) in symengine_types: 
@@ -285,7 +294,7 @@ def greater_than(x, y):
         if type(y) == GC:
             y.do_full_diff()
             fake_diffs = {s: -g for s, g in y.gradients.items()}
-    if type(x) == spw.Symbol:
+    if type(x) == Symbol:
         x_d = get_diff_symbol(x)
         if x_d in fake_diffs:
             fake_diffs[x_d] += 1

@@ -1,6 +1,6 @@
 import giskardpy.symengine_wrappers as spw
 
-from kineverse.gradients.diff_logic import get_diff_symbol, get_int_symbol
+from kineverse.gradients.diff_logic import get_diff_symbol, get_int_symbol, Symbol
 from kineverse.json_serializable    import JSONSerializable
 
 class DerivativeException(Exception):
@@ -28,6 +28,10 @@ class GradientContainer(JSONSerializable):
         self.free_symbols = expr.free_symbols if hasattr(expr, 'free_symbols') else set()
         self.free_diff_symbols = {get_diff_symbol(s) for s in self.free_symbols if get_diff_symbol(s) not in self.gradients}
 
+    @property
+    def diff_symbols(self):
+        return self.free_diff_symbols.union(set(self.gradients.keys()))
+
     def do_full_diff(self):
         """Computes all derivatives for the expression."""
         for fs in self.free_diff_symbols.copy():
@@ -40,7 +44,7 @@ class GradientContainer(JSONSerializable):
     @classmethod
     def json_factory(cls, expr, gradient_exprs):
         """Instantiates a GradientContainer from a JSON data structure."""
-        return cls(expr, {spw.Symbol(k.encode('utf-8')): v for k, v in gradient_exprs.items()})
+        return cls(expr, {Symbol(k.encode('utf-8')): v for k, v in gradient_exprs.items()})
 
     def __copy__(self):
         return GradientContainer(self.expr, {k: g for k, g in self.gradients.items()})

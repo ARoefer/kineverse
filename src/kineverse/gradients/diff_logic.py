@@ -1,5 +1,7 @@
 import giskardpy.symengine_wrappers as spw
 
+Symbol = spw.Symbol
+
 TYPE_UNKNOWN  = 0
 TYPE_POSITION = 1
 TYPE_VELOCITY = 2
@@ -29,7 +31,7 @@ def create_symbol(symbol, stype):
     """
     if stype not in TYPE_SUFFIXES_INV:
         raise Exception('Can not create symbol for type {}: Type id not defined.'.format(stype))
-    return spw.Symbol('{}{}'.format(str(symbol), TYPE_SUFFIXES_INV[stype]))
+    return Symbol('{}{}'.format(str(symbol), TYPE_SUFFIXES_INV[stype]))
 
 def create_pos(symbol):
     """Shorthand for creating a position symbol.
@@ -91,7 +93,7 @@ def erase_type(symbol):
     """
     st = get_symbol_type(symbol)
     if st != TYPE_UNKNOWN:
-        return spw.Symbol(str(symbol)[:-len(TYPE_SUFFIXES_INV[st])])
+        return Symbol(str(symbol)[:-len(TYPE_SUFFIXES_INV[st])])
     return symbol
 
 def get_symbol_type(symbol):
@@ -116,7 +118,7 @@ def get_diff_symbol(symbol):
     s_type = get_symbol_type(symbol)
     if s_type == TYPE_UNKNOWN or s_type == TYPE_SNAP:
         raise CastException('Cannot generate derivative symbol for {}! The type is {}'.format(symbol, s_type))
-    return spw.Symbol('{}{}'.format(str(symbol)[:-2], TYPE_SUFFIXES_INV[s_type + 1]))
+    return Symbol('{}{}'.format(str(symbol)[:-2], TYPE_SUFFIXES_INV[s_type + 1]))
 
 def get_int_symbol(symbol):
     """Returns the integral symbol of the given symbol.
@@ -130,7 +132,7 @@ def get_int_symbol(symbol):
     s_type = get_symbol_type(symbol)
     if s_type == TYPE_UNKNOWN or s_type == TYPE_POSITION:
         raise CastException('Cannot generate integrated symbol for {}! The type is {}'.format(symbol, s_type))
-    return spw.Symbol('{}{}'.format(str(symbol)[:-2], TYPE_SUFFIXES_INV[s_type - 1]))
+    return Symbol('{}{}'.format(str(symbol)[:-2], TYPE_SUFFIXES_INV[s_type - 1]))
 
 Position     = create_pos
 Velocity     = create_vel
