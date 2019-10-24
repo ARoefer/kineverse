@@ -1,4 +1,3 @@
-import giskardpy.symengine_wrappers as spw
 import numpy  as np
 import pandas as pd
 
@@ -8,9 +7,12 @@ from giskardpy.qp_solver  import QPSolver
 
 from kineverse.gradients.diff_logic         import get_symbol_type, get_int_symbol, Symbol
 from kineverse.gradients.gradient_container import GradientContainer as GC
+from kineverse.gradients.gradient_math      import spw, extract_expr, wrap_expr
 from kineverse.model.kinematic_model        import Constraint, Path
 from kineverse.model.geometry_model         import CollisionSubworld, ContactHandler, obj_to_obj_infix
 from kineverse.visualization.bpb_visualizer import ROSBPBVisualizer
+from kineverse.bpb_wrapper                  import transform_to_matrix as tf2mx
+from kineverse.type_sets                    import is_symbolic
 
 default_bound = 1e9    
 
@@ -37,12 +39,6 @@ class ControlledValue(object):
 
     def __str__(self):
         return '{} <= {} <= {} @ {}'.format(self.lower, self.symbol, self.upper, self.weight)
-
-def extract_expr(expr):
-    return expr if type(expr) != GC else expr.expr
-
-def wrap_expr(expr):
-    return expr if type(expr) == GC else GC(expr)
 
 class MinimalQPBuilder(object):
     def __init__(self, hard_constraints, soft_constraints, controlled_values):
@@ -199,14 +195,20 @@ class MinimalQPBuilder(object):
             self.H_dfs.append(dfH)
             self._cmd_log.append(xdot_full[:self.n_cv])
         except QPSolverException as e:
-            print('INFEASIBLE CONFIGURATION!\nH:{}\nA:\n{}'.format(dfH, dfA))
+            print('INFEASIBLE CONFIGURATION!\nH:{}\nA:\n{}\nFull data written to "solver_crash_H.csv" and "solver_crash_A.csv"'.format(dfH, dfA))
+            dfH.to_csv('solver_crash_H.csv')
+            dfA.to_csv('solver_crash_A.csv')
             b_comp  = np.greater(self.np_lb,  self.np_ub)
             bA_comp = np.greater(self.np_lbA, self.np_ubA)
             if b_comp.max() or bA_comp.max():
                 print('Overlapping boundary conditions:\n{}\n{}'.format('\n'.join(['{}:\n  lb: {}\n  ub: {}'.format(n, lb, ub) for n, lb, ub, c in zip(self.col_names, self.np_lb, self.np_ub, b_comp) if c]),
                      '\n'.join(['{}:\n  lbA: {}\n  ubA: {}'.format(n, lbA, ubA) for n, lbA, ubA, c in zip(self.row_names, self.np_lbA, self.np_ubA, bA_comp) if c])))
             else:
-                print('Boundaries are not overlapping. Error must be more complex.')
+                unsat_rows = [(n, lb, ub) for n, lb, ub, d in zip(self.row_names, self.np_lbA, self.np_ubA, self.np_A) if (lb > 0 or ub < 0) and (d == 0).min()]
+                if len(unsat_rows) > 0:
+                    print('Direct unsatisfiability:\n{}'.format('\n'.join(['{} needs change but the Jacobian is 0. lbA: {}, ubA: {}'.format(n, lb, ub) for n, lb, ub in unsat_rows])))
+                else:
+                    print('Boundaries are not overlapping and direct unsatisfiability could not be found. Error must be more complex.')
 
             raise e
         if xdot_full is None:
@@ -249,6 +251,15 @@ class PID_Constraint():
         self.k_i    = k_i
         self.k_d    = k_d
 
+    @property
+    def free_symbols(self):
+        out = set()
+        if hasattr(self.error_term, 'free_symbols'):
+            out.update(self.error_term.free_symbols)
+        if hasattr(self.control_value, 'free_symbols'):
+            out.update(self.control_value.free_symbols) 
+        return out
+
     def to_soft_constraint(self):
         return SoftConstraint(-self.error_term, -self.error_term, self.weight, self.control_value)
 
@@ -279,11 +290,11 @@ class PIDQPBuilder(TypedQPBuilder):
             else:
                 pid_factors.append((1, 0, 0))
 
-        self.pid_factors = np.array(pid_factors)
-        self._old_lbA = np.zeros((len(pid_factors), 1))
-        self._old_ubA = np.zeros((len(pid_factors), 1))
-        self._int_lbA = np.zeros((len(pid_factors), 1))
-        self._int_ubA = np.zeros((len(pid_factors), 1))
+        self.pid_factors = np.array(pid_factors).T
+        self._old_lbA = np.zeros(len(pid_factors))
+        self._old_ubA = np.zeros(len(pid_factors))
+        self._int_lbA = np.zeros(len(pid_factors))
+        self._int_ubA = np.zeros(len(pid_factors))
 
         super(PIDQPBuilder, self).__init__(hard_constraints, soft_constraints, controlled_values)
 
@@ -295,8 +306,8 @@ class PIDQPBuilder(TypedQPBuilder):
         true_lbA = self.np_lbA.copy()
         true_ubA = self.np_ubA.copy()        
 
-        self.np_lbA = np.sum(np.hstack(self.np_lbA, self._int_lbA, (self.np_lbA - self._old_lbA) / deltaT) * self.pid_factors, axis=1, keepdims=True)
-        self.np_ubA = np.sum(np.hstack(self.np_ubA, self._int_ubA, (self.np_ubA - self._old_ubA) / deltaT) * self.pid_factors, axis=1, keepdims=True)
+        self.np_lbA = np.sum(np.vstack((self.np_lbA, self._int_lbA, (self.np_lbA - self._old_lbA) / deltaT)) * self.pid_factors, axis=0) #, keepdims=True)
+        self.np_ubA = np.sum(np.vstack((self.np_ubA, self._int_ubA, (self.np_ubA - self._old_ubA) / deltaT)) * self.pid_factors, axis=0) #, keepdims=True)
 
         self._old_lbA  = true_lbA 
         self._old_ubA  = true_ubA
@@ -304,7 +315,7 @@ class PIDQPBuilder(TypedQPBuilder):
         self._int_ubA += true_ubA
 
 
-class GeomQPBuilder(TypedQPBuilder):
+class GeomQPBuilder(PIDQPBuilder): #(TypedQPBuilder):
     @profile
     def __init__(self, collision_world, hard_constraints, soft_constraints, controlled_values, default_query_distance=1.0, visualizer=None):
 
@@ -358,9 +369,9 @@ class GeomQPBuilder(TypedQPBuilder):
                     self.name_resolver[coll_b] = obj_b
 
                     if coll_b not in self.collision_handlers:
-                        if obj_a_str not in self.collision_handlers:
-                            self.collision_handlers[coll_b] = ContactHandler(obj_a)
-                        handler = self.collision_handlers[coll_b]
+                        if coll_a not in self.collision_handlers:
+                            self.collision_handlers[coll_a] = ContactHandler(obj_a)
+                        handler = self.collision_handlers[coll_a]
                         if not handler.has_handle_for(obj_b):
                             handler.add_active_handle(obj_b)
                     else:
@@ -404,9 +415,10 @@ class GeomQPBuilder(TypedQPBuilder):
 @profile
 def generate_controlled_values(constraints, symbols, weights={}, bounds={}, default_weight=0.01, default_bounds=(-1e9, 1e9)):
     controlled_values = {}
-    to_remove = set()
+    to_remove  = set()
+
     for k, c in constraints.items():
-        if type(c.expr) is spw.Symbol and c.expr in symbols:
+        if type(c.expr) is Symbol and c.expr in symbols and str(c.expr) not in controlled_values:
             weight = default_weight if c.expr not in weights else weights[c.expr] 
             controlled_values[str(c.expr)] = ControlledValue(c.lower, c.upper, c.expr, weight)
             to_remove.add(k)
@@ -419,6 +431,25 @@ def generate_controlled_values(constraints, symbols, weights={}, bounds={}, defa
             controlled_values[str(s)] = ControlledValue(lower, upper, s, weight)
 
     return controlled_values, new_constraints
+
+def depth_weight_controlled_values(gm, controlled_values, default_weight=0.01, exp_factor=1.0):
+    for cv in controlled_values.values():
+        cv.weight = default_weight * max(1, len(gm.get_active_geometry_raw({cv.symbol}))) ** exp_factor
+    return controlled_values
+
+def find_constant_bounds(constraints):
+    mins  = {}
+    maxes = {}
+
+    for c in constraints.values():
+        if type(c.expr) is Symbol:
+            if not is_symbolic(c.lower):
+                mins[c.expr] = c.lower if c.expr not in mins  else max(mins[c.expr], c.lower)
+
+            if not is_symbolic(c.upper):
+                mins[c.expr] = c.upper if c.expr not in maxes else max(mins[c.expr], c.upper)
+
+    return {s: (mins[s] if s in mins else None, maxes[s] if s in maxes else None) for s in set(mins.keys()).union(set(maxes.keys()))}
 
 
 

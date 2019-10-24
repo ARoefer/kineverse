@@ -126,7 +126,7 @@ class GeometryModel(EventModel):
         self._co_callbacks  = {}
         self._static_objects = []
 
-    def _process_link_insertion(self, key, link):
+    def _process_body_insertion(self, key, link):
         if link.collision is not None and str(key) not in self._collision_objects:
             shape = create_compound_shape()
             for c in link.collision.values():
@@ -184,12 +184,12 @@ class GeometryModel(EventModel):
             key = Path(key)
 
         if isinstance(value, RigidBody):
-            self._process_link_insertion(key, value)
+            self._process_body_insertion(key, value)
         elif isinstance(value, KinematicJoint):
             self._process_joint_insertion(key, value)
         elif isinstance(value, ArticulatedObject):
             for lname, link in value.links.items():
-                self._process_link_insertion(key + ('links', lname,), link)
+                self._process_body_insertion(key + ('links', lname,), link)
             for jname, joint in value.joints.items():
                 self._process_joint_insertion(key + ('joints', jname,), joint)
         super(GeometryModel, self).set_data(key, value)
@@ -211,6 +211,7 @@ class GeometryModel(EventModel):
     def dispatch_events(self):
         static_objects = []
         static_poses   = []
+        dynamic_poses  = {}
         for str_k in self._collision_objects:
             k = Path(str_k)
             if k in self._callback_batch:
@@ -218,16 +219,20 @@ class GeometryModel(EventModel):
                 if self.has_data(k):
                     #print('{} was changed'.format(k))
                     link = self.get_data(k)
-                    pose_expr = link.pose # * link.collision.to_parent
+                    pose_expr  = link.pose # * link.collision.to_parent
+                    symbol_set = set()
                     if type(pose_expr) is GM:
-                        pose_expr = pose_expr.to_sym_matrix()
+                        symbol_set  = symbol_set.union(pose_expr.diff_symbols)
+                        pose_expr   = pose_expr.to_sym_matrix()
+                    symbol_set |= pose_expr.free_symbols.union({get_diff_symbol(s) for s in pose_expr.free_symbols})
                     self._co_pose_expr[str_k]  = pose_expr
-                    self._co_symbol_map[str_k] = pose_expr.free_symbols
-                    if len(pose_expr.free_symbols) > 0:
-                        for s in pose_expr.free_symbols:
+                    self._co_symbol_map[str_k] = symbol_set
+                    if len(symbol_set) > 0:
+                        for s in symbol_set:
                             if s not in self._symbol_co_map:
                                 self._symbol_co_map[s] = set()
                             self._symbol_co_map[s].add(str_k)
+                        dynamic_poses[str_k] = np.array(pose_expr.subs({s: 0 for s in pose_expr.free_symbols}).tolist())
                     else:
                         #print('{} is static, setting its pose to:\n{}'.format(k, pose_expr))
                         static_objects.append(self._collision_objects[str_k])
@@ -236,8 +241,13 @@ class GeometryModel(EventModel):
                     self._process_link_removal(k)
         if len(static_objects) > 0:
             self.kw.batch_set_transforms(static_objects, np.vstack(static_poses))
-            self.static_objects = static_objects
+            self._static_objects = static_objects
             # print('\n  '.join(['{}: {}'.format(n, c.transform) for n, c in self._collision_objects.items()]))
+
+        if len(dynamic_poses) > 0:
+            objs, matrices = zip(*[(self._collision_objects[k], m) for k, m in dynamic_poses.items()])
+            self.kw.batch_set_transforms(objs, np.vstack(matrices))
+
         super(GeometryModel, self).dispatch_events()
 
 
@@ -267,6 +277,8 @@ class GeometryModel(EventModel):
         out.update(super(GeometryModel, self).get_constraints_by_symbols(symbol_set))
         return out
 
+    def get_active_geometry_raw(self, symbols):
+        return {k: self._collision_objects[k] for k in set(sum([list(self._symbol_co_map[s]) for s in symbols if s in self._symbol_co_map], []))}
 
     def get_active_geometry(self, symbols, static_state=None, include_static=True):
         coll_obj_keys = set()
@@ -288,12 +300,12 @@ class GeometryModel(EventModel):
 
         cythonized_matrix = spw.speed_up(pose_matrix, pose_matrix.free_symbols, backend=BACKEND)
 
-        world = pb.KineverseWorld()
-        filtered_objs = objs if not include_static else objs + self.static_objects
-        for obj in filtered_objs:
-            world.add_collision_object(obj)
+        # world = pb.KineverseWorld()
+        # filtered_objs = objs if not include_static else objs + self._static_objects
+        # for obj in filtered_objs:
+        #     world.add_collision_object(obj)
 
-        return CollisionSubworld(world, obj_names, objs, pose_matrix.free_symbols, cythonized_matrix)
+        return CollisionSubworld(self.kw, obj_names, objs, pose_matrix.free_symbols, cythonized_matrix)
 
 
 class CollisionSubworld(object):
@@ -331,12 +343,14 @@ class CollisionSubworld(object):
             self.world.perform_discrete_collision_detection()
         return self.world.get_closest_batch(query_batch)
 
-
-
-def closest_distance(pose_a, pose_b, path_a, path_b):
+def contact_geometry(pose_a, pose_b, path_a, path_b):
     cont = ContactSymbolContainer(path_a, path_b)
     point_a = pose_a * point3(cont.on_a_x, cont.on_a_y, cont.on_a_z)
     point_b = pose_b * point3(cont.on_b_x, cont.on_b_y, cont.on_b_z)
+    return point_a, point_b, vector3(cont.normal_x, cont.normal_y, cont.normal_z)
+
+def closest_distance(pose_a, pose_b, path_a, path_b):
+    point_a, point_b, _ = contact_geometry(pose_a, pose_b, path_a, path_b)
     return norm(point_a - point_b)
 
 def closest_distance_constraint(obj_a_pose, obj_b_pose, obj_a_path, obj_b_path, margin=0):
@@ -357,9 +371,14 @@ class ContactSymbolContainer(object):
         self.on_b_x = Position((contact_name + ('onB', 'x')).to_symbol())
         self.on_b_y = Position((contact_name + ('onB', 'y')).to_symbol())
         self.on_b_z = Position((contact_name + ('onB', 'z')).to_symbol())
+        self.normal_x = Position((contact_name + ('normal', 'x')).to_symbol())
+        self.normal_y = Position((contact_name + ('normal', 'y')).to_symbol())
+        self.normal_z = Position((contact_name + ('normal', 'z')).to_symbol())
+
 
 pb_zero_vector = pb.Vector3(0,0,0)
 pb_far_away_vector = pb.Vector3(1e8,1e8,-1e8)
+pb_default_normal  = pb.Vector3(0,0,1)
 
 class ContactHandler(object):
     def __init__(self, object_path):
@@ -372,23 +391,22 @@ class ContactHandler(object):
     def num_anon_contacts(self):
         return self._num_anon_contacts
     
-
     def has_handle_for(self, other_path):
         return other_path in self.var_map
 
     def add_active_handle(self, other_path):
         if other_path not in self.var_map:
             self.var_map[other_path] = ContactSymbolContainer(self.obj_path, other_path)
-            self.handle_contact(pb_zero_vector, pb_zero_vector, other_path)
+            self.handle_contact(pb_zero_vector, pb_zero_vector, pb_default_normal, other_path)
 
     def add_passive_handle(self):
         self.var_map[self._num_anon_contacts] = ContactSymbolContainer(self.obj_path, Path('anon/{}'.format(self._num_anon_contacts)))
-        self.handle_contact(pb_zero_vector, pb_zero_vector, self._num_anon_contacts)
+        self.handle_contact(pb_zero_vector, pb_zero_vector, pb_default_normal, self._num_anon_contacts)
         self._num_anon_contacts += 1
 
 
     @profile
-    def handle_contact(self, point_a, point_b, name=0):
+    def handle_contact(self, point_a, point_b, normal, name=0):
         if name not in self.var_map:
             raise Exception('Name {} is not known to contact handler'.format(name))
         container = self.var_map[name]
@@ -397,7 +415,10 @@ class ContactHandler(object):
                            container.on_a_z: point_a.z,
                            container.on_b_x: point_b.x,
                            container.on_b_y: point_b.y,
-                           container.on_b_z: point_b.z})
+                           container.on_b_z: point_b.z,
+                           container.normal_x: normal.x,
+                           container.normal_y: normal.y,
+                           container.normal_z: normal.z})
 
     @profile
     def handle_contacts(self, contacts, name_resolver=None):
@@ -405,15 +426,15 @@ class ContactHandler(object):
         for cp in contacts:
             if len(cp.points) > 0:
                 if name_resolver is not None and cp.obj_b in name_resolver and name_resolver[cp.obj_b] in self.var_map:
-                    name = name_resolver[cp.obj_a]
-                    self.handle_contact(cp.points[0].point_a, cp.points[0].point_b, name)
+                    name = name_resolver[cp.obj_b]
+                    self.handle_contact(cp.points[0].point_a, cp.points[0].point_b, cp.points[0].normal_world_b, name)
                 elif anon_idx < self._num_anon_contacts:
-                    self.handle_contact(cp.points[0].point_a, cp.obj_b.transform * cp.points[0].point_b, anon_idx)
+                    self.handle_contact(cp.points[0].point_a, cp.obj_b.transform * cp.points[0].point_b, cp.points[0].normal_world_b, anon_idx)
                     anon_idx += 1
         
         if anon_idx < self._num_anon_contacts:
             for x in range(anon_idx, self._num_anon_contacts):
-                self.handle_contact(pb_zero_vector, pb_far_away_vector, anon_idx)
+                self.handle_contact(pb_zero_vector, pb_far_away_vector, pb_default_normal, anon_idx)
 
 
 
