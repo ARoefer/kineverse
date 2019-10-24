@@ -66,7 +66,10 @@ class ROSBPBVisualizer(ROSVisualizer):
     #         self.draw_collision_object(namespace, obj, frame)
 
 
-    def draw_contacts(self, namespace, contacts, size, r=1, g=0, b=0, a=1, frame=None):
+    def draw_contacts(self, namespace, contacts, size, r=1, g=0, b=0, a=1, arrow_length=1.0, frame=None):
         for cp in contacts:
             lines = sum([[cp.obj_a.transform * p.point_a, cp.obj_b.transform * p.point_b] for p in cp.points], [])
-            self.draw_lines(namespace, pb.Transform.identity(), size, lines, r, g, b, a, frame)        
+            self.draw_lines(namespace, pb.Transform.identity(), size, lines, r, g, b, a, frame)
+            self.draw_points(namespace, pb.Transform.identity(), size * 2, lines, r, g, b, a, frame)
+            for x, p in enumerate(cp.points):
+                self.draw_vector(namespace, lines[x * 2 + 1], p.normal_world_b * arrow_length, r, g, b, a, frame=frame)
