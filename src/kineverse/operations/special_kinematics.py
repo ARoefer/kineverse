@@ -71,6 +71,56 @@ def create_roomba_joint_with_symbols(parent_pose, child_pose, connection_path, r
                 create_vel((var_prefix + ('linear_joint',)).to_symbol()),
                 create_vel((var_prefix + ('angular_joint',)).to_symbol()),
                 lin_vel_limit, ang_vel_limit)
+
+
+class OmnibaseJoint(KinematicJoint):
+    def __init__(self, parent, child, x_pos, y_pos, a_pos):
+        super(OmnibaseJoint, self).__init__('roomba', parent, child)
+        self.x_pos = x_pos
+        self.y_pos = y_pos
+        self.a_pos = a_pos
+
+    def _json_data(self, json_dict):
+        super(OmnibaseJoint, self)._json_data(json_dict)
+        del json_dict['jtype']
+        json_dict.update({'x_pos'   : self.x_pos,
+                          'y_pos'   : self.y_pos,
+                          'a_pos'   : self.a_pos})
+
+
+class SetOmnibaseJoint(Operation):
+    def init(self, parent_pose, child_pose, connection_path, rot_axis, x_pos, y_pos, a_pos, l_vel_limit, a_vel_limit):
+        self.joint_obj = OmnibaseJoint(str(parent_pose[:-1]), str(child_pose[:-1]), x_pos, y_pos, a_pos)
+        self.conn_path = connection_path
+        op_construction_wrapper(super(SetOmnibaseJoint, self).init,
+                                'Roomba Joint', 
+                                ['child_pose', 'child_parent', 'child_parent_tf'],
+                                (connection_path, 'connection', self.joint_obj),
+                                parent_pose=parent_pose,
+                                child_parent=child_pose[:-1] + ('parent',),
+                                child_parent_tf=child_pose[:-1] + ('to_parent',),
+                                child_pose=child_pose,
+                                rot_axis=rot_axis,
+                                x_pos=x_pos,
+                                y_pos=y_pos,
+                                a_pos=a_pos,
+                                lin_vel_limit=l_vel_limit,
+                                ang_vel_limit=a_vel_limit)
+
+    def _apply(self, ks, parent_pose, child_pose, child_parent_tf, rot_axis, x_pos, y_pos, a_pos, lin_vel_limit, ang_vel_limit):
+        child_parent_tf = translation3(x_pos, y_pos, 0) * rotation3_axis_angle(rot_axis, a_pos)
+        return {'child_parent': self.joint_obj.parent,
+                'child_parent_tf': child_parent_tf,
+                'child_pose': parent_pose * child_parent_tf,
+                'connection': self.joint_obj}, \
+               {'{}_lin_vel'.format(self.conn_path): Constraint(-lin_vel_limit, lin_vel_limit, get_diff(norm(vector3(x_pos, y_pos, 0)))),
+                '{}_ang_vel'.format(self.conn_path): Constraint(-ang_vel_limit, ang_vel_limit, get_diff(a_pos))}
+
+def create_omnibase_joint_with_symbols(parent_pose, child_pose, connection_path, rot_axis, lin_vel_limit, ang_vel_limit, var_prefix):
+    return SetOmnibaseJoint(parent_pose, child_pose, connection_path, rot_axis,
+                create_pos((var_prefix + ('localization_x',)).to_symbol()),
+                create_pos((var_prefix + ('localization_y',)).to_symbol()),
+                create_pos((var_prefix + ('localization_a',)).to_symbol()),
                 lin_vel_limit, ang_vel_limit)
 
 
