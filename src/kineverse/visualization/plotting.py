@@ -1,9 +1,55 @@
 import matplotlib.pyplot as plt
+import matplotlib.colors as matcolors
+import pandas            as pd
 
 from collections import namedtuple
 from math import ceil, sqrt
 
 COLORS = ['r', 'g', 'b', 'c', 'm', 'y', 'k']
+
+def hsv_to_rgb(h, s, v):
+    return matcolors.hsv_to_rgb((h, s, v))
+
+def print_return(f):
+    def wrap(*args):
+        out = f(*args)
+        print(out)
+        return out
+    return wrap
+
+
+class ColorGenerator(object):
+    def __init__(self, dist=0.2, s_lb=0.6, v_lb=0.3, s=1.0, v=1.0):
+        self.dist = dist
+        self.h    = 0.0
+        self.s    = s
+        self.v    = v
+        self.s_lb = s_lb
+        self.v_lb = v_lb
+        self._current_step = 1.0 / ceil(1.0 / dist)
+
+    def get_color(self):
+        out = hsv_to_rgb(self.h, self.s, self.v)
+        self.h += self._current_step
+        if self.h >= 1.0:
+            self.h = 0
+            self.s -= self.dist / self.v
+            if self.s < self.s_lb:
+                self.s = 1.0
+                self.v -= self.dist
+                if self.v < self.v_lb:
+                    self.v = 1.0
+                    self.s = 1.0
+                    self.h = 0.0
+                    #raise Exception('Can not generate any more colors.')
+            self._current_step = self.s * self.v / ceil(self.s * self.v / self.dist)
+
+        return out
+
+    def get_color_hex(self):
+        r, g, b = self.get_color()
+        return '#{:02X}{:02X}{:02X}'.format(int(r * 255), int(g * 255), int(b * 255))
+
 
 def draw_recorders(recorders, ratio=1.0, plot_width=3, plot_height=2, sizes=[]):
     #max_w = max([t[0] for t in sizes if t != None])
@@ -97,8 +143,9 @@ def split_recorders(recorders, threshold=0.1, flatline=1e-4):
 class ValueRecorder(object):
     def __init__(self, title, *args):
         super(ValueRecorder, self).__init__()
+        self._color_generator = ColorGenerator(v=1.0, s_lb=0.75)
         self.title    = title
-        group_colors  = [args[x] if type(args[x]) == tuple else (args[x], COLORS[x % len(COLORS)]) for x in range(len(args))]
+        group_colors  = [args[x] if type(args[x]) == tuple else (args[x], self._color_generator.get_color_hex()) for x in range(len(args))]
         self.data     = {a: [] for a, _ in group_colors}
         self.data_lim = {a: (1e20, -1e20) for a, _ in group_colors}
         self.colors   = dict(group_colors)
@@ -116,7 +163,7 @@ class ValueRecorder(object):
             self.data_lim[a] = (min(d), max(d))
 
     def plot(self, ax):
-        self.patches = [ax.plot(d, self.colors[n], label=n)[0] for n, d in sorted(self.data.items())]
+        self.patches = [ax.plot(d, color=self.colors[n], label=n)[0] for n, d in sorted(self.data.items())]
         
         for n, (y, c) in self.thresholds.items():
             ax.axhline(y, color=c)
