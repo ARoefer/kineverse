@@ -361,6 +361,37 @@ def contact_constraint(obj_a_pose, obj_b_pose, obj_a_path, obj_b_path):
     dist = closest_distance(obj_a_pose, obj_b_pose, obj_a_path, obj_b_path)
     return Constraint(-dist, -dist, dist)
 
+def generate_contact_model(actuated_point, actuated_symbols, contact_point, contact_normal, affected_dof, dist_threshold=0.01, set_inanimate=True, default_bound=1e9):
+    """Normal is assumed to point towards the actuator.
+    This is a very bad and limited model. Should suffice for 1-Dof pushes though.
+    """
+    distance     = dot(contact_normal, actuated_point - contact_point)
+    in_contact   = less_than(distance, dist_threshold)
+    actuated_jac = vector3(*[get_diff(x, actuated_symbols) for x in actuated_point[:3]])
+
+    actuated_n = dot(actuated_point, contact_normal)
+    actuated_t = actuated_point - actuated_n * contact_normal 
+
+    contact_n  = dot(contact_point,  contact_normal)
+    contact_t  = contact_point - contact_n * contact_normal
+
+    tangent_dist = norm(contact_t - actuated_t)
+
+    out = {
+           'direction_limit': Constraint(-default_bound, 0, dot(contact_point, contact_normal)),
+           'impenetrability': Constraint(-distance - alg_not(in_contact) * default_bound, default_bound, distance),
+           #'motion_alignment_tangent': Constraint(-alg_not(in_contact), alg_not(in_contact), tangent_dist),
+           #'motion_alignment_normal': Constraint(-alg_not(in_contact), alg_not(in_contact), actuated_n - contact_n)
+           }
+
+    for s in affected_dof:
+        contact_jac = vector3(*[x.diff(s) for x in contact_point[:3]]) * get_diff(s)
+        out['motion_alignment_{}'.format(s)] = Constraint(-in_contact * default_bound, 0, dot(contact_normal, contact_jac))
+        if set_inanimate:
+            out['inanimate_{}'.format(s)] = Constraint(-in_contact * default_bound, in_contact * default_bound, s)
+
+    return out
+
 
 class ContactSymbolContainer(object):
     def __init__(self, path_obj, path_other=0):
