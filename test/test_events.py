@@ -205,11 +205,11 @@ class TestEventModel(ut.TestCase):
         km.register_on_operation_changed('hah \w* something', cb_op)
         km.register_on_operation_changed('hah lol \w*', cb_op)
 
-        km.apply_operation(EmptyOperation(), 'nothing')
+        km.apply_operation('nothing', EmptyOperation())
         km.dispatch_events()
         self.assertNotIn('nothing', self.op_tracker)
 
-        km.apply_operation(EmptyOperation(), 'foo')
+        km.apply_operation('foo', EmptyOperation())
         km.dispatch_events()
         self.assertIn('foo', self.op_tracker)
         self.assertTrue(self.op_tracker['foo'])
@@ -219,21 +219,21 @@ class TestEventModel(ut.TestCase):
         self.assertIn('foo', self.op_tracker)
         self.assertFalse(self.op_tracker['foo'])
 
-        km.apply_operation(EmptyOperation(), 'kek')
+        km.apply_operation('kek', EmptyOperation())
         km.dispatch_events()
         self.assertNotIn('kek', self.op_tracker)
 
-        km.apply_operation(EmptyOperation(), 'kek wonderful')
+        km.apply_operation('kek wonderful', EmptyOperation())
         km.dispatch_events()
         self.assertIn('kek wonderful', self.op_tracker)
         self.assertTrue(self.op_tracker['kek wonderful'])
 
-        km.apply_operation_before(EmptyOperation(), 'hah abc something', 'kek')
+        km.apply_operation_before('hah abc something', 'kek', EmptyOperation())
         km.dispatch_events()
         self.assertIn('hah abc something', self.op_tracker)
         self.assertTrue(self.op_tracker['hah abc something'])        
 
-        km.apply_operation_after(EmptyOperation(), 'hah lol nothing', 'kek wonderful')
+        km.apply_operation_after('hah lol nothing', 'kek wonderful', EmptyOperation())
         km.dispatch_events()
         self.assertIn('hah lol nothing', self.op_tracker)
         self.assertTrue(self.op_tracker['hah lol nothing'])
