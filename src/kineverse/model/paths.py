@@ -12,7 +12,10 @@ class PathException(Exception):
 class Path(tuple, JSONSerializable):
     def __new__(cls, path):
         if type(path) == str:
-            return super(Path, cls).__new__(Path, path.split('/'))
+            parts = path.split('/')
+            if parts[0] == '':
+                return super(Path, cls).__new__(Path, parts[1:])
+            return super(Path, cls).__new__(Path, parts)
         elif type(path) == spw.Symbol:
             return super(Path, cls).__new__(Path, str(path).split('__'))
         return super(Path, cls).__new__(Path, path)
