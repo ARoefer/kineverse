@@ -178,25 +178,25 @@ class KinematicModel(object):
     @profile
     def has_data(self, key):
         if type(key) == str:
-            key = Path(key.split('/'))
+            key = Path(key)
         return key in self.data_tree
 
     @profile
     def get_data(self, key):
         if type(key) == str:
-            key = Path(key.split('/'))
+            key = Path(key)
         return self.data_tree[key]
 
     @profile
     def set_data(self, key, value):
         if type(key) == str:
-            key = Path(key.split('/'))
+            key = Path(key)
         self.data_tree[key] = value
 
     @profile
     def remove_data(self, key):
         if type(key) == str:
-            key = Path(key.split('/'))
+            key = Path(key)
         self.data_tree.remove_data(key)
 
     @profile
