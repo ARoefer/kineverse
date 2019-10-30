@@ -114,6 +114,9 @@ class ModelClient(object):
 
 
     def register_on_model_changed(self, path, callback):
+        if type(path) == str:
+            path = Path(path)
+
         self.km.register_on_model_changed(path, callback)
         if path not in self.tracked_paths: 
             self._start_tracking(path)
