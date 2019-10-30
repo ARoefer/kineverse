@@ -186,9 +186,10 @@ class PathDict(dict):
 class PathSet(set):
     # Tests whether a path or any of its prefixes are covered by this set
     def __contains__(self, key):
+        out = False
         for x in range(len(key)):
-            return super(PathSet, self).__contains__(key[:x + 1])
-        return False
+            out = max(out, super(PathSet, self).__contains__(key[:x + 1]))
+        return out
 
     # Tests whether the given key is a prefix of any element in the set
     def is_prefix(self, key):
