@@ -68,6 +68,43 @@ def draw_recorders(recorders, ratio=1.0, plot_width=3, plot_height=2, sizes=[]):
     fig.tight_layout()
     return fig
 
+def convert_qp_builder_log(qp_builder, constraints=[]):
+    color_gen = ColorGenerator()
+
+    if len(constraints) == 0:
+        constraints = qp_builder.row_names
+
+    dfs_H, dfs_A, cmds = qp_builder.H_dfs, qp_builder.A_dfs, qp_builder.cmd_df
+    lbs     = pd.DataFrame([df.T['lb'].T for df in dfs_H]).reset_index(drop=True)
+    ubs     = pd.DataFrame([df.T['ub'].T for df in dfs_H]).reset_index(drop=True)
+    weights = pd.DataFrame([df.T['weight'].T for df in dfs_H]).reset_index(drop=True)
+
+    colors = {}
+    constraint_recs = {}
+    for cn in constraints:
+        if cn in qp_builder.row_names:
+            cs  = pd.DataFrame([df.T[cn].T for df in dfs_A]).reset_index(drop=True)
+            names = [c for c in cs.columns if (cs[c] != 0.0).any()]
+            for n in names:
+                if n not in colors:
+                    colors[n] = color_gen.get_color_hex()
+
+            rec = ValueRecorder(cn, *[(n, colors[n]) for n in names])
+            rec.data = {c: cs[c] for c in rec.data.keys()}
+            constraint_recs[cn] = rec
+
+    rec_w = ValueRecorder('weights', *[(c, colors[c]) for c in weights.columns if c in colors])
+    rec_w.data = {c: weights[c] for c in rec_w.data.keys()}
+
+    rec_b = ValueRecorder('bounds', *sum([[('{}_lb'.format(c), colors[c]), ('{}_ub'.format(c), colors[c])] for c in lbs.columns if c in colors], []))
+    rec_b.data = dict(sum([[('{}_lb'.format(c), lbs[c]), ('{}_ub'.format(c), ubs[c])] for c in lbs.columns if c in colors], []))
+
+    rec_c = ValueRecorder('commands', *[(c, colors[c]) for c in cmds.columns if c in colors])
+    rec_c.data = {c: cmds[c] for c in rec_c.data.keys()}
+
+    return rec_w, rec_b, rec_c, constraint_recs
+
+
 class PlotProp(object):
     def __init__(self, name, lower, upper):
         self.name   = name
