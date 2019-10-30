@@ -378,7 +378,6 @@ class GeomQPBuilder(PIDQPBuilder): #(TypedQPBuilder):
                         handler = self.collision_handlers[coll_b]
                         if not handler.has_handle_for(obj_a):
                             handler.add_active_handle(obj_a)
-        
 
         self.closest_query_batch = {collision_object: default_query_distance for collision_object in self.collision_handlers.keys()}
 
@@ -387,7 +386,7 @@ class GeomQPBuilder(PIDQPBuilder): #(TypedQPBuilder):
 
 
     @profile
-    def get_cmd(self, substitutions, nWSR=None, deltaT=None):
+    def compute_queries(self, substitutions):
         self.collision_world.update_world(substitutions)
         closest = self.collision_world.closest_distances(self.closest_query_batch)
 
@@ -408,6 +407,10 @@ class GeomQPBuilder(PIDQPBuilder): #(TypedQPBuilder):
 
         if self.visualizer is not None:
             self.visualizer.render('debug_world', 'debug_contacts')
+
+    @profile
+    def get_cmd(self, substitutions, nWSR=None, deltaT=None):
+        self.compute_queries(substitutions)
 
         return super(GeomQPBuilder, self).get_cmd(substitutions, nWSR, deltaT)
 

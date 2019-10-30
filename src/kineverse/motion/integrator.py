@@ -3,6 +3,7 @@ from giskardpy.symengine_wrappers     import *
 from kineverse.visualization.plotting import ValueRecorder, SymbolicRecorder
 from kineverse.gradients.diff_logic   import get_symbol_type
 from kineverse.motion.min_qp_builder  import TypedQPBuilder as TQPB, \
+                                             GeomQPBuilder  as GQPB, \
                                              extract_expr
 from kineverse.type_sets              import is_symbolic
 from kineverse.time_wrapper           import Time
@@ -41,6 +42,10 @@ class CommandIntegrator(object):
     def run(self, dt=0.02, max_iterations=200):
         self.state[DT_SYM] = dt
         
+        # Precompute geometry related values for better plots
+        if isinstance(self.qp_builder, GQPB):
+            self.qp_builder.compute_queries(self.state)
+
         #for x in range(max_iterations):
         for x in tqdm(range(max_iterations), desc='Running "{}" for {} iterations'.format(self.recorder.title, max_iterations)):
             if rospy.is_shutdown():
