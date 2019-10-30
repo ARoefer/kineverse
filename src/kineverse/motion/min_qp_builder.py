@@ -430,7 +430,7 @@ def generate_controlled_values(constraints, symbols, weights={}, bounds={}, defa
     for s in symbols:
         if str(s) not in controlled_values:
             lower, upper = default_bounds if s not in bounds else bounds[s]
-            weight = default_weight if c.expr not in weights else weights[c.expr] 
+            weight = default_weight if s not in weights else weights[s]
             controlled_values[str(s)] = ControlledValue(lower, upper, s, weight)
 
     return controlled_values, new_constraints
