@@ -108,6 +108,10 @@ class ModelClient(object):
     def _start_tracking(self, path):
         print('Started tracking {}'.format(path))
         self.tracked_paths.add(path)
+        for x in range(len(path)):
+            if not self.km.has_data(path[:x]):
+                self.km.set_data(path[:x], {})
+
         self._update_model(self.srv_get_model([str(path)],[]).model)
         self.km.clean_structure()
         self.km.dispatch_events()
