@@ -12,7 +12,7 @@ from tqdm import tqdm
 DT_SYM = sp.symbols('T_p')
 
 class CommandIntegrator(object):
-    def __init__(self, qp_builder, integration_rules=None, start_state=None, recorded_terms={}, equilibrium=0):
+    def __init__(self, qp_builder, integration_rules=None, start_state=None, recorded_terms={}, equilibrium=0.001):
         self.qp_builder = qp_builder
         if isinstance(qp_builder, TQPB):
             self.integration_rules = {}
@@ -46,8 +46,9 @@ class CommandIntegrator(object):
         if isinstance(self.qp_builder, GQPB):
             self.qp_builder.compute_queries(self.state)
 
-        #for x in range(max_iterations):
-        for x in tqdm(range(max_iterations), desc='Running "{}" for {} iterations'.format(self.recorder.title, max_iterations)):
+        cmd_accu = np.zeros(self.qp_builder.n_cv)
+        for x in range(max_iterations):
+        # for x in tqdm(range(max_iterations), desc='Running "{}" for {} iterations'.format(self.recorder.title, max_iterations)):
             if rospy.is_shutdown():
                 break
 
@@ -58,9 +59,12 @@ class CommandIntegrator(object):
                     self.recorder.log_data(s, v)
 
             cmd = self.qp_builder.get_cmd(self.state, deltaT=dt)
-            #print(self.qp_builder.last_matrix_str())
+            cmd_accu = cmd_accu * 0.5 + self.qp_builder._cmd_log[-1] * dt
             if self.qp_builder.equilibrium_reached(self.equilibrium, -self.equilibrium):
                 #print('Equilibrium point reached after {} iterations'.format(x))
+                return
+
+            if np.abs(cmd_accu).max() <= self.equilibrium:
                 return
 
             # print('---\n{}'.format('\n'.join(['{:>35}: {:>12.4f}'.format(k, v) for k, v in cmd.items()])))
