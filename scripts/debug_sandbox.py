@@ -115,7 +115,7 @@ if __name__ == '__main__':
     parts = ['sink_area_trash_drawer_handle', 'iai_fridge_door_handle', 'sink_area_dish_washer_door_handle', 'sink_area_left_upper_drawer_handle', 'sink_area_left_middle_drawer_handle', 'sink_area_left_bottom_drawer_handle']
     #kitchen_path = Path('kitchen/links/sink_area_trash_drawer_handle/pose')
     #kitchen_path = Path('kitchen/links/iai_fridge_door_handle/pose')
-    part = parts[2] # random.choice(parts)
+    part = parts[0] # random.choice(parts)
     kitchen_path = Path('kitchen/links/{}/pose'.format(part))
 
     look_goal = 1 - (dot(cam_to_eef, cam_forward) / norm(cam_to_eef))

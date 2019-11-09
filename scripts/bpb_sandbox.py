@@ -32,8 +32,8 @@ if __name__ == '__main__':
     cube_shape = pb.BoxShape(pb.Vector3(0.5,0.5,0.5))
     cube_body  = create_object(cube_shape, pb.Transform(1, 0, 0))
     cube2_body = create_object(cube_shape, pb.Transform(-1, 0, 0))
-    obj_body   = create_object(suzanne_obj, pb.Transform(0, 1, 0)) 
-    stl_body   = create_object(suzanne_stl, pb.Transform(0,-1, 0))
+    #obj_body   = create_object(suzanne_obj, pb.Transform(0, 1, 0)) 
+    #stl_body   = create_object(suzanne_stl, pb.Transform(0,-1, 0))
 
 
     kw.add_collision_object(cube_body)
@@ -43,11 +43,11 @@ if __name__ == '__main__':
     
     cube_body.activate(True)
     cube2_body.activate(True)
-    obj_body.activate(True)
-    stl_body.activate(True)
+    #obj_body.activate(True)
+    #stl_body.activate(True)
     
-    print(cube_body.isActive, cube2_body.isActive, obj_body.isActive, stl_body.isActive)
-    print(cube_body.activation_state, cube2_body.activation_state, obj_body.activation_state, stl_body.activation_state)
+    #print(cube_body.isActive, cube2_body.isActive, obj_body.isActive, stl_body.isActive)
+    #print(cube_body.activation_state, cube2_body.activation_state, obj_body.activation_state, stl_body.activation_state)
 
     last_time = Time.now()
     while not rospy.is_shutdown():
@@ -74,8 +74,8 @@ if __name__ == '__main__':
             #                        [0,0,1,0], 
             #                        [0,0,0,1]])
 
-            cube2_body.transform = pb.Transform(-y - 1, 0, 0)
-            cube_body.transform = pb.Transform(y + 1, 0, 0)
+            cube2_body.transform = pb.Transform(pb.Quaternion(pb.Vector3(1,1,0).normalized(), y), pb.Vector3(-y - 1, 0, 0))
+            cube_body.transform = pb.Transform(pb.Quaternion(pb.Vector3(0,1,0), y), pb.Vector3(y + 1, 0, 0))
             # obj_body.transform = pb.Transform(0,  y + 1, 0)
             # stl_body.transform = pb.Transform(0, -y - 1, 0)
 
@@ -83,10 +83,10 @@ if __name__ == '__main__':
 
             kw.update_aabbs()
             vis.draw_world('objects', kw)
-            #kw.perform_discrete_collision_detection()
+            kw.perform_discrete_collision_detection()
 
             #contacts = kw.get_contacts()
-            closest = kw.get_closest_batch({cube_body: 2, stl_body: 2})
+            closest = kw.get_closest_batch({cube_body: 2})#, stl_body: 2})
             #print('Number of contacts: {}'.format(len(closest)))
             for contacts in closest.values():
                 for i, cp in enumerate(contacts):
