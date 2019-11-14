@@ -1,6 +1,7 @@
 from kineverse.utils       import copy, deepcopy
 from symengine import Symbol
-from kineverse.model.paths import Path, find_common_root, is_prefix, collect_paths
+from kineverse.model.paths       import Path, find_common_root, is_prefix, collect_paths
+from kineverse.json_serializable import JSONSerializable
 
 def op_construction_wrapper(init_fn, name, mod_list, *written_objs, **kwargs):
     add_kwargs = kwargs
@@ -12,7 +13,7 @@ def op_construction_wrapper(init_fn, name, mod_list, *written_objs, **kwargs):
     init_fn(name, mod_list + mod_attrs, **add_kwargs)
 
 # Every action needs to declare the fields it depends on and the ones it modifies
-class Operation(object):
+class Operation(JSONSerializable):
     def __init__(self, *args):
         self._construction_args = args
         self.init(*args)
@@ -85,3 +86,11 @@ class Operation(object):
                 ks.remove_constraint(k)
             else:
                 ks.add_constraint(k, c)
+
+    def _json_data(self, json_dict):
+        json_dict['args'] = self._construction_args
+
+
+    @classmethod
+    def json_factory(cls, args):
+        return cls(*args)

@@ -70,6 +70,8 @@ add_service_files(
   GetModel.srv
   DebugInfo.srv
   ListPaths.srv
+  SaveModel.srv
+  LoadModel.srv
 )
 
 ## Generate actions in the 'action' folder

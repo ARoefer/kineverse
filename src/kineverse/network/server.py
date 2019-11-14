@@ -33,6 +33,11 @@ from kineverse.srv import GetConstraints          as GetConstraintsSrv
 from kineverse.srv import GetConstraintsResponse  as GetConstraintsResponseMsg 
 from kineverse.srv import ListPaths               as ListPathsSrv
 from kineverse.srv import ListPathsResponse       as ListPathsResponseMsg 
+from kineverse.srv import SaveModel               as SaveModelSrv
+from kineverse.srv import SaveModelResponse       as SaveModelResponseMsg
+from kineverse.srv import LoadModel               as LoadModelSrv
+from kineverse.srv import LoadModelResponse       as LoadModelResponseMsg 
+
 
 # Server without any ROS attachements for testing
 class ModelServer_NoROS(object):
@@ -180,6 +185,30 @@ class ModelServer_NoROS(object):
             res.paths = sorted([str(p) for p in collect_paths(data_root, Path(req.root), depth)])
         return res
 
+    def srv_save_model(self, req):
+        res = SaveModelResponseMsg(success=False)
+
+        try:
+            with open(res_pkg_path(req.filepath), 'w') as f:
+                self.km.save_to_file(f, Path(req.modelpath))
+                res.success = True
+        except Exception as e:
+            print(traceback.format_exc())
+            res.error_msg = str(e)
+        return res
+
+    def srv_load_model(self, req):
+        res = LoadModelResponseMsg(success=False)
+
+        try:
+            with open(res_pkg_path(req.filepath), 'r') as f:
+                self.km.load_from_file(f)
+            res.success = True
+        except Exception as e:
+            print(traceback.format_exc())
+            res.error_msg = str(e)
+        return res
+
 
 # Server with ROS-topics and services
 class ModelServer(ModelServer_NoROS):
@@ -196,7 +225,9 @@ class ModelServer(ModelServer_NoROS):
             rospy.Service(stdn.srv_get_constraints,  GetConstraintsSrv,  self.srv_get_constraints),
             rospy.Service(stdn.srv_get_history,      GetHistorySrv,      self.srv_get_history),
             rospy.Service(stdn.srv_debug_info,       DebugInfoSrv,       self.srv_debug_info),
-            rospy.Service(stdn.srv_list_paths,       ListPathsSrv,       self.srv_list_paths)
+            rospy.Service(stdn.srv_list_paths,       ListPathsSrv,       self.srv_list_paths),
+            rospy.Service(stdn.srv_save_model,       SaveModelSrv,       self.srv_save_model),
+            rospy.Service(stdn.srv_load_model,       LoadModelSrv,       self.srv_load_model)
             ]
 
     def _publish_updates(self, operations_update_msg, model_update_msg):

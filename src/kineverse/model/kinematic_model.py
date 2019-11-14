@@ -1,14 +1,25 @@
 import traceback 
+import kineverse.json_wrapper       as json
+
 from kineverse.model.data_tree      import DataTree
 from kineverse.model.history        import History, Timeline, StampedData, Chunk
 from kineverse.model.paths          import Path
 from kineverse.operations.operation import Operation
 from kineverse.type_sets            import is_symbolic
+from kineverse.json_serializable    import JSONSerializable
 
-class ApplicationInstruction(object):
+Tag = str
+
+class ApplicationInstruction(JSONSerializable):
+    @type_check(Operation, Tag)
     def __init__(self, op, tag):
         self.op  = op
         self.tag = tag
+
+    def _json_data(self, json_dict):
+        json_dict['op'] = self.op
+        json_dict['tag'] = self.tag
+
 
 class ApplyAt(ApplicationInstruction):
     def __init__(self, op, tag):
@@ -19,14 +30,28 @@ class ApplyBefore(ApplicationInstruction):
         super(ApplyBefore, self).__init__(op, tag)
         self.ref_tag = before
 
+    def _json_data(self, json_dict):
+        super(ApplyBefore, self)._json_data(json_dict)
+        json_dict['before'] = self.ref_tag
+
+
 class ApplyAfter(ApplicationInstruction):
     def __init__(self, op, tag, after):
         super(ApplyAfter, self).__init__(op, tag)
         self.ref_tag = after
 
+    def _json_data(self, json_dict):
+        super(ApplyAfter, self)._json_data(json_dict)
+        json_dict['after'] = self.ref_tag
+
+
 class RemoveOp(ApplicationInstruction):
     def __init__(self, tag):
         super(RemoveOp, self).__init__(None, tag)
+
+    def _json_data(self, json_dict):
+        super(RemoveOp, self)._json_data(json_dict)
+        del json_dict['op']
 
 
 class TagNode(StampedData):
@@ -83,7 +108,36 @@ class KinematicModel(object):
 
 
     @profile
-    @type_check(str, Operation)
+    def save_to_file(self, f, subpath=Path('')):
+        self.clean_structure()
+        if len(subpath) != 0:
+            json.dump([{'op' : top.op, 'tag' : top.tag} for top in self.get_history_of(subpath)], f)
+        else:
+            json.dump([{'op' : chunk.operation, 'tag' : t} for (_, t), chunk in zip(sorted([(s, t) for t, s in self.timeline_tags.items()]), self.operation_history.chunk_history)], f)
+
+
+    @profile
+    def load_from_file(self, f): #, clear_model=False):
+        self.clean_structure()
+        instructions = json.load(f)
+        for x, d in enumerate(instructions):
+            if 'tag' not in d:
+                raise Exception('Loading of model from file failed: Entry {} has no tag-field.'.format(x))
+
+            if d['tag'] is None:
+                raise Exception('Loading of model from file failed: Entry {} has a NULL tag.'.format(x))
+
+            if 'op' not in d:
+                raise Exception('Loading of model from file failed: Tag "{}" has no op-field.'.format(d['tag']))
+
+            if d['op'] is None:
+                raise Exception('Loading of model from file failed: Tag "{}" has a NULL operation.'.format(d['tag']))
+
+            self.apply_operation(d['tag'], d['op'])
+        self.clean_structure()
+
+    @profile
+    @type_check(Tag, Operation)
     def apply_operation(self, tag, op):
         time = self.timeline_tags[tag] if tag in self.timeline_tags else self.operation_history.get_time_stamp()
         self.clean_structure(time)
@@ -108,7 +162,7 @@ class KinematicModel(object):
 
 
     @profile
-    @type_check(str, str, Operation)
+    @type_check(Tag, Tag, Operation)
     def apply_operation_before(self, tag, before_tag, op):
         if before_tag not in self.timeline_tags:
             raise Exception('History does not contain a timestamp for tag "{}"'.format(before_tag))
@@ -126,7 +180,7 @@ class KinematicModel(object):
 
 
     @profile
-    @type_check(str, str, Operation)
+    @type_check(Tag, Tag, Operation)
     def apply_operation_after(self, tag, after_tag, op):
         if after_tag not in self.timeline_tags:
             raise Exception('History does not contain a timestamp for tag "{}"'.format(after_tag))
@@ -144,7 +198,7 @@ class KinematicModel(object):
 
 
     @profile
-    @type_check(str)
+    @type_check(Tag)
     def remove_operation(self, tag):
         if tag not in self.timeline_tags:
             raise Exception('Tag "{}" not found in time line.'.format(tag))
@@ -157,7 +211,7 @@ class KinematicModel(object):
 
 
     @profile
-    @type_check(str)
+    @type_check(Tag)
     def get_operation(self, tag):
         if tag not in self.timeline_tags:
             raise Exception('Tag "{}" not found in time line.'.format(tag))
@@ -257,7 +311,7 @@ class KinematicModel(object):
 
     def get_history_of(self, *paths):
         inv_tags = {s: t for t, s in self.timeline_tags.items()}
-        return [TaggedOperation(c.stamp, inv_tags[s], c.operation) for c in self.operation_history.get_history_of(*paths)]
+        return [TaggedOperation(c.stamp, inv_tags[c.stamp], c.operation) for c in self.operation_history.get_history_of(*paths)]
 
     def get_data_chain(self):
         inv_tags = {s: t for t, s in self.timeline_tags.items()}

@@ -1,0 +1,5 @@
+string filepath    # File path to save the model to. package:// allowed
+string modelpath   # If empty, saves the complete model
+---
+bool success
+string error_msg

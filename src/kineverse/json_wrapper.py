@@ -4,7 +4,7 @@ import simplejson as json
 import symengine  as sp
 
 from kineverse.json_serializable import JSONSerializable
-from kineverse.type_sets         import symengine_matrix_types, symengine_types
+from kineverse.type_sets         import symengine_matrix_types, symengine_types, is_symbolic
 from kineverse.utils             import import_class
 
 json_sym_matrix = 'SYM_MATRIX'
@@ -20,7 +20,7 @@ class KineverseJSONEncoder(json.JSONEncoder):
         elif type(obj) in symengine_matrix_types:
             return {'__type__': json_sym_matrix, 'data': obj.tolist()}
         elif type(obj) in symengine_types:
-            return {'__type__': json_sym_expr,   'data': str(obj)}
+            return {'__type__': json_sym_expr,   'data': str(obj)} if is_symbolic(obj) else float(obj)
         else:
             try:
                 return super(KineverseJSONEncoder, self).default(obj)
