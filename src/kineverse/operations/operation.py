@@ -15,7 +15,7 @@ def op_construction_wrapper(init_fn, name, mod_list, *written_objs, **kwargs):
 # Every action needs to declare the fields it depends on and the ones it modifies
 class Operation(JSONSerializable):
     def __init__(self, *args):
-        self._construction_args = args
+        self._construction_args = [deepcopy(a) for a in args]
         self.init(*args)
 
     def init(self, name, modifications, **kwargs):
