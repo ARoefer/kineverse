@@ -79,4 +79,4 @@ def dumps(obj, **kwargs):
     return KineverseJSONEncoder(for_json=True, **kwargs).encode(obj)
 
 def dump(obj, fp, **kwargs):
-    json.dump(obj, fp, cls=KineverseJSONEncoder, for_json=True, **kwargs)
+    json.dump(obj, fp, cls=KineverseJSONEncoder, for_json=True, check_circular=True, **kwargs)
