@@ -151,20 +151,20 @@ class SetBallJoint(Operation):
                                 pos_limit=pos_limit,
                                 vel_limit=vel_limit)
 
-        def _apply(self, km, parent_pose, child_pose, child_parent, child_parent_tf, connection_tf, axis_x, axis_y, axis_z, pos_limit, vel_limit):
-            rot_axis = vector3(axis_x, axis_y, axis_z)
-            normed_axis = rot_axis / (norm(rot_axis) + 1e-4)
-            rot_matrix = rotation3_axis_angle(normed_axis, norm(rot_axis))
+    def _apply(self, km, parent_pose, child_pose, child_parent, child_parent_tf, connection_tf, axis_x, axis_y, axis_z, pos_limit, vel_limit):
+        rot_axis = vector3(axis_x, axis_y, axis_z)
+        normed_axis = rot_axis / (norm(rot_axis) + 1e-4)
+        rot_matrix = rotation3_axis_angle(normed_axis, norm(rot_axis))
 
-            pos_measure = dot(unitZ, normed_axis)
-            limit_dot_space = cos(pos_limit)
+        pos_measure = dot(vector3(0,0,1), normed_axis)
+        limit_dot_space = cos(pos_limit)
 
-            return {'child_parent': self.joint_obj.parent,
-                    'child_parent_tf': connection_tf * child_parent_tf,
-                    'child_pose': parent_pose * connection_tf * rot_matrix * child_pose,
-                    'connection': self.joint_obj}, \
-                   {'{}_position'.format(self.conn_path): Constraint(limit_dot_space - pos, 1, get_diff(pos_measure)),
-                    '{}_velocity'.format(self.conn_path): Constraint(-vel_limit, vel_limit, get_diff(norm(rot_axis)))}
+        return {'child_parent': self.joint_obj.parent,
+                'child_parent_tf': connection_tf * child_parent_tf,
+                'child_pose': parent_pose * connection_tf * rot_matrix * child_pose,
+                'connection': self.joint_obj}, \
+               {'{}_position'.format(self.conn_path): Constraint(limit_dot_space - pos_measure, 1, get_diff(pos_measure)),
+                '{}_velocity'.format(self.conn_path): Constraint(-vel_limit, vel_limit, get_diff(norm(rot_axis)))}
 
 
 class TwoDOFRotationJoint(KinematicJoint):
