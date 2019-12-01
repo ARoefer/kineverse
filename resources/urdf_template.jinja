@@ -1,0 +1,33 @@
+<robot name="{{path}}">
+    <link name="{{root}}"/>
+    {% for n, frame in frames.items() %}
+        <link name="{{n}}"/>
+        <joint name="{{n}}_joint" type="fixed">
+            <child link="{{n}}"/>
+            <parent link="{{frame.parent}}"/>
+        </joint>
+    {% endfor %}
+    {% for n, rb in rbs.items() %}
+        <link name="{{n}}">
+            {% for v in rb.geometry %}
+            <visual>
+                <geometry>
+                {% if v.type == 'box' %}
+                    <box size="{{v.scale[0]}} {{v.scale[1]}} {{v.scale[2]}}"/>
+                {% elif v.type == 'sphere' %}
+                    <sphere radius="{{v.size[0] * 0.5}}"/>
+                {% elif v.type == 'cylinder' %}
+                    <cylinder radius="{{v.size[0] * 0.5}}" length="{{v.size[2]}}"/>
+                {% elif v.type == 'mesh' %}
+                    <mesh scale="{{v.scale[0]}} {{v.scale[1]}} {{v.scale[2]}}" filename="{{v.mesh}}"/>
+                {% endif %}
+                </geometry>
+            </visual>
+            {% endfor %}        
+        </link>
+        <joint name="{{n}}_joint" type="fixed">
+            <child link="{{n}}"/>
+            <parent link="{{rb.parent}}"/>
+        </joint>
+    {% endfor %}
+</robot>
