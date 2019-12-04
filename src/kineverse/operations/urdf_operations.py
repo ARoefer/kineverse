@@ -54,6 +54,11 @@ class FixedJoint(KinematicJoint):
         super(FixedJoint, self)._json_data(json_dict)
         del json_dict['jtype']
 
+    def __deepcopy__(self, memo):
+        out = FixedJoint(self.parent, self.child)
+        memo[id(self)] = out
+        return out
+
 class PrismaticJoint(KinematicJoint):
     def __init__(self, parent, child, position):
         super(PrismaticJoint, self).__init__('prismatic', parent, child)   
@@ -173,7 +178,7 @@ class SetPrismaticJoint(Operation):
     def _apply(self, ks, parent_pose, child_pose, child_parent_tf, connection_tf, axis, position, lower_limit, upper_limit, vel_limit, mimic_m, mimic_o):
         vel = get_diff(position)
         return {'child_parent': self.joint_obj.parent,
-                'child_parent_tf': connection_tf * child_parent_tf,
+                'child_parent_tf': connection_tf * translation3(*(axis[:,:3] * position)) * child_parent_tf,
                 'child_pose': parent_pose * connection_tf * translation3(*(axis[:,:3] * position)) * child_pose,
                 'connection': self.joint_obj}, \
                {'{}_position'.format(self.conn_path): Constraint(lower_limit - position, upper_limit - position, position),
@@ -204,7 +209,7 @@ class SetRevoluteJoint(Operation):
         position = position if mimic_m is None or mimic_o is None else position * mimic_m + mimic_o
         vel = get_diff(position)
         return {'child_parent': self.joint_obj.parent,
-                'child_parent_tf': connection_tf * child_parent_tf,
+                'child_parent_tf': connection_tf * rotation3_axis_angle(axis, position) * child_parent_tf,
                 'child_pose': parent_pose * connection_tf * rotation3_axis_angle(axis, position) * child_pose,
                 'connection': self.joint_obj}, \
                {'{}_position'.format(self.conn_path): Constraint(lower_limit - position, upper_limit - position, position),
@@ -232,7 +237,7 @@ class SetContinuousJoint(Operation):
     def _apply(self, ks, parent_pose, child_pose, child_parent_tf, connection_tf, axis, position, vel_limit, mimic_m, mimic_o):
         position = position if mimic_m is None or mimic_o is None else position * mimic_m + mimic_o
         return {'child_parent': self.joint_obj.parent,
-                'child_parent_tf': connection_tf * child_parent_tf,
+                'child_parent_tf': connection_tf * rotation3_axis_angle(axis, position) * child_parent_tf,
                 'child_pose': parent_pose * connection_tf * rotation3_axis_angle(axis, position) * child_pose,
                 'connection': self.joint_obj}, \
                {'{}_velocity'.format(self.conn_path): Constraint(-vel_limit, vel_limit, get_diff(position))}
