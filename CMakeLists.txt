@@ -59,6 +59,7 @@ add_message_files(
   Operation.msg
   OperationCall.msg
   OperationsUpdate.msg
+  ValueMap.msg
 )
 
 ## Generate services in the 'srv' folder
