@@ -1,12 +1,13 @@
 import traceback 
 import kineverse.json_wrapper       as json
 
-from kineverse.model.data_tree      import DataTree
-from kineverse.model.history        import History, Timeline, StampedData, Chunk
-from kineverse.model.paths          import Path
-from kineverse.operations.operation import Operation
-from kineverse.type_sets            import is_symbolic
-from kineverse.json_serializable    import JSONSerializable
+from kineverse.model.data_tree             import DataTree
+from kineverse.model.history               import History, Timeline, StampedData, Chunk
+from kineverse.model.paths                 import Path
+from kineverse.operations.operation        import Operation
+from kineverse.operations.basic_operations import CreateSingleValue
+from kineverse.type_sets                   import is_symbolic
+from kineverse.json_serializable           import JSONSerializable
 
 Tag = str
 
@@ -117,8 +118,14 @@ class KinematicModel(object):
 
 
     @profile
-    def load_from_file(self, f): #, clear_model=False):
+    def load_from_file(self, f, prefix=Path('')): #, clear_model=False):
         self.clean_structure()
+
+        if len(prefix) > 0:
+            for x in range(len(prefix) + 1):
+                if not self.has_data(prefix[:x]):
+                    self.apply_operation('create {}'.format(prefix[:x]), CreateSingleValue(prefix[:x], {}))
+
         instructions = json.load(f)
         for x, d in enumerate(instructions):
             if 'tag' not in d:
@@ -133,7 +140,10 @@ class KinematicModel(object):
             if d['op'] is None:
                 raise Exception('Loading of model from file failed: Tag "{}" has a NULL operation.'.format(d['tag']))
 
-            self.apply_operation(d['tag'], d['op'])
+            if len(prefix) == 0:
+                self.apply_operation(d['tag'], d['op'])
+            else:
+                self.apply_operation(d['tag'], type(d['op'])(*[a if type(a) != Path else prefix + a for a in d['op']._construction_args]))
         self.clean_structure()
 
     @profile
