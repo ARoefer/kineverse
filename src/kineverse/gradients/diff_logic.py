@@ -19,6 +19,9 @@ TYPE_SUFFIXES_INV = {v: k for k, v in TYPE_SUFFIXES.items()}
 class CastException(Exception):
     pass    
 
+class ConversionException(Exception):
+    pass
+
 def create_symbol(symbol, stype):
     """Adds proper type suffix to the given symbol.
 
@@ -136,6 +139,22 @@ def get_int_symbol(symbol):
     if s_type == TYPE_UNKNOWN or s_type == TYPE_POSITION:
         raise CastException('Cannot generate integrated symbol for {}! The type is {}'.format(symbol, s_type))
     return Symbol('{}{}'.format(str(symbol)[:-2], TYPE_SUFFIXES_INV[s_type - 1]))
+
+def get_conversion(a_space1, a_space2, dt=1):
+    if erase_type(a_space1) != erase_type(a_space2):
+        raise ConversionException('Cannot determine conversion factor from "{}" to "{}" because they do not refer to the same symbol.'.format(a_space1, a_space2))
+
+    t1 = get_symbol_type(a_space1)
+    t2 = get_symbol_type(a_space2)
+
+    if t1 == TYPE_UNKNOWN:
+        raise ConversionException('Type of can not be determined {}'.format(a_space1))
+
+    if t2 == TYPE_UNKNOWN:
+        raise ConversionException('Type of can not be determined {}'.format(a_space2))
+
+    return dt ** (t2 - t1)
+
 
 Position     = create_pos
 Velocity     = create_vel
