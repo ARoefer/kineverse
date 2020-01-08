@@ -438,7 +438,7 @@ class GradientMatrix(JSONSerializable):
         return self.__mul__(other)
 
     def __div__(self, other):
-        return GradientMatrix([[g / other for g in r] for r in self.gradients])
+        return GradientMatrix([[g / other for g in r] for r in self.expr])
 
     def __repr__(self):
         return '\n'.join([repr(r) for r in self.expr])

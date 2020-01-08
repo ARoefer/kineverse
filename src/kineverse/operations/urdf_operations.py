@@ -124,8 +124,7 @@ class RevoluteJoint(KinematicJoint):
 class KinematicLink(RigidBody):
     pass
 
-class URDFRobot(ArticulatedObject):
-    pass
+URDFRobot = ArticulatedObject
 
 
 class SetConnection(Operation):

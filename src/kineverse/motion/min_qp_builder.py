@@ -18,6 +18,8 @@ default_bound = 1e9
 
 HardConstraint = Constraint
 
+PANDA_LOGGING = False
+
 class SoftConstraint(Constraint):
     def __init__(self, lower, upper, weight, expr):
         super(SoftConstraint, self).__init__(lower, upper, expr)
@@ -182,20 +184,29 @@ class MinimalQPBuilder(object):
 
         self._post_process_matrices(deltaT)
 
-        dfH = pd.DataFrame(np.vstack((self.np_lb, self.np_ub, self.np_H.diagonal())), index=['lb', 'ub', 'weight'], columns=self.col_names)
-        dfA = pd.DataFrame(np.hstack((self.np_lbA.reshape((self.shape1, 1)), 
-                                      self.np_ubA.reshape((self.shape1, 1)), 
-                                      self.np_A[:, :-self.n_sc])), 
-                                      index=self.row_names, columns=['lbA', 'ubA'] + self.col_names[:self.n_cv])
+        if PANDA_LOGGING:
+            dfH = pd.DataFrame(np.vstack((self.np_lb, self.np_ub, self.np_H.diagonal())), index=['lb', 'ub', 'weight'], columns=self.col_names)
+            dfA = pd.DataFrame(np.hstack((self.np_lbA.reshape((self.shape1, 1)), 
+                                          self.np_ubA.reshape((self.shape1, 1)), 
+                                          self.np_A[:, :-self.n_sc])), 
+                                          index=self.row_names, columns=['lbA', 'ubA'] + self.col_names[:self.n_cv])
 
         try:
             xdot_full = self.qp_solver.solve(self.np_H, self.np_g, self.np_A, self.np_lb,  self.np_ub, 
                                                                     self.np_lbA, self.np_ubA, nWSR)
-            self.A_dfs.append(dfA)
-            self.H_dfs.append(dfH)
+            if PANDA_LOGGING:
+                self.A_dfs.append(dfA)
+                self.H_dfs.append(dfH)
             self._cmd_log.append(xdot_full[:self.n_cv])
         except QPSolverException as e:
             print('INFEASIBLE CONFIGURATION!\nH:{}\nA:\n{}\nFull data written to "solver_crash_H.csv" and "solver_crash_A.csv"'.format(dfH, dfA))
+            if not PANDA_LOGGING:
+                dfH = pd.DataFrame(np.vstack((self.np_lb, self.np_ub, self.np_H.diagonal())), index=['lb', 'ub', 'weight'], columns=self.col_names)
+                dfA = pd.DataFrame(np.hstack((self.np_lbA.reshape((self.shape1, 1)), 
+                                          self.np_ubA.reshape((self.shape1, 1)), 
+                                          self.np_A[:, :-self.n_sc])), 
+                                          index=self.row_names, columns=['lbA', 'ubA'] + self.col_names[:self.n_cv])
+
             dfH.to_csv('solver_crash_H.csv')
             dfA.to_csv('solver_crash_A.csv')
             b_comp  = np.greater(self.np_lb,  self.np_ub)
@@ -317,7 +328,7 @@ class PIDQPBuilder(TypedQPBuilder):
 
 class GeomQPBuilder(PIDQPBuilder): #(TypedQPBuilder):
     @profile
-    def __init__(self, collision_world, hard_constraints, soft_constraints, controlled_values, default_query_distance=1.0, visualizer=None):
+    def __init__(self, collision_world, hard_constraints, soft_constraints, controlled_values, default_query_distance=10.0, visualizer=None):
 
         if visualizer is not None and not isinstance(visualizer, ROSBPBVisualizer):
             raise Exception('Visualizer needs to be an instance of ROSBPBVisualizer. Given argument is of type {}'.format(type(visualizer)))

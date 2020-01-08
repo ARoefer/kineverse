@@ -47,8 +47,8 @@ class CommandIntegrator(object):
             self.qp_builder.compute_queries(self.state)
 
         cmd_accu = np.zeros(self.qp_builder.n_cv)
-        for x in range(max_iterations):
-        # for x in tqdm(range(max_iterations), desc='Running "{}" for {} iterations'.format(self.recorder.title, max_iterations)):
+        #for x in range(max_iterations):
+        for x in tqdm(range(max_iterations), desc='Running "{}" for {} iterations'.format(self.recorder.title, max_iterations)):
             if rospy.is_shutdown():
                 break
 

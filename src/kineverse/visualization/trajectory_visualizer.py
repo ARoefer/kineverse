@@ -28,14 +28,14 @@ class TrajectoryVisualizer(object):
         self.base_frames      = {}
         self.devnull          = None
 
-    def add_articulated_object(self, urdf, art_obj):
+    def add_articulated_object(self, path, art_obj):
         if self.devnull is None:
             self.devnull = open(os.devnull, 'w')
 
-        self.js_publishers[art_obj.name] = rospy.Publisher('/{}/joint_states'.format(art_obj.name), JointStateMsg, queue_size=1)
-        self.robot_publishers[art_obj.name] = ModelTFBroadcaster_URDF('/{}/robot_description'.format(art_obj.name), art_obj.name, art_obj)
+        self.js_publishers[path] = rospy.Publisher('/{}/joint_states'.format(path), JointStateMsg, queue_size=1)
+        self.robot_publishers[path] = ModelTFBroadcaster_URDF('/{}/robot_description'.format(path), path, art_obj)
 
-        self.joint_symbols[art_obj.name] = self.robot_publishers[art_obj.name].s_frame_map.keys()
+        self.joint_symbols[path] = self.robot_publishers[path].s_frame_map.keys()
         
 
     def shutdown(self):
@@ -62,6 +62,7 @@ class TrajectoryVisualizer(object):
                 for pub in self.robot_publishers.values():
                     pub.update_state(state)
                 
+                stamp = now
                 x += 1
                 t.update()
         t.close()

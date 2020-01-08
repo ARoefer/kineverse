@@ -1,6 +1,7 @@
 import matplotlib.pyplot as plt
 import matplotlib.colors as matcolors
 import pandas            as pd
+import numpy             as np
 
 from collections import namedtuple
 from math import ceil, sqrt
@@ -187,6 +188,30 @@ class ValueRecorder(object):
         self.data_lim = {a: (1e20, -1e20) for a, _ in group_colors}
         self.colors   = dict(group_colors)
         self.thresholds = {}
+        self.x_labels = None
+        self.x_title  = None
+        self.x_space  = None
+        self.y_labels = None
+        self.y_title  = None
+        self.y_space  = None
+
+    def set_xspace(self, min, max):
+        self.x_space  = (min, max)
+
+    def set_xtitle(self, title):
+        self.x_title  = title
+
+    def set_xlabels(self, labels):
+        self.x_labels = labels
+
+    def set_yspace(self, min, max):
+        self.y_space  = (min, max)
+
+    def set_ytitle(self, title):
+        self.y_title  = title
+
+    def set_ylabels(self, labels):
+        self.y_labels = labels
 
     def log_data(self, group, value):
         if group not in self.data:
@@ -200,12 +225,32 @@ class ValueRecorder(object):
             self.data_lim[a] = (min(d), max(d))
 
     def plot(self, ax):
-        self.patches = [ax.plot(d, color=self.colors[n], label=n)[0] for n, d in sorted(self.data.items())]
+        if len(self.data) > 0:
+            labels = range(len(self.data.values()[0])) if self.x_labels is None else self.x_labels
+        else:
+            labels = []
+
+        self.patches = [ax.plot(labels, d, color=self.colors[n], label=n)[0] for n, d in sorted(self.data.items())]
         
         for n, (y, c) in self.thresholds.items():
             ax.axhline(y, color=c)
 
-        ax.legend(handles=self.patches, loc='center right')
+        if self.x_space is not None:
+            ax.set_xlim(self.x_space)
+
+        if self.y_space is not None:
+            ax.set_ylim(self.y_space)
+
+        if self.y_labels is not None:
+            ax.set_yticklabels(self.y_labels)
+
+        if self.x_title is not None:
+            ax.set_xlabel(self.x_title)
+
+        if self.y_title is not None:
+            ax.set_ylabel(self.y_title)
+
+        ax.legend(handles=self.patches, loc='best')
         ax.set_title(self.title)
 
     def add_threshold(self, name, value, color=None):

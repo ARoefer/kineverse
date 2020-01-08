@@ -106,6 +106,7 @@ class History(object):
 
         self.chunk_history.add(chunk)
 
+    @profile
     def remove_chunk(self, chunk):
         for p in chunk.modifications:
             if self.modification_history[p][0] == chunk and len(chunk.dependents) > 0 and max([p in c.dependencies for c in chunk.dependents]):
@@ -132,6 +133,7 @@ class History(object):
         self.chunk_history.remove(chunk)
         self.dirty_chunks.update(chunk.dependents)
 
+    @profile
     def replace_chunk(self, c_old, c_new):
         if c_old.stamp != c_new.stamp:
             raise Exception('Can only replace chunk if stamps match. Stamps:\n Old: {:>8.3f}\n New: {:>8.3f}'.format(c_old.stamp, c_new.stamp))

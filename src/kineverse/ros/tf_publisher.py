@@ -1,10 +1,11 @@
 #!/usr/bin/env python
 import rospy
+import numpy as np
 
 from jinja2 import Environment, FileSystemLoader, select_autoescape
 
 from giskardpy import BACKEND
-from kineverse.gradients.gradient_math import spw
+from kineverse.gradients.gradient_math import spw, Symbol
 from kineverse.model.paths             import Path, stopping_set
 from kineverse.model.frames            import Frame
 from kineverse.model.geometry_model    import RigidBody, EventModel
@@ -12,6 +13,7 @@ from kineverse.network.model_client    import ModelClient
 from kineverse.time_wrapper            import Time
 from kineverse.type_sets               import is_symbolic
 from kineverse.utils                   import real_quat_from_matrix, res_pkg_path
+from kineverse.visualization.ros_visualizer import ROSVisualizer
 
 from tf import TransformBroadcaster
 
@@ -54,6 +56,9 @@ class ModelTFBroadcaster(object):
         self._state_complete   = False
         self.frame_info        = []
         self.broadcaster       = TransformBroadcaster()
+        self.static_frames     = {}
+        self.np_poses          = None
+        self.visualizer = ROSVisualizer('publisher_debug', 'map')
         self.set_model(model)
 
     @profile
@@ -66,19 +71,31 @@ class ModelTFBroadcaster(object):
                 if not self._state_complete:
                     return
 
-            indices = set(sum([self.s_frame_map[s] for s in update if s in self.s_frame_map], []))
-            now     = Time.now()
+            self.np_poses = self.cythonized_matrix(**self.state)
 
+
+    @profile
+    def publish_state(self):
+        if self.np_poses is not None:
             #print('---\n{}'.format('\n'.join(['{}: {}'.format(k, v) for k, v in sorted(self.state.items())])))
+            
+            indices = sum(self.s_frame_map.values(), []) # set(sum([self.s_frame_map[s] for s in update if s in self.s_frame_map], []))
+            now     = Time.now()
+            self.visualizer.begin_draw_cycle('debug')
+            self.visualizer.draw_poses('debug', spw.eye(4), 0.1, 0.01, [spw.Matrix(self.np_poses[x * 4:x * 4 + 4].tolist()) for x in range(self.np_poses.shape[0]/4)])
+            self.visualizer.render('debug')
 
-            np_matrix = self.cythonized_matrix(**self.state)
             published_frames = []
             for x in indices:
                 n, f     = self.frame_info[x]
-                pose     = np_matrix[x*4: x*4 + 4, :4]
+                pose     = self.np_poses[x*4: x*4 + 4, :4]
                 position = (pose[0, 3], pose[1, 3], pose[2, 3])
                 quat     = real_quat_from_matrix(pose)
                 self.broadcaster.sendTransform(position, quat, now, n, f.parent)
+                published_frames.append(n)
+
+            for n, param in self.static_frames.items():
+                self.broadcaster.sendTransform(param[0], param[1], now, param[2], param[3])
                 published_frames.append(n)
 
             #print('---\n{}'.format('\n'.join(published_frames)))
@@ -88,7 +105,9 @@ class ModelTFBroadcaster(object):
         self.model       = model
         self.state       = {}
         self.s_frame_map = {}
+        self.static_frames = {}
         self.frame_info  = []
+        self.np_poses    = None
         self._state_complete = False
 
         if self.model is not None:
@@ -103,6 +122,8 @@ class ModelTFBroadcaster(object):
 
             self.cythonized_matrix = spw.speed_up(pose_matrix, pose_matrix.free_symbols, backend=BACKEND)
 
+            self.np_poses = np.vstack([np.eye(4) for x in range(len(self.frame_info))])
+
             now = Time.now()
             for x, (n, f) in enumerate(self.frame_info):
                 if len(f.to_parent.free_symbols) > 0:
@@ -113,6 +134,7 @@ class ModelTFBroadcaster(object):
                 else:
                     position = (f.to_parent[0, 3], f.to_parent[1, 3], f.to_parent[2, 3])
                     quat     = real_quat_from_matrix(f.to_parent)
+                    self.static_frames[n] = (position, quat, n, f.parent)
                     self.broadcaster.sendTransform(position, quat, now, n, f.parent)
 
 
@@ -126,10 +148,14 @@ class ModelTFBroadcaster_URDF(ModelTFBroadcaster):
         super(ModelTFBroadcaster_URDF, self).set_model(model)
 
         if self.model is not None:
+            print('Model was received.')
             frames = dict(self.frame_info)
 
-            # there can only be one root be published model
-            root_frame = list({f.parent for f in frames.values()}.difference(set(frames.values())))[0]
+            # there can only be one root per published model
+            root_frames = list({f.parent for f in frames.values()}.difference({str(f) for f in frames.keys()}))
+            if len(root_frames) != 1:
+                raise Exception('There should be exactly one root frame in a model. There are: {}\nFrames:\n {}\nRoots:\n {}'.format(len(root_frames), '\n '.join(frames.keys()), '\n '.join(root_frames)))
+            root_frame = root_frames[0]
 
             fs  = {}
             rbs = {}
@@ -149,7 +175,7 @@ class ModelTFBroadcaster_URDF(ModelTFBroadcaster):
 
 
 class NetworkedTFBroadcaster(ModelTFBroadcaster_URDF):
-    def __init__(self, urdf_param, update_topic, model_path, use_js_msg=False):
+    def __init__(self, urdf_param, update_topic, model_path, frequency=50, use_js_msg=False):
         super(NetworkedTFBroadcaster, self).__init__(urdf_param, model_path, None)
         self.mc = ModelClient(EventModel)
         self.mc.register_on_model_changed(model_path, self.set_model)
@@ -160,7 +186,13 @@ class NetworkedTFBroadcaster(ModelTFBroadcaster_URDF):
         else:
             self.sub_state = rospy.Subscriber(update_topic, ValueMapMsg, callback=self.cb_state_update, queue_size=1)
 
+        self.timer = rospy.Timer(rospy.Duration(1.0/frequency), self.tick_cb)
+
+    def tick_cb(self, event):
+        self.publish_state()
+
     def cb_state_update(self, msg):
+        print('Got state update')
         if self.use_js_msg:
             self.update_state({Symbol(n): v for n, v in zip(msg.name, msg.position)})
         else:    

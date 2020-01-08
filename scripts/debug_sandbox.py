@@ -98,8 +98,8 @@ if __name__ == '__main__':
     visualizer = ROSBPBVisualizer('/bullet_test', base_frame='map')
     traj_vis   = TrajectoryVisualizer(visualizer)
 
-    traj_vis.add_articulated_object(urdf_model,    km.get_data('fetch'))
-    traj_vis.add_articulated_object(kitchen_model, km.get_data('kitchen'))
+    traj_vis.add_articulated_object(Path('fetch'),   km.get_data('fetch'))
+    traj_vis.add_articulated_object(Path('kitchen'), km.get_data('kitchen'))
 
     # GOAL DEFINITION
     eef_path = Path('fetch/links/r_gripper_finger_link/pose')
@@ -109,104 +109,95 @@ if __name__ == '__main__':
     cam_pose    = km.get_data('fetch/links/head_camera_link/pose')
     cam_pos     = pos_of(cam_pose)
     cam_forward = x_of(cam_pose)
-    cam_to_eef  = eef_pos - cam_pos
 
 
-    parts = ['sink_area_trash_drawer_handle', 'iai_fridge_door_handle', 'sink_area_dish_washer_door_handle', 'sink_area_left_upper_drawer_handle', 'sink_area_left_middle_drawer_handle', 'sink_area_left_bottom_drawer_handle']
+    parts = ['sink_area_trash_drawer_handle', 'iai_fridge_door_handle', 'sink_area_dish_washer_door_handle', 'sink_area_left_upper_drawer_handle', 'sink_area_left_middle_drawer_handle', 'sink_area_left_bottom_drawer_handle', 'oven_area_area_middle_upper_drawer_handle', 'oven_area_area_middle_lower_drawer_handle']
     #kitchen_path = Path('kitchen/links/sink_area_trash_drawer_handle/pose')
     #kitchen_path = Path('kitchen/links/iai_fridge_door_handle/pose')
-    part = parts[0] # random.choice(parts)
-    kitchen_path = Path('kitchen/links/{}/pose'.format(part))
-
-    look_goal = 1 - (dot(cam_to_eef, cam_forward) / norm(cam_to_eef))
-
-    goal = point3(-0.4, 0.4, 1.2)
-    dist = norm(goal - eef_pos)
-    obj_pose = km.get_data(kitchen_path)
-    robot_cp, object_cp, contact_normal = contact_geometry(eef_pose, obj_pose, eef_path[:-1], kitchen_path[:-1])
-    geom_distance = dot(contact_normal, robot_cp - object_cp)
-
-    #exit()
-
-    #print('Symbols for subworld:\n  {}'.format('\n  '.join([str(x) for x in geom_distance.free_symbols])))
-    coll_world = km.get_active_geometry(geom_distance.free_symbols)
-
-    # QP CONFIGURTION
-    base_joint    = km.get_data('fetch/joints/to_map')
-    joint_symbols = [j.position for j in km.get_data('fetch/joints').values() if hasattr(j, 'position') and type(j.position) is Symbol]
-    k_joint_symbols = [j.position for j in km.get_data('kitchen/joints').values() if hasattr(j, 'position') and type(j.position) is Symbol]
-    controlled_symbols = {get_diff_symbol(j) for j in joint_symbols}.union({get_diff_symbol(j) for j in obj_pose.free_symbols})
-
-    integration_rules = None
-    if isinstance(base_joint, RoombaJoint):
-        controlled_symbols |= {base_joint.lin_vel, base_joint.ang_vel}
-        integration_rules = {base_joint.x_pos: base_joint.x_pos + DT_SYM * get_diff(pos_of(base_link.to_parent)[0].subs({base_joint.x_pos: 0})),
-                                    base_joint.y_pos: base_joint.y_pos + DT_SYM * get_diff(pos_of(base_link.to_parent)[1].subs({base_joint.y_pos: 0})),
-                                    base_joint.z_pos: base_joint.z_pos + DT_SYM * get_diff(pos_of(base_link.to_parent)[2].subs({base_joint.z_pos: 0})),
-                                    base_joint.a_pos: base_joint.a_pos + DT_SYM * base_joint.ang_vel}
-    else:
-        controlled_symbols |= {get_diff(x) for x in [base_joint.x_pos, base_joint.y_pos, base_joint.a_pos]}
-
-    constraints = km.get_constraints_by_symbols(geom_distance.free_symbols.union(controlled_symbols))
-    constraints.update(generate_contact_model(robot_cp, controlled_symbols, object_cp, contact_normal, obj_pose.free_symbols))
-
-    controlled_values, constraints = generate_controlled_values(constraints, controlled_symbols)
-    controlled_values = depth_weight_controlled_values(km, controlled_values, exp_factor=1.2)
-
-    print('Controlled values:\n{}'.format('\n'.join([str(x) for x in controlled_values.values()])))
-    print('Additional joint constraints:\n{}'.format('\n'.join([str(c) for c in constraints.values() if c.expr in controlled_symbols])))
-
-    in_contact = less_than(geom_distance, 0.01)
-
-    goal_constraints = {'reach_point': PIDC(geom_distance, geom_distance, 1, k_i=0.01),
-                        'look_at_eef':   SC(   -look_goal,    -look_goal, 1, look_goal)}
-    goal_constraints.update({'open_object_{}'.format(x): PIDC(s, s, 1) for x, s in enumerate(obj_pose.free_symbols)})
-
-    start_state = {s: 0.0 for s in coll_world.free_symbols}
-    start_state.update({s: 0.4 for s in obj_pose.free_symbols})
-    start_state.update({Position(Path('fetch') + (k,)): v  for k, v in tucked_arm.items()})
-
-    base_link  = km.get_data('fetch/links/base_link') 
-    integrator = CommandIntegrator(GQPB(coll_world, constraints, goal_constraints, controlled_values, visualizer=visualizer),
-    #integrator = CommandIntegrator(TQPB(constraints, goal_constraints, controlled_values),
-                                   integration_rules,
-                                   start_state=start_state,
-                                   recorded_terms={'distance': geom_distance,
-                                                   'gaze_align': look_goal,
-                                                   'in contact': in_contact,
-                                                   'goal': goal_constraints.values()[0].expr,
-                                                   'location_x': base_joint.x_pos,
-                                                   'location_y': base_joint.y_pos,
-                                                   'rotation_a': base_joint.a_pos})
+    
+    for part in parts:
+    #part = parts[0] # random.choice(parts)
+        kitchen_path = Path('kitchen/links/{}/pose'.format(part))
 
 
-    # RUN
-    int_factor = 0.1
-    integrator.restart('Fetch Cartesian Goal Example')
-    try:
-        integrator.run(int_factor, 500)
-    except Exception as e:
-        print(e)
+        goal = point3(-0.4, 0.4, 1.2)
+        dist = norm(goal - eef_pos)
+        obj_pose = km.get_data(kitchen_path)
+        robot_cp, object_cp, contact_normal = contact_geometry(eef_pose, obj_pose, eef_path[:-1], kitchen_path[:-1])
+        geom_distance = dot(contact_normal, robot_cp - object_cp)
 
-    # DRAW
-    draw_recorders([integrator.recorder, integrator.sym_recorder], 4.0/9.0, 8, 4).savefig('{}/fetch_sandbox_plots.png'.format(plot_dir))
-    rec_w, rec_b, rec_c, recs = convert_qp_builder_log(integrator.qp_builder)
-    draw_recorders([rec_b, rec_c] + [r for _, r in sorted(recs.items())], 1, 8, 4).savefig('{}/fetch_sandbox_constraints.png'.format(plot_dir))
+        cam_to_obj = pos_of(obj_pose) - cam_pos
+        look_goal  = 1 - (dot(cam_to_obj, cam_forward) / norm(cam_to_obj))
+        #exit()
 
-    if True:
-        traj_vis.visualize(integrator.recorder.data, hz=50)
-        pass
-    else:
-        trajmsg = JointTrajectoryMsg()
-        trajmsg.header.stamp = rospy.Time.now()
-        trajmsg.joint_names  = trajectory.keys()
-        for x in range(len(trajectory.values()[0])):
-            point = JointTrajectoryPointMsg()
-            point.time_from_start = rospy.Duration(x * int_factor)
-            point.positions = [trajectory[j][x] for j in trajmsg.joint_names]
-            trajmsg.points.append(point)
-        traj_pup.publish(trajmsg)
-        while (rospy.Time.now() - trajmsg.header.stamp).to_sec() > 0.5:
-            pass 
+        #print('Symbols for subworld:\n  {}'.format('\n  '.join([str(x) for x in geom_distance.free_symbols])))
+        coll_world = km.get_active_geometry(geom_distance.free_symbols)
+
+        # QP CONFIGURTION
+        base_joint    = km.get_data('fetch/joints/to_map')
+        joint_symbols = [j.position for j in km.get_data('fetch/joints').values() if hasattr(j, 'position') and type(j.position) is Symbol]
+        k_joint_symbols = [j.position for j in km.get_data('kitchen/joints').values() if hasattr(j, 'position') and type(j.position) is Symbol]
+        controlled_symbols = {get_diff_symbol(j) for j in joint_symbols}.union({get_diff_symbol(j) for j in obj_pose.free_symbols})
+
+        integration_rules = None
+        if isinstance(base_joint, RoombaJoint):
+            controlled_symbols |= {base_joint.lin_vel, base_joint.ang_vel}
+            integration_rules = {base_joint.x_pos: base_joint.x_pos + DT_SYM * get_diff(pos_of(base_link.to_parent)[0].subs({base_joint.x_pos: 0})),
+                                        base_joint.y_pos: base_joint.y_pos + DT_SYM * get_diff(pos_of(base_link.to_parent)[1].subs({base_joint.y_pos: 0})),
+                                        base_joint.z_pos: base_joint.z_pos + DT_SYM * get_diff(pos_of(base_link.to_parent)[2].subs({base_joint.z_pos: 0})),
+                                        base_joint.a_pos: base_joint.a_pos + DT_SYM * base_joint.ang_vel}
+        else:
+            controlled_symbols |= {get_diff(x) for x in [base_joint.x_pos, base_joint.y_pos, base_joint.a_pos]}
+
+        constraints = km.get_constraints_by_symbols(geom_distance.free_symbols.union(controlled_symbols))
+        constraints.update(generate_contact_model(robot_cp, controlled_symbols, object_cp, contact_normal, obj_pose.free_symbols))
+
+        controlled_values, constraints = generate_controlled_values(constraints, controlled_symbols)
+        controlled_values = depth_weight_controlled_values(km, controlled_values, exp_factor=1.2)
+
+        print('Controlled values:\n{}'.format('\n'.join([str(x) for x in controlled_values.values()])))
+        print('Additional joint constraints:\n{}'.format('\n'.join([str(c) for c in constraints.values() if c.expr in controlled_symbols])))
+
+        in_contact = less_than(geom_distance, 0.01)
+
+        goal_constraints = {'reach_point': PIDC(geom_distance, geom_distance, 1, k_i=0.01),
+                            'look_at_obj':   SC(   -look_goal,    -look_goal, 1, look_goal)}
+        goal_constraints.update({'open_object_{}'.format(x): PIDC(s, s, 1) for x, s in enumerate(obj_pose.free_symbols)})
+
+        start_state = {s: 0.0 for s in coll_world.free_symbols}
+        start_state.update({s: 0.4 for s in obj_pose.free_symbols})
+        start_state.update({Position(Path('fetch') + (k,)): v  for k, v in tucked_arm.items()})
+
+        base_link  = km.get_data('fetch/links/base_link') 
+        integrator = CommandIntegrator(GQPB(coll_world, constraints, goal_constraints, controlled_values, visualizer=visualizer),
+        #integrator = CommandIntegrator(TQPB(constraints, goal_constraints, controlled_values),
+                                       integration_rules,
+                                       start_state=start_state,
+                                       recorded_terms={'distance': geom_distance,
+                                                       'gaze_align': look_goal,
+                                                       'in contact': in_contact,
+                                                       'goal': goal_constraints.values()[0].expr,
+                                                       'location_x': base_joint.x_pos,
+                                                       'location_y': base_joint.y_pos,
+                                                       'rotation_a': base_joint.a_pos})
+
+
+        # RUN
+        int_factor = 0.1
+        integrator.restart('Fetch Cartesian Goal Example')
+        try:
+            integrator.run(int_factor, 500)
+        except Exception as e:
+            print(e)
+
+        # DRAW
+        # print('Drawing recorders')
+        # draw_recorders([integrator.recorder, integrator.sym_recorder], 4.0/9.0, 8, 4).savefig('{}/fetch_sandbox_{}_plots.png'.format(plot_dir, part))
+        # rec_w, rec_b, rec_c, recs = convert_qp_builder_log(integrator.qp_builder)
+        # draw_recorders([rec_b, rec_c] + [r for _, r in sorted(recs.items())], 1, 8, 4).savefig('{}/fetch_sandbox_{}_constraints.png'.format(plot_dir, part))
+
+        if False:
+            traj_vis.visualize(integrator.recorder.data, hz=50)
+            pass
 
     traj_vis.shutdown()    
