@@ -142,3 +142,6 @@ Velocity     = create_vel
 Acceleration = create_acc
 Jerk         = create_jerk
 Snap         = create_snap
+
+DiffSymbol   = get_diff_symbol
+IntSymbol    = get_int_symbol

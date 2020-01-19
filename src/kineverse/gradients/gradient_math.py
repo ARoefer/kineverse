@@ -33,6 +33,12 @@ def get_diff(term, symbols=None):
     else:
         return sum([s * term[s] for s in symbols if s in term])
 
+def subs(expr, subs_dict):
+    if hasattr(expr, 'subs') and callable(expr.subs):
+        return expr.subs(subs_dict)
+    return expr
+
+
 def sin(expr):
     """Sine"""
     if type(expr) == GC:
