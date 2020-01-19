@@ -4,7 +4,7 @@ import simplejson as json
 import symengine  as sp
 
 from kineverse.json_serializable import JSONSerializable
-from kineverse.type_sets         import symengine_matrix_types, symengine_types, is_symbolic
+from kineverse.type_sets         import symengine_matrix_types, symengine_types, is_symbolic, symengine_floats
 from kineverse.utils             import import_class
 
 json_sym_matrix = 'SYM_MATRIX'
@@ -12,6 +12,8 @@ json_sym_expr   = 'SYM_EXPR'
 
 class_registry = {}
 
+def encode_symengine_number(obj):
+    return float(obj) if type(obj) in symengine_floats else int(obj)
 
 class KineverseJSONEncoder(json.JSONEncoder):
     def default(self, obj):
@@ -20,7 +22,7 @@ class KineverseJSONEncoder(json.JSONEncoder):
         elif type(obj) in symengine_matrix_types:
             return {'__type__': json_sym_matrix, 'data': obj.tolist()}
         elif type(obj) in symengine_types:
-            return {'__type__': json_sym_expr,   'data': str(obj)} if is_symbolic(obj) else float(obj)
+            return {'__type__': json_sym_expr,   'data': str(obj)} if is_symbolic(obj) else encode_symengine_number(obj)
         else:
             try:
                 return super(KineverseJSONEncoder, self).default(obj)
@@ -79,4 +81,4 @@ def dumps(obj, **kwargs):
     return KineverseJSONEncoder(for_json=True, **kwargs).encode(obj)
 
 def dump(obj, fp, **kwargs):
-    json.dump(obj, fp, cls=KineverseJSONEncoder, for_json=True, indent=False, check_circular=True, **kwargs)
+    json.dump(obj, fp, cls=KineverseJSONEncoder, for_json=True, check_circular=True, **kwargs)

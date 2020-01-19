@@ -22,6 +22,14 @@ from urdf_parser_py.urdf import URDF
 
 class TestURDF(ut.TestCase):
     
+    def test_model_eq(self):
+        urdf_model = URDF.from_xml_file(res_pkg_path('package://kineverse/urdf/testbot.urdf'))
+        ks1 = KinematicModel()
+        ks2 = KinematicModel()
+        load_urdf(ks1, Path(urdf_model.name), urdf_model)
+        load_urdf(ks2, Path(urdf_model.name), urdf_model)
+        self.assertEquals(ks1, ks2)
+
     def test_load(self):
         urdf_model = URDF.from_xml_file(res_pkg_path('package://kineverse/urdf/testbot.urdf'))
         ks = KinematicModel()

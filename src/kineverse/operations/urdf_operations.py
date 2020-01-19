@@ -26,13 +26,13 @@ from kineverse.utils                       import deepcopy
 
 def urdf_origin_to_transform(origin):
     if origin is not None:
-        xyz = origin.xyz if origin.xyz is not None else [0,0,0]
-        rpy = origin.rpy if origin.rpy is not None else [0,0,0]
+        xyz = origin.xyz if origin.xyz is not None else [0.0,0.0,0.0]
+        rpy = origin.rpy if origin.rpy is not None else [0.0,0.0,0.0]
         return translation3(*xyz) * rotation3_rpy(*rpy)
     return spw.eye(4)
 
 def urdf_axis_to_vector(axis):
-    return vector3(*axis) if axis is not None else vector3(1,0,0)
+    return vector3(*axis) if axis is not None else vector3(1.0,0.0,0.0)
 
 
 
@@ -44,6 +44,11 @@ class Kinematic1DofJoint(KinematicJoint):
     def _json_data(self, json_dict):
         super(Kinematic1DofJoint, self)._json_data(json_dict)
         json_dict.update({'position': self.position})
+
+    def __eq__(self, other):
+        if isinstance(other, Kinematic1DofJoint):
+            return super(Kinematic1DofJoint, self).__eq__(other) and self.position == other.position
+        return False
 
 
 class FixedJoint(KinematicJoint):
@@ -121,8 +126,7 @@ class RevoluteJoint(KinematicJoint):
 #         self.upper_limit = upper_limit
 
 
-class KinematicLink(RigidBody):
-    pass
+KinematicLink = RigidBody
 
 URDFRobot = ArticulatedObject
 
@@ -305,7 +309,7 @@ def load_urdf(ks, prefix, urdf, reference_frame='map'):
 
         ks.apply_operation('create {}'.format(str(prefix + Path(u_link.name))),
                             CreateComplexObject(link_path, 
-                                                KinematicLink(reference_frame, urdf_origin_to_transform(u_link.origin), geometry, collision, inertial)))
+                                                KinematicLink(reference_frame, urdf_origin_to_transform(u_link.origin), None, geometry, collision, inertial)))
 
     links_left = [urdf.get_root()]
     joint_set  = set()

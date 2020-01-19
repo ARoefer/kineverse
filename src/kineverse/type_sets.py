@@ -1,4 +1,4 @@
-from kineverse.symengine_types           import symengine_matrix_types, symengine_types
+from kineverse.symengine_types           import symengine_matrix_types, symengine_types, symengine_floats
 from kineverse.gradients.gradient_math   import GC, GM
 
 atomic_types = set([int, float, bool, str, GC])

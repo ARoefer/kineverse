@@ -192,7 +192,6 @@ class NetworkedTFBroadcaster(ModelTFBroadcaster_URDF):
         self.publish_state()
 
     def cb_state_update(self, msg):
-        print('Got state update')
         if self.use_js_msg:
             self.update_state({Symbol(n): v for n, v in zip(msg.name, msg.position)})
         else:    

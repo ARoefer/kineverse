@@ -50,7 +50,7 @@ class OperationsClient_NoROS(object):
             return self.km.has_data(path)
 
 
-    def get_data(self, data):
+    def get_data(self, path):
         if type(path) == str:
             path = Path(path)
 

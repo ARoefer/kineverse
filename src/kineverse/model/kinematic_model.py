@@ -95,6 +95,11 @@ class Constraint(object):
     def __str__(self):
         return '{}\n  >= {}\n  <= {}'.format(self.expr, self.lower, self.upper)
 
+    def __eq__(self, other):
+        if isinstance(other, Constraint):
+            return self.lower == other.lower and self.upper == other.upper and self.expr == other.expr
+        return False
+
 
 class KinematicModel(object):
     def __init__(self):
@@ -478,3 +483,9 @@ class KinematicModel(object):
 
             for a in node.after:
                 self._apply_tag_node_after(a, node.tag)
+
+
+    def __eq__(self, other):
+        if isinstance(other, KinematicModel):
+            return self.operation_history == other.operation_history and self.data_tree == other.data_tree and self.timeline_tags == other.timeline_tags and self.constraints == other.constraints 
+        return False

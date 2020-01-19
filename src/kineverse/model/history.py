@@ -238,6 +238,11 @@ class History(object):
     def str_history(self):
         return '\n'.join(['{:>8.3f} : {}'.format(chunk.stamp, str(chunk.op)) for chunk in self.chunk_history])
 
+    def __eq__(self, other):
+        if isinstance(other, History):
+            return self.chunk_history == other.chunk_history
+        return False
+
 
 class StampedData(object):
     def __init__(self, stamp, **kwargs):
@@ -263,6 +268,11 @@ class StampedData(object):
     def __str__(self):
         return 'Stamped Data {}'.format(self.stamp)
 
+    def __eq__(self, other):
+        if isinstance(other, StampedData):
+            return self.stamp == other.stamp
+        return False
+
 
 class Chunk(StampedData):
     def __init__(self, stamp, op):
@@ -274,3 +284,8 @@ class Chunk(StampedData):
 
     def __str__(self):
         return 'Stamp: {}\n Arguments: {}\n Modifications: {}\n Dependents: {}\n'.format(self.stamp, ', '.join(self.dependencies), ', '.join(self.modifications), ', '.join([str(d.stamp) for d in self.dependents]))
+
+    def __eq__(self, other):
+        if isinstance(other, Chunk):
+            return super(Chunk, self).__eq__(other) and self.operation == other.operation and self.dependencies == other.dependencies and self.modifications == other.modifications
+        return False

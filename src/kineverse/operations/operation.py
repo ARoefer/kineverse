@@ -90,7 +90,11 @@ class Operation(JSONSerializable):
     def _json_data(self, json_dict):
         json_dict['args'] = self._construction_args
 
-
     @classmethod
     def json_factory(cls, args):
         return cls(*args)
+
+    def __eq__(self, other):
+        if isinstance(other, type(self)):
+            return self.name == other.name and self.args_paths == other.args_paths and self.mod_paths == other.mod_paths
+        return False

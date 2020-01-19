@@ -26,6 +26,11 @@ class RoombaJoint(KinematicJoint):
                           'lin_vel' : self.lin_vel,
                           'ang_vel' : self.ang_vel})
 
+    def __eq__(self, other):
+        if isinstance(other, RoombaJoint):
+            return super(RoombaJoint, self).__eq__(other) and self.x_pos == other.x_pos and self.y_pos == other.y_pos and self.a_pos == other.a_pos and self.a_pos == other.a_pos and self.lin_vel == other.lin_vel and self.ang_vel == other.ang_vel
+        return False
+
 
 class SetRoombaJoint(Operation):
     def init(self, parent_pose, child_pose, connection_path, rot_axis, lin_axis, x_pos, y_pos, z_pos, a_pos, lin_vel, ang_vel, l_vel_limit, a_vel_limit):
@@ -87,6 +92,11 @@ class OmnibaseJoint(KinematicJoint):
                           'y_pos'   : self.y_pos,
                           'a_pos'   : self.a_pos})
 
+    def __eq__(self, other):
+        if isinstance(other, OmnibaseJoint):
+            return super(OmnibaseJoint, self).__eq__(other) and self.x_pos == other.x_pos and self.y_pos == other.y_pos and self.a_pos == other.a_pos
+        return False
+
 
 class SetOmnibaseJoint(Operation):
     def init(self, parent_pose, child_pose, connection_path, rot_axis, x_pos, y_pos, a_pos, l_vel_limit, a_vel_limit):
@@ -131,6 +141,11 @@ class BallJoint(KinematicJoint):
         self.axis_y = axis_y
         self.axis_z = axis_z
 
+    def __eq__(self, other):
+        if isinstance(other, BallJoint):
+            return super(BallJoint, self).__eq__(other) and self.axis_x == other.axis_x and self.axis_y == other.axis_y and self.axis_z == other.axis_z
+        return False
+
 
 class SetBallJoint(Operation):
     def init(self, parent_pose, child_pose, connection_path, connection_tf, axis_x, axis_y, axis_z, pos_limit, vel_limit):
@@ -173,6 +188,10 @@ class TwoDOFRotationJoint(KinematicJoint):
         self.axis_x = axis_x
         self.axis_y = axis_y
 
+    def __eq__(self, other):
+        if isinstance(other, TwoDOFRotationJoint):
+            return super(TwoDOFRotationJoint, self).__eq__(other) and self.axis_x == other.axis_x and self.axis_y == other.axis_y
+        return False
 
 # class Set2DofRotationJoint(Operation):
 #     def init(self, parent_pose, child_pose, connection_path, connection_tf, axis_x, axis_y, pos)

@@ -14,21 +14,14 @@ from kineverse.srv import GetConstraints as GetConstraintsSrv
 
 
 
-class ModelClient(object):
+class ModelClient_NoROS(object):
     """Client for mirroring a complete or partial kinematic model."""
     def __init__(self, model_type, *args):
         if model_type is not None and not issubclass(model_type, EventModel):
             raise Exception('Model type must be a subclass of EventModel. Type "{}" is not.'.format(model_type))
 
         self.km = model_type(*args) if model_type is not None else EventModel()
-
-        rospy.wait_for_service('get_model')
-        self.srv_get_model = rospy.ServiceProxy('get_model', GetModelSrv)
-
-        rospy.wait_for_service('get_constraints')
-        self.srv_get_constraints = rospy.ServiceProxy('get_constraints', GetConstraintsSrv)
-
-        self.sub_model = rospy.Subscriber('/km', ModelUpdateMsg, self.cb_model_update, queue_size=1)
+        
         self._last_update    = Time(0)
         self.tracked_paths   = PathSet()
         self.tracked_symbols = set()
@@ -134,3 +127,16 @@ class ModelClient(object):
 
     def deregister_on_constraints_changed(self, callback):
         self.km.deregister_on_constraints_changed(callback)
+
+
+class ModelClient(ModelClient_NoROS):
+    def __init__(self, model_type, *args):
+        rospy.wait_for_service('get_model')
+        self.srv_get_model = rospy.ServiceProxy('get_model', GetModelSrv)
+
+        rospy.wait_for_service('get_constraints')
+        self.srv_get_constraints = rospy.ServiceProxy('get_constraints', GetConstraintsSrv)
+
+        super(ModelClient, self).__init__(model_type, *args)
+        
+        self.sub_model = rospy.Subscriber('/km', ModelUpdateMsg, self.cb_model_update, queue_size=1)

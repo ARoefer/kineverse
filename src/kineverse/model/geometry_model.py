@@ -28,6 +28,12 @@ class KinematicJoint(JSONSerializable):
         memo[id(self)] = out
         return out
 
+    def __eq__(self, other):
+        if isinstance(other, KinematicJoint):
+            return self.type == other.type and self.parent == other.parent and self.child == other.child
+        return False
+
+
 class Geometry(Frame):
     def __init__(self, parent_path, pose, geom_type, scale=None, mesh=None):
         super(Geometry, self).__init__(parent_path, pose)
@@ -41,6 +47,12 @@ class Geometry(Frame):
         json_dict.update({'geom_type': self.type,
                           'scale':     self.scale,
                           'mesh':      self.mesh})
+
+    def __eq__(self, other):
+        if isinstance(other, Geometry):
+            return super(Geometry, self).__eq__(other) and self.type == other.type and self.scale == other.scale and self.mesh == other.mesh
+        return False
+
 
 class InertialData(Frame):
     def __init__(self, parent_path, pose, mass=1, inertia_matrix=spw.eye(3)):
@@ -57,25 +69,34 @@ class InertialData(Frame):
         json_dict.update({'mass':           self.mass,
                           'inertia_matrix': self.inertia_matrix})
 
+    def __eq__(self, other):
+        if isinstance(other, InertialData):
+            return super(InertialData, self).__eq__(other) and self.mass == other.mass and self.inertia_matrix == other.inertia_matrix
+        return False
+
 
 class RigidBody(Frame):
-    def __init__(self, parent_path, pose, geometry=None, collision=None, inertial=None):
-        super(RigidBody, self).__init__(parent_path, pose)
+    def __init__(self, parent_path, pose, to_parent=None, geometry=None, collision=None, inertial=None):
+        super(RigidBody, self).__init__(parent_path, pose, to_parent)
         self.geometry  = geometry
         self.collision = collision
         self.inertial  = inertial
 
     def _json_data(self, json_dict):
         super(RigidBody, self)._json_data(json_dict)
-        del json_dict['to_parent']
         json_dict.update({'collision': self.collision,
                           'geometry':  self.geometry,
                           'inertial':  self.inertial})
 
     def __deepcopy__(self, memo):
-        out = RigidBody(self.parent, self.pose * 1, self.geometry, self.collision, self.inertial)
+        out = RigidBody(self.parent, self.pose * 1, self.to_parent * 1, self.geometry, self.collision, self.inertial)
         memo[id(self)] = out
         return out
+
+    def __eq__(self, other):
+        if isinstance(other, RigidBody):
+            return super(RigidBody, self).__eq__(other) and self.geometry == other.geometry and self.collision == other.collision and self.inertial == other.inertial
+        return False
 
 
 class ArticulatedObject(JSONSerializable):
@@ -102,6 +123,11 @@ class ArticulatedObject(JSONSerializable):
         out.links  = {k: deepcopy(v) for k, v in self.links.items()}
         out.joints = {k: deepcopy(v) for k, v in self.joints.items()}
         return out
+
+    def __eq__(self, other):
+        if isinstance(other, ArticulatedObject):
+            return self.name == other.name and self.links == other.links and self.joints == other.joints
+        return False
 
 
 obj_to_obj_prefix = 'distance_obj_to_obj'
@@ -343,6 +369,12 @@ class CollisionSubworld(object):
             self.world.perform_discrete_collision_detection()
         return self.world.get_closest_batch(query_batch)
 
+    def __eq__(self, other):
+        if isinstance(other, CollisionSubworld):
+            return self.names == other.names and self.free_symbols == other.free_symbols
+        return False
+
+
 def contact_geometry(pose_a, pose_b, path_a, path_b):
     cont = ContactSymbolContainer(path_a, path_b)
     point_a = pose_a * point3(cont.on_a_x, cont.on_a_y, cont.on_a_z)
@@ -406,6 +438,11 @@ class ContactSymbolContainer(object):
         self.normal_y = Position((contact_name + ('normal', 'y')).to_symbol())
         self.normal_z = Position((contact_name + ('normal', 'z')).to_symbol())
 
+    def __eq__(self, other):
+        if isinstance(other, ContactSymbolContainer):
+            return self.on_a_x == other.on_a_x and self.on_a_y == other.on_a_y and self.on_a_z == other.on_a_z and self.on_b_x == other.on_b_x and self.on_b_y == other.on_b_y and self.on_b_z == other.on_b_z and self.normal_x == other.normal_x and self.normal_y == other.normal_y and self.normal_z == other.normal_z
+        return False
+
 
 pb_zero_vector = pb.Vector3(0,0,0)
 pb_far_away_vector = pb.Vector3(1e8,1e8,-1e8)
@@ -467,7 +504,10 @@ class ContactHandler(object):
             for x in range(anon_idx, self._num_anon_contacts):
                 self.handle_contact(pb_zero_vector, pb_far_away_vector, pb_default_normal, anon_idx)
 
-
+    def __eq__(self, other):
+        if isinstance(other, ContactHandler):
+            return self.obj_path == other.obj_path and self.state == other.state and self.var_map == other.state
+        return False
 
 
 

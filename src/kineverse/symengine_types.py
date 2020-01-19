@@ -6,4 +6,5 @@ symengine_matrix_types = set([spw.sp.DenseMatrix,
                               spw.sp.MatrixBase, 
                               spw.sp.MutableDenseMatrix])
 
-symengine_types = set([getattr(spw.sp.lib.symengine_wrapper, x) for x in dir(spw.sp.lib.symengine_wrapper) if type(getattr(spw.sp.lib.symengine_wrapper, x)) == type])
+symengine_types  = set([getattr(spw.sp.lib.symengine_wrapper, x) for x in dir(spw.sp.lib.symengine_wrapper) if type(getattr(spw.sp.lib.symengine_wrapper, x)) == type])
+symengine_floats = {spw.sp.RealDouble, spw.sp.RealNumber}

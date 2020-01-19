@@ -32,6 +32,12 @@ class SoftConstraint(Constraint):
     def __str__(self):
         return '{} @ {}'.format(super(SoftConstraint, self).__str__(), self.weight)
 
+    def __eq__(self, other):
+        if isinstance(other, SoftConstraint):
+            return self.lower == other.lower and self.upper == other.upper and self.expr == other.expr and self.weight == other.weight
+        return False
+
+
 class ControlledValue(object):
     def __init__(self, lower, upper, symbol, weight=1):
         self.lower  = lower
@@ -41,6 +47,12 @@ class ControlledValue(object):
 
     def __str__(self):
         return '{} <= {} <= {} @ {}'.format(self.lower, self.symbol, self.upper, self.weight)
+
+    def __eq__(self, other):
+        if isinstance(other, ControlledValue):
+            return self.lower == other.lower and self.upper == other.upper and self.symbol == other.symbol and self.weight == other.weight
+        return False
+
 
 class MinimalQPBuilder(object):
     def __init__(self, hard_constraints, soft_constraints, controlled_values):
@@ -279,6 +291,11 @@ class PID_Constraint():
 
     def to_constraint(self):
         return self.to_hard_constraint() if self.weight is None else self.to_soft_constraint()
+
+    def __eq__(self, other):
+        if isinstance(other, PID_Constraint):
+            return self.error_term == other.error_term and self.control_value == other.control_value and self.weight == other.weight and self.k_p == other.k_p and self.k_i == other.k_i and self.k_d == other.k_d
+        return False
 
 
 class PIDQPBuilder(TypedQPBuilder):

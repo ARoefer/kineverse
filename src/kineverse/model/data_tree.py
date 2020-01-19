@@ -115,3 +115,8 @@ class DataTree(JSONSerializable):
 
     def get_data_map(self):
         return self.data_tree.copy()
+
+    def __eq__(self, other):
+        if isinstance(other, DataTree):
+            return self.parent == other.parent and self.data_tree == other.data_tree and self.value_table == other.value_table
+        return False

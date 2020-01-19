@@ -13,12 +13,18 @@ class Frame(JSONSerializable):
                           'to_parent': self.to_parent})
 
     def __copy__(self):
-        return Frame(self.parent, self.pose)
+        return Frame(self.parent, self.pose, self.to_parent)
 
     def __deepcopy__(self, memo):
-        out = Frame(self.parent, self.pose * 1)
+        out = Frame(self.parent, self.pose * 1, self.to_parent * 1)
         memo[id(self)] = out
         return out
+
+    def __eq__(self, other):
+        if isinstance(other, Frame):
+            return self.parent == other.parent and self.pose == other.pose and self.to_parent == other.to_parent
+        return False
+
 
 class Transform(JSONSerializable):
     def __init__(self, from_frame, to_frame, pose):
@@ -32,9 +38,14 @@ class Transform(JSONSerializable):
                           'pose':       self.pose})
 
     def __copy__(self):
-        return Transform(self.from_frame, self.to_frame, self.pose)
+        return Transform(self.from_frame, self.to_frame, self.pose * 1)
 
     def __deepcopy__(self, memo):
         out = Transform(self.from_frame, self.to_frame, self.pose * 1)
         memo[id(self)] = out
         return out
+
+    def __eq__(self, other):
+        if isinstance(other, Transform):
+            return self.from_frame == other.from_frame and self.pose == other.pose and self.to_frame == other.to_frame
+        return False
