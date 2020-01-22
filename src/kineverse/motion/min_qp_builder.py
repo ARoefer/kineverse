@@ -265,7 +265,7 @@ class TypedQPBuilder(MinimalQPBuilder):
         return dict(zip(self.cv, self.cv_type))
 
 
-class PID_Constraint():
+class PID_Constraint(object):
     def __init__(self, error_term, control_value, weight=1, k_p=1, k_i=0, k_d=0):
         self.error_term    = error_term
         self.control_value = control_value
@@ -296,6 +296,9 @@ class PID_Constraint():
         if isinstance(other, PID_Constraint):
             return self.error_term == other.error_term and self.control_value == other.control_value and self.weight == other.weight and self.k_p == other.k_p and self.k_i == other.k_i and self.k_d == other.k_d
         return False
+
+    def __str__(self):
+        return 'Error term: {}\nControl term: {}\nWeight: {}\nP: {} I: {} D: {}'.format(str(self.error_term), str(self.control_value), str(self.weight), self.k_p, self.k_i, self.k_d)
 
 
 class PIDQPBuilder(TypedQPBuilder):

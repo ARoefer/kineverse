@@ -51,7 +51,6 @@ class TestOperations(ut.TestCase):
         self.assertFalse(ks.has_data('my_obj/some_subobj/y'))
         self.assertFalse(ks.has_data('my_obj/some_subobj/z'))
 
-
     def test_add_fn_call(self):
         ks  = KinematicModel()
         ks.apply_operation('create my_var', CreateSingleValue('my_var', 5))

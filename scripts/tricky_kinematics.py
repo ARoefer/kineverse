@@ -216,7 +216,7 @@ def lock_explorer(km, state, goals, generated_constraints):
         symbols = goal.expr.free_symbols
         goal_sign = sign(subs_if_sym(goal.lower, state)) + sign(subs_if_sym(goal.upper, state))
         if goal_sign == 0:
-            return goals
+            continue
 
         goal_expr = goal.expr
         if type(goal_expr) != GC:
@@ -252,7 +252,7 @@ def lock_explorer(km, state, goals, generated_constraints):
 
         new_goals = {}
         # If all symbols are blocked from going in the desired direction
-        if min([len(cd) for cd in blocking_constraints.values()]):
+        if min([len(cd) for cd in blocking_constraints.values()]) > 0:
             for s, cd in blocking_constraints.items():
                 for n, c in cd.items():
                     u_const_name = 'unlock {} upper bound'.format(n)
