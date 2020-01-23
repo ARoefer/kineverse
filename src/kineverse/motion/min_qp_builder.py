@@ -83,92 +83,6 @@ class MinimalQPBuilder(object):
         self._build_M()
 
 
-    # Add new constraints as you go
-    def add_constraints(self, hard_constraints, soft_constraints):
-        if len(hard_constraints) > 0 or len(soft_constraints) > 0:
-            hc = [(k, Constraint(extract_expr(c.lower), extract_expr(c.upper), wrap_expr(c.expr))) for k, c in hard_constraints.items()]
-            sc = [(k, SoftConstraint(extract_expr(c.lower), extract_expr(c.upper), c.weight, wrap_expr(c.expr))) for k, c in soft_constraints.items()]
-
-            A_addition   = spw.zeros(1, self.A.shape[1])
-            lbA_addition = spw.zeros(1)
-            ubA_addition = spw.zeros(1)
-            new_weights  = []
-
-            for k, c in hc + sc:
-                try:
-                    idx = self.row_names.index(k)
-                    is_hc = max(self.A[idx, len(self.cv):]) == 0
-                    if type(c) is SoftConstraint and is_hc:
-                        raise Exception('key "{}" refers to hard constraint but is being overriden with a soft constraint.')
-                    elif idx >= self.n_hc:
-                        raise Exception('key "{}" refers to soft constraint but is being overriden with a hard constraint.')
-
-                    self.lbA[idx] = c.lower
-                    self.ubA[idx] = c.upper
-                    for x, s in enumerate(self.cv):
-                            self.A[idx, x] = c.expr[s] if s in c.expr else 0
-                    if type(c) is SoftConstraint:
-                        d_idx = self.n_cv + idx - self.n_hc
-                        self.H[d_idx, d_idx] = c.weight
-                except ValueError:
-                    lbA_addition = lbA_addition.col_join(spw.Matrix([c.lower]))
-                    ubA_addition = ubA_addition.col_join(spw.Matrix([c.upper]))
-                    if type(c) is SoftConstraint:
-                        A_addition = A_addition.row_join(spw.zeros(A_addition.shape[0], 1).col_join(spw.Matrix([1])))
-                        new_weights.append(c.weight)
-                        self.col_names.append(k)
-
-                    self.row_names.append(k)
-                    A_addition = A_addition.col_join(spw.Matrix([c.expr[s] if s in c.expr else 0 for s in self.cv] + [0] * (A_addition.shape[1] - self.n_cv)))
-
-            if A_addition.shape[1] > 1: # New constraints have been added
-                self.lbA = self.lbA.col_join(lbA_addition[1:,:])
-                self.ubA = self.ubA.col_join(ubA_addition[1:,:])
-                if A_addition.shape[1] > self.A.shape[1]:
-                    self.A = self.A.row_join(spw.zeros(self.A.shape[0], A_addition.shape[1] - self.A.shape[1]))
-                self.A   = self.A.col_join(A_addition[1:,:])
-
-            if len(new_weights) > 0:
-                self.H = self.H.row_join(spw.zeros(self.H.shape[0], len(new_weights))).col_join(spw.zeros(len(new_weights), self.H.shape[1]).row_join(spw.diag(*new_weights)))
-
-            self.n_hc += len(lbA_addition) - 1 - len(new_weights)
-            self.n_sc += len(new_weights)
-
-            self._build_M()
-
-
-    def remove_constraints(self, constraints):
-        indices = {n: x for x, n in enumerate(self.row_names)}
-
-        to_remove = {indices[k] for k in constraints if k in indices}
-        if len(to_remove) > 0:
-            new_A_rows   = []
-            new_lbA      = []
-            new_ubA      = []
-            new_weights  = [self.H[x, x] for x in range(self.H.shape[0] - self.n_sc)]
-            sc_idx = 0 
-            for x in range(self.A.shape[0]):
-                if x not in to_remove:
-                    new_lbA.append(self.lbA[x,:])
-                    new_ubA.append(self.lbA[x,:])
-                    if max(self.A[indices[k], len(self.cv):] != 0): # this is a soft constraint
-                        new_weights.append(self.H[len(self.cv) + sc_idx, len(self.cv) + sc_idx])
-                        new_A_rows.append(self.A[x, :].row_join(spw.Matrix(([0] * sc_idx) + [1])))
-                        sc_idx += 1
-                    else:
-                        new_A_rows.append(self.A[x, :])
-                else:
-                    del self.row_names[x]
-
-            self.n_sc = sc_idx
-            self.n_hc = len(new_A_rows) - self.n_sc
-
-            self.A   = spw.Matrix([row.row_join(spw.Matrix([0] * (sc_idx + len(self.cv) - row.shape[1]))) for row in new_A_rows])
-            self.H   = spw.diag(*new_weights)
-            self.lbA = spw.Matrix(new_lbA)
-            self.ubA = spw.Matrix(new_ubA)
-
-
     def _build_M(self):
         self.big_ass_M = self.A.row_join(self.lbA).row_join(self.ubA).col_join(self.H.row_join(self.lb).row_join(self.ub))
 
@@ -486,5 +400,9 @@ def find_constant_bounds(constraints):
     return {s: (mins[s] if s in mins else None, maxes[s] if s in maxes else None) for s in set(mins.keys()).union(set(maxes.keys()))}
 
 
+# def generate_full_giskard_problem(km, task_constraints, controlled_symbols, weights={}, default_weight=0.01, default_bounds=(-1e9, 1e9)):
 
+#     for s in symbols:
+#         diff_type = get_symbol_type(s)
+        
 

@@ -184,7 +184,7 @@ class SetPrismaticJoint(Operation):
                 'child_parent_tf': connection_tf * translation3(*(axis[:,:3] * position)) * child_parent_tf,
                 'child_pose': parent_pose * connection_tf * translation3(*(axis[:,:3] * position)) * child_pose,
                 'connection': self.joint_obj}, \
-               {'{}_position'.format(self.conn_path): Constraint(lower_limit - position, upper_limit - position, position),
+               {'{}_position'.format(self.conn_path): Constraint(lower_limit, upper_limit, position),
                 '{}_velocity'.format(self.conn_path): Constraint(-vel_limit, vel_limit, vel)}
 
 class SetRevoluteJoint(Operation):
@@ -215,7 +215,7 @@ class SetRevoluteJoint(Operation):
                 'child_parent_tf': connection_tf * rotation3_axis_angle(axis, position) * child_parent_tf,
                 'child_pose': parent_pose * connection_tf * rotation3_axis_angle(axis, position) * child_pose,
                 'connection': self.joint_obj}, \
-               {'{}_position'.format(self.conn_path): Constraint(lower_limit - position, upper_limit - position, position),
+               {'{}_position'.format(self.conn_path): Constraint(lower_limit, upper_limit, position),
                '{}_velocity'.format(self.conn_path): Constraint(-vel_limit, vel_limit, vel)}
 
 class SetContinuousJoint(Operation):
