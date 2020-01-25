@@ -6,7 +6,13 @@ import numpy             as np
 from collections import namedtuple
 from math import ceil, sqrt
 
-COLORS = ['r', 'g', 'b', 'c', 'm', 'y', 'k']
+BASE_COLORS = [(35, 95, 100), (355, 95, 91), (261, 100, 100), (194, 95, 91), (123, 100, 100)]#, 
+               #(15, 95, 100), (293, 95, 91), (244, 100, 100), (156, 95, 91), (76, 100, 100)]
+BASE_COLORS = [np.array(b) * np.array([1.0/360, 1e-2, 1e-2]) for b in BASE_COLORS]
+BASE_COLORS = [[b * (1.0, 1.0, f) for f in np.linspace(1.0, 0.5, 3)] for b in BASE_COLORS]
+
+from pprint import pprint
+pprint(BASE_COLORS)
 
 def hsv_to_rgb(h, s, v):
     return matcolors.hsv_to_rgb((h, s, v))
@@ -21,31 +27,16 @@ def print_return(f):
 
 class ColorGenerator(object):
     def __init__(self, dist=0.2, s_lb=0.6, v_lb=0.3, s=1.0, v=1.0):
-        self.dist = dist
-        self.h    = 0.0
-        self.s    = s
-        self.v    = v
-        self.s_lb = s_lb
-        self.v_lb = v_lb
-        self._current_step = 1.0 / ceil(1.0 / dist)
+        self.counter = 0
 
     def get_color(self):
-        out = hsv_to_rgb(self.h, self.s, self.v)
-        self.h += self._current_step
-        if self.h >= 1.0:
-            self.h = 0
-            self.s -= self.dist / self.v
-            if self.s < self.s_lb:
-                self.s = 1.0
-                self.v -= self.dist
-                if self.v < self.v_lb:
-                    self.v = 1.0
-                    self.s = 1.0
-                    self.h = 0.0
-                    #raise Exception('Can not generate any more colors.')
-            self._current_step = self.s * self.v / ceil(self.s * self.v / self.dist)
+        out = BASE_COLORS[self.counter % len(BASE_COLORS)][self.counter / len(BASE_COLORS)]
 
-        return out
+        print(self.counter % len(BASE_COLORS),self.counter / len(BASE_COLORS))
+
+        self.counter = (self.counter + 1) % (len(BASE_COLORS) * len(BASE_COLORS[0]))
+
+        return hsv_to_rgb(*out)
 
     def get_color_hex(self):
         r, g, b = self.get_color()
@@ -194,6 +185,7 @@ class ValueRecorder(object):
         self.y_labels = None
         self.y_title  = None
         self.y_space  = None
+        self.grid     = False
 
     def set_xspace(self, min, max):
         self.x_space  = (min, max)
@@ -213,6 +205,9 @@ class ValueRecorder(object):
     def set_ylabels(self, labels):
         self.y_labels = labels
 
+    def set_grid(self, grid):
+        self.grid = grid
+
     def log_data(self, group, value):
         if group not in self.data:
             raise Exception('Unknown data group "{}"'.format(group))
@@ -231,7 +226,9 @@ class ValueRecorder(object):
             labels = []
 
         self.patches = [ax.plot(labels, d, color=self.colors[n], label=n)[0] for n, d in sorted(self.data.items())]
-        
+
+        data_lim_y = (float(min([l[0] for l in self.data_lim.values()])), float(max([l[1] for l in self.data_lim.values()])))
+
         for n, (y, c) in self.thresholds.items():
             ax.axhline(y, color=c)
 
@@ -240,6 +237,10 @@ class ValueRecorder(object):
 
         if self.y_space is not None:
             ax.set_ylim(self.y_space)
+        else:
+            y_width = data_lim_y[1] - data_lim_y[0]
+            new_width = (data_lim_y[0] - y_width * 0.1, data_lim_y[1] + y_width * 0.1)
+            ax.set_ylim(new_width)
 
         if self.y_labels is not None:
             ax.set_yticklabels(self.y_labels)
@@ -252,6 +253,7 @@ class ValueRecorder(object):
 
         ax.legend(handles=self.patches, loc='best')
         ax.set_title(self.title)
+        ax.grid(self.grid)
 
     def add_threshold(self, name, value, color=None):
         if color is None:
