@@ -186,6 +186,7 @@ class ValueRecorder(object):
         self.y_title  = None
         self.y_space  = None
         self.grid     = False
+        self.outside_legend = None
 
     def set_xspace(self, min, max):
         self.x_space  = (min, max)
@@ -207,6 +208,9 @@ class ValueRecorder(object):
 
     def set_grid(self, grid):
         self.grid = grid
+
+    def set_outside_legend(self, position):
+        self.outside_legend = position
 
     def log_data(self, group, value):
         if group not in self.data:
@@ -243,7 +247,12 @@ class ValueRecorder(object):
             ax.set_ylim(new_width)
 
         if self.y_labels is not None:
-            ax.set_yticklabels(self.y_labels)
+            if type(self.y_labels) is tuple:
+                ax.set_yticks(self.y_labels[0])
+                ax.set_yticklabels(self.y_labels[1])
+            else:
+                ax.set_yticks(np.linspace(data_lim_y[0], data_lim_y[1], len(self.y_labels)))
+                ax.set_yticklabels(self.y_labels)
 
         if self.x_title is not None:
             ax.set_xlabel(self.x_title)
@@ -251,7 +260,13 @@ class ValueRecorder(object):
         if self.y_title is not None:
             ax.set_ylabel(self.y_title)
 
-        ax.legend(handles=self.patches, loc='best')
+        if self.outside_legend is not None:
+            if self.outside_legend == 'right':
+                legend = ax.legend(handles=self.patches, loc='center left', bbox_to_anchor=(1, 0.5))
+                # legend.set_in_layout(True)
+        else:
+            legend = ax.legend(handles=self.patches, loc='center left')
+
         ax.set_title(self.title)
         ax.grid(self.grid)
 

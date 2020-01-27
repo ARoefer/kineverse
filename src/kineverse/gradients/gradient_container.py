@@ -235,7 +235,7 @@ class GradientContainer(JSONSerializable):
 
 
     def __str__(self):
-        return '{} ({})'.format(str(self.expr), ', '.join([str(k) for k in self.gradients.keys()]))
+        return '\\/ {} [{}]'.format(str(self.expr), ', '.join([str(k) for k in self.gradients.keys()]))
 
     def __repr__(self):
         return 'G({})'.format(self.expr)

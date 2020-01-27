@@ -93,7 +93,10 @@ class Constraint(object):
         return out
 
     def __str__(self):
-        return '{}\n  >= {}\n  <= {}'.format(self.expr, self.lower, self.upper)
+        s_low  = str(self.lower) if not hasattr(self.lower, 'latex') else self.lower.latex()
+        s_upp  = str(self.upper) if not hasattr(self.upper, 'latex') else self.upper.latex()
+        s_expr = str(self.expr)  if not hasattr(self.expr, 'latex')  else self.expr.latex()
+        return '{}\n  >= {}\n  <= {}'.format(s_expr, s_low, s_upp)
 
     def __eq__(self, other):
         if isinstance(other, Constraint):
