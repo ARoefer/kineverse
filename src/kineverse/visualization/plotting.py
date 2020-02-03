@@ -11,9 +11,6 @@ BASE_COLORS = [(35, 95, 100), (355, 95, 91), (261, 100, 100), (194, 95, 91), (12
 BASE_COLORS = [np.array(b) * np.array([1.0/360, 1e-2, 1e-2]) for b in BASE_COLORS]
 BASE_COLORS = [[b * (1.0, 1.0, f) for f in np.linspace(1.0, 0.5, 3)] for b in BASE_COLORS]
 
-from pprint import pprint
-pprint(BASE_COLORS)
-
 def hsv_to_rgb(h, s, v):
     return matcolors.hsv_to_rgb((h, s, v))
 
@@ -31,8 +28,6 @@ class ColorGenerator(object):
 
     def get_color(self):
         out = BASE_COLORS[self.counter % len(BASE_COLORS)][self.counter / len(BASE_COLORS)]
-
-        print(self.counter % len(BASE_COLORS),self.counter / len(BASE_COLORS))
 
         self.counter = (self.counter + 1) % (len(BASE_COLORS) * len(BASE_COLORS[0]))
 

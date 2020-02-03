@@ -211,7 +211,6 @@ class MinimalQPBuilder(object):
                 self.H_dfs.append(dfH)
             self._cmd_log.append(xdot_full[:self.n_cv])
         except QPSolverException as e:
-            print('INFEASIBLE CONFIGURATION!\nH:{}\nA:\n{}\nFull data written to "solver_crash_H.csv" and "solver_crash_A.csv"'.format(dfH, dfA))
             if not PANDA_LOGGING:
                 dfH = pd.DataFrame(np.vstack((self.np_lb, self.np_ub, self.np_H.diagonal())), index=['lb', 'ub', 'weight'], columns=self.col_names)
                 dfA = pd.DataFrame(np.hstack((self.np_lbA.reshape((self.shape1, 1)), 
@@ -219,6 +218,7 @@ class MinimalQPBuilder(object):
                                           self.np_A[:, :-self.n_sc])), 
                                           index=self.row_names, columns=['lbA', 'ubA'] + self.col_names[:self.n_cv])
 
+            print('INFEASIBLE CONFIGURATION!\nH:{}\nA:\n{}\nFull data written to "solver_crash_H.csv" and "solver_crash_A.csv"'.format(dfH, dfA))
             dfH.to_csv('solver_crash_H.csv')
             dfA.to_csv('solver_crash_A.csv')
             b_comp  = np.greater(self.np_lb,  self.np_ub)
@@ -484,7 +484,3 @@ def find_constant_bounds(constraints):
                 mins[c.expr] = c.upper if c.expr not in maxes else max(mins[c.expr], c.upper)
 
     return {s: (mins[s] if s in mins else None, maxes[s] if s in maxes else None) for s in set(mins.keys()).union(set(maxes.keys()))}
-
-
-
-

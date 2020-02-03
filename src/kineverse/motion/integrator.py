@@ -33,11 +33,13 @@ class CommandIntegrator(object):
             self.start_state.update(start_state)
         self.recorded_terms = recorded_terms
         self.equilibrium = equilibrium
+        self.current_iteration = 0
 
     def restart(self, title='Integrator'):
         self.state    = self.start_state.copy()
         self.recorder = ValueRecorder(title, *sorted([str(s) for s in self.state.keys()]))
         self.sym_recorder = SymbolicRecorder(title, **{k: extract_expr(s) for k, s in self.recorded_terms.items() if is_symbolic(s)})
+        self.current_iteration = 0
 
     def run(self, dt=0.02, max_iterations=200):
         self.state[DT_SYM] = dt
@@ -49,6 +51,7 @@ class CommandIntegrator(object):
         cmd_accu = np.zeros(self.qp_builder.n_cv)
         #for x in range(max_iterations):
         for x in tqdm(range(max_iterations), desc='Running "{}" for {} iterations'.format(self.recorder.title, max_iterations)):
+            self.current_iteration = x
             if rospy.is_shutdown():
                 break
 
