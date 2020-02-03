@@ -1,6 +1,19 @@
 import giskardpy.symengine_wrappers as spw
 
-from kineverse.gradients.diff_logic         import get_diff_symbol, create_symbol, create_pos, create_vel, create_acc, create_jerk, create_snap, Position, Velocity, Acceleration, Jerk, Snap, Symbol
+from kineverse.gradients.diff_logic         import get_diff_symbol, \
+                                                   create_symbol, \
+                                                   create_pos, \
+                                                   create_vel, \
+                                                   create_acc, \
+                                                   create_jerk, \
+                                                   create_snap, \
+                                                   Position, \
+                                                   Velocity, \
+                                                   Acceleration, \
+                                                   Jerk, \
+                                                   Snap, \
+                                                   Symbol, \
+                                                   DiffSymbol
 from kineverse.gradients.gradient_container import GradientContainer as GC
 from kineverse.gradients.gradient_matrix    import GradientMatrix    as GM
 from kineverse.symengine_types              import symengine_types, symengine_matrix_types
@@ -173,6 +186,26 @@ def cross(u, v):
     return matrix_wrapper([u[1] * v[2] - u[2] * v[1],
                            u[2] * v[0] - u[0] * v[2],
                            u[0] * v[1] - u[1] * v[0], 0])
+
+def trace(matrix):
+    return sum(matrix[i, i] for i in range(matrix.shape[0]))
+
+def axis_angle_from_matrix(rotation_matrix):
+    rm = rotation_matrix
+    if hasattr(rm, 'free_symbols') and len(rm.free_symbols) == 0:
+        if 1 - rm[0,0] <= 0.0001 and 1 - rm[1,1] <= 0.0001 and 1 - rm[2,2] <= 0.0001:
+            return unitX, 0
+    
+    angle = (trace(rm[:3, :3]) - 1) / 2
+    angle = acos(angle)
+    x = (rm[2, 1] - rm[1, 2])
+    y = (rm[0, 2] - rm[2, 0])
+    z = (rm[1, 0] - rm[0, 1])
+    n = sqrt(x * x + y * y + z * z)
+
+
+    axis = vector3(x / n, y / n, z / n)
+    return axis, angle
 
 def translation3(x, y, z, w=1):
     """Creates a homogenous translation transformation."""
