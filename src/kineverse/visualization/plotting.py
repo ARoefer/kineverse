@@ -219,8 +219,10 @@ class ValueRecorder(object):
             self.data_lim[a] = (min(d), max(d))
 
     def plot(self, ax):
+        no_xticks = self.x_labels is not None and len(self.x_labels) == 0
+
         if len(self.data) > 0:
-            labels = range(len(self.data.values()[0])) if self.x_labels is None else self.x_labels
+            labels = range(len(self.data.values()[0])) if self.x_labels is None or no_xticks else self.x_labels
         else:
             labels = []
 
@@ -261,6 +263,9 @@ class ValueRecorder(object):
                 # legend.set_in_layout(True)
         else:
             legend = ax.legend(handles=self.patches, loc='center left')
+
+        if no_xticks:
+            ax.set_xticklabels([])
 
         ax.set_title(self.title)
         ax.grid(self.grid)
