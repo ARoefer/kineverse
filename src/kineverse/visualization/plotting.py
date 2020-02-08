@@ -181,6 +181,7 @@ class ValueRecorder(object):
         self.y_title  = None
         self.y_space  = None
         self.grid     = False
+        self.legend_loc = None
 
     def set_xspace(self, min, max):
         self.x_space  = (min, max)
@@ -202,6 +203,9 @@ class ValueRecorder(object):
 
     def set_grid(self, grid):
         self.grid = grid
+
+    def set_legend_location(self, loc):
+        self.legend_loc = loc
 
     def log_data(self, group, value):
         if group not in self.data:
@@ -246,7 +250,8 @@ class ValueRecorder(object):
         if self.y_title is not None:
             ax.set_ylabel(self.y_title)
 
-        ax.legend(handles=self.patches, loc='best')
+        loc = 'best' if self.legend_loc is None else self.legend_loc
+        ax.legend(handles=self.patches, loc=loc)
         ax.set_title(self.title)
         ax.grid(self.grid)
 
