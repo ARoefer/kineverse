@@ -37,7 +37,7 @@ class CommandIntegrator(object):
 
     def restart(self, title='Integrator'):
         self.state    = self.start_state.copy()
-        self.recorder = ValueRecorder(title, *[str(s) for s in self.state.keys()])
+        self.recorder = ValueRecorder(title, *sorted([str(s) for s in self.state.keys()]))
         self.sym_recorder = SymbolicRecorder(title, **{k: extract_expr(s) for k, s in self.recorded_terms.items() if is_symbolic(s)})
         self.current_iteration = 0
 

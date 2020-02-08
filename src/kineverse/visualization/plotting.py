@@ -219,8 +219,10 @@ class ValueRecorder(object):
             self.data_lim[a] = (min(d), max(d))
 
     def plot(self, ax):
+        no_xticks = self.x_labels is not None and len(self.x_labels) == 0
+
         if len(self.data) > 0:
-            labels = range(len(self.data.values()[0])) if self.x_labels is None else self.x_labels
+            labels = range(len(self.data.values()[0])) if self.x_labels is None or no_xticks else self.x_labels
         else:
             labels = []
 
@@ -242,13 +244,21 @@ class ValueRecorder(object):
             ax.set_ylim(new_width)
 
         if self.y_labels is not None:
-            ax.set_yticklabels(self.y_labels)
+            if type(self.y_labels) is tuple:
+                ax.set_yticks(self.y_labels[0])
+                ax.set_yticklabels(self.y_labels[1])
+            else:
+                ax.set_yticks(np.linspace(data_lim_y[0], data_lim_y[1], len(self.y_labels)))
+                ax.set_yticklabels(self.y_labels)
 
         if self.x_title is not None:
             ax.set_xlabel(self.x_title)
 
         if self.y_title is not None:
             ax.set_ylabel(self.y_title)
+
+        if no_xticks:
+            ax.set_xticklabels([])
 
         loc = 'best' if self.legend_loc is None else self.legend_loc
         ax.legend(handles=self.patches, loc=loc)
