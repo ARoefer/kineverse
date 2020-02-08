@@ -262,7 +262,8 @@ class ValueRecorder(object):
 
         loc = 'best' if self.legend_loc is None else self.legend_loc
         ax.legend(handles=self.patches, loc=loc)
-        ax.set_title(self.title)
+        if self.title is not None:
+            ax.set_title(self.title)
         ax.grid(self.grid)
 
     def add_threshold(self, name, value, color=None):

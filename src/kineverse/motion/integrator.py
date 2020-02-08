@@ -25,9 +25,12 @@ class CommandIntegrator(object):
                             self.integration_rules[s] = s + c * (DT_SYM ** (t_c - t_s))
 
             if integration_rules is not None:
-                self.integration_rules.update({s: r for s, r in integration_rules.items() if s in self.qp_builder.free_symbols})
+                # Only add custom rules which are fully defined given the set of state variables and the set of command variables
+                cv_set = set(self.qp_builder.cv)
+                self.integration_rules.update({s: r for s, r in integration_rules.items() if len(r.free_symbols.difference(self.qp_builder.free_symbols).difference(cv_set)) == 0})
         else:
             self.integration_rules = integration_rules if integration_rules is not None else {s: s*DT_SYM for s in self.qp_builder.free_symbols}
+        
         self.start_state = {s: 0.0 for s in self.qp_builder.free_symbols}
         if start_state is not None:
             self.start_state.update(start_state)
