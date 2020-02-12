@@ -15,6 +15,8 @@ from kineverse.type_sets               import is_symbolic
 from kineverse.utils                   import real_quat_from_matrix, res_pkg_path
 from kineverse.visualization.ros_visualizer import ROSVisualizer
 
+from multiprocessing import RLock
+
 from tf import TransformBroadcaster
 
 from kineverse.msg   import ValueMap   as ValueMapMsg
@@ -51,6 +53,7 @@ class ModelTFBroadcaster(object):
     def __init__(self, model_path, model=None):
         self.s_frame_map       = {}
         self.state             = {}
+        self.model             = None
         self.model_path        = Path(model_path)
         self.cythonized_matrix = None
         self._state_complete   = False
@@ -58,84 +61,94 @@ class ModelTFBroadcaster(object):
         self.broadcaster       = TransformBroadcaster()
         self.static_frames     = {}
         self.np_poses          = None
+        self.lock              = RLock()
         self.visualizer = ROSVisualizer('publisher_debug', 'map')
         self.set_model(model)
 
     @profile
     def update_state(self, update):
-        if self.model is not None:
+        with self.lock:
+            if self.model is not None:
 
-            self.state.update({str(s): v for s, v in update.items()})
-            if not self._state_complete:
-                self._state_complete = len(set(self.cythonized_matrix.str_params).difference(set(self.state.keys()))) == 0
+                state = {str(s): v for s, v in update.items()}
+                # print('---- Update\n{}'.format('\n'.join(['{}: {}'.format(k, v) for k, v in state.items()])))
+                self.state.update(state)
                 if not self._state_complete:
-                    return
+                    self._state_complete = len(set(self.cythonized_matrix.str_params).difference(set(self.state.keys()))) == 0
+                    if not self._state_complete:
+                        return
 
-            self.np_poses = self.cythonized_matrix(**self.state)
+                self.np_poses = self.cythonized_matrix(**self.state)
 
 
     @profile
     def publish_state(self):
-        if self.np_poses is not None:
-            #print('---\n{}'.format('\n'.join(['{}: {}'.format(k, v) for k, v in sorted(self.state.items())])))
-            
-            indices = sum(self.s_frame_map.values(), []) # set(sum([self.s_frame_map[s] for s in update if s in self.s_frame_map], []))
-            now     = Time.now()
-            self.visualizer.begin_draw_cycle('debug')
-            self.visualizer.draw_poses('debug', spw.eye(4), 0.1, 0.01, [spw.Matrix(self.np_poses[x * 4:x * 4 + 4].tolist()) for x in range(self.np_poses.shape[0]/4)])
-            self.visualizer.render('debug')
+        with self.lock:
+            if self.np_poses is not None:
+                #print('---\n{}'.format('\n'.join(['{}: {}'.format(k, v) for k, v in sorted(self.state.items())])))
+                
+                indices = sum(self.s_frame_map.values(), []) # set(sum([self.s_frame_map[s] for s in update if s in self.s_frame_map], []))
+                now     = Time.now()
+                self.visualizer.begin_draw_cycle('debug')
+                self.visualizer.draw_poses('debug', spw.eye(4), 0.1, 0.01, [spw.Matrix(self.np_poses[x * 4:x * 4 + 4].tolist()) for x in range(self.np_poses.shape[0]/4)])
+                self.visualizer.render('debug')
 
-            published_frames = []
-            for x in indices:
-                n, f     = self.frame_info[x]
-                pose     = self.np_poses[x*4: x*4 + 4, :4]
-                position = (pose[0, 3], pose[1, 3], pose[2, 3])
-                quat     = real_quat_from_matrix(pose)
-                self.broadcaster.sendTransform(position, quat, now, n, f.parent)
-                published_frames.append(n)
+                published_frames = []
+                for x in indices:
+                    n, f     = self.frame_info[x]
+                    pose     = self.np_poses[x*4: x*4 + 4, :4]
+                    position = (pose[0, 3], pose[1, 3], pose[2, 3])
+                    quat     = real_quat_from_matrix(pose)
+                    self.broadcaster.sendTransform(position, quat, now, n, f.parent)
+                    published_frames.append(n)
 
-            for n, param in self.static_frames.items():
-                self.broadcaster.sendTransform(param[0], param[1], now, param[2], param[3])
-                published_frames.append(n)
+                for n, param in self.static_frames.items():
+                    self.broadcaster.sendTransform(param[0], param[1], now, param[2], param[3])
+                    # published_frames.append(n)
 
-            #print('---\n{}'.format('\n'.join(published_frames)))
+            # print('---\n{}'.format('\n'.join(published_frames)))
 
 
     def set_model(self, model):
-        self.model       = model
-        self.state       = {}
-        self.s_frame_map = {}
-        self.static_frames = {}
-        self.frame_info  = []
-        self.np_poses    = None
-        self._state_complete = False
+        with self.lock:
+            self.model       = model
+            self.state       = {}
+            self.s_frame_map = {}
+            self.static_frames = {}
+            self.frame_info  = []
+            self.np_poses    = None
+            self._state_complete = False
+            self.cythonized_matrix = None
 
-        if self.model is not None:
-            frames = find_all_frames(self.model_path, model)
+            if self.model is not None:
+                frames = find_all_frames(self.model_path, model)
 
-            names, lframes = zip(*frames.items())
-            pose_matrix    = lframes[0].to_parent
-            for f in lframes[1:]:
-                pose_matrix = pose_matrix.col_join(f.to_parent)
-            
-            self.frame_info = list(zip([str(n) for n in names], lframes))
+                names, lframes = zip(*frames.items())
+                pose_matrix    = lframes[0].to_parent
+                for f in lframes[1:]:
+                    pose_matrix = pose_matrix.col_join(f.to_parent)
+                
+                self.frame_info = list(zip([str(n) for n in names], lframes))
 
-            self.cythonized_matrix = spw.speed_up(pose_matrix, pose_matrix.free_symbols, backend=BACKEND)
+                self.cythonized_matrix = spw.speed_up(pose_matrix, pose_matrix.free_symbols, backend=BACKEND)
 
-            self.np_poses = np.vstack([np.eye(4) for x in range(len(self.frame_info))])
+                self.state = {p: 0.0 for p in self.cythonized_matrix.str_params}
+                self._state_complete = True
 
-            now = Time.now()
-            for x, (n, f) in enumerate(self.frame_info):
-                if len(f.to_parent.free_symbols) > 0:
-                    for s in f.to_parent.free_symbols:
-                        if s not in self.s_frame_map:
-                            self.s_frame_map[s] = []
-                        self.s_frame_map[s].append(x)
-                else:
-                    position = (f.to_parent[0, 3], f.to_parent[1, 3], f.to_parent[2, 3])
-                    quat     = real_quat_from_matrix(f.to_parent)
-                    self.static_frames[n] = (position, quat, n, f.parent)
-                    self.broadcaster.sendTransform(position, quat, now, n, f.parent)
+                self.np_poses = np.vstack([np.eye(4) for x in range(len(self.frame_info))])
+
+                now = Time.now()
+                for x, (n, f) in enumerate(self.frame_info):
+                    if len(f.to_parent.free_symbols) > 0:
+                        for s in f.to_parent.free_symbols:
+                            if s not in self.s_frame_map:
+                                self.s_frame_map[s] = []
+                            self.s_frame_map[s].append(x)
+                    else:
+                        position = (f.to_parent[0, 3], f.to_parent[1, 3], f.to_parent[2, 3])
+                        quat     = real_quat_from_matrix(f.to_parent)
+                        self.static_frames[n] = (position, quat, n, f.parent)
+                        self.broadcaster.sendTransform(position, quat, now, n, f.parent)
 
 
 class ModelTFBroadcaster_URDF(ModelTFBroadcaster):
@@ -148,7 +161,7 @@ class ModelTFBroadcaster_URDF(ModelTFBroadcaster):
         super(ModelTFBroadcaster_URDF, self).set_model(model)
 
         if self.model is not None:
-            print('Model was received.')
+            print('[ModelTFBraodcasterURDF] Model was received.')
             frames = dict(self.frame_info)
 
             # there can only be one root per published model
@@ -192,6 +205,7 @@ class NetworkedTFBroadcaster(ModelTFBroadcaster_URDF):
         self.publish_state()
 
     def cb_state_update(self, msg):
+        # print('Got new state')
         if self.use_js_msg:
             self.update_state({Symbol(n): v for n, v in zip(msg.name, msg.position)})
         else:    

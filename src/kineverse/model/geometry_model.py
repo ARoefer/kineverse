@@ -10,6 +10,7 @@ from kineverse.model.kinematic_model   import Constraint
 from kineverse.model.event_model       import EventModel
 from kineverse.model.frames            import Frame
 from kineverse.bpb_wrapper             import pb, create_object, create_cube_shape, create_sphere_shape, create_cylinder_shape, create_compound_shape, load_convex_mesh_shape, matrix_to_transform
+from kineverse.utils                   import rot3_to_rpy
 
 
 class KinematicJoint(JSONSerializable):
@@ -47,6 +48,12 @@ class Geometry(Frame):
         json_dict.update({'geom_type': self.type,
                           'scale':     self.scale,
                           'mesh':      self.mesh})
+
+    def to_parent_xyz_str(self):
+        return ' '.join([str(x) for x in pos_of(self.to_parent)[:3]])
+    
+    def to_parent_rpy_str(self):
+        return ' '.join([str(x) for x in rot3_to_rpy(self.to_parent, True)])
 
     def __eq__(self, other):
         if isinstance(other, Geometry):
@@ -401,16 +408,15 @@ def generate_contact_model(actuated_point, actuated_symbols, contact_point, cont
     in_contact   = less_than(distance, dist_threshold)
     actuated_jac = vector3(*[get_diff(x, actuated_symbols) for x in actuated_point[:3]])
 
-    actuated_n = dot(actuated_point, contact_normal)
-    actuated_t = actuated_point - actuated_n * contact_normal 
+    actuated_n   = dot(actuated_point, contact_normal)
+    actuated_t   = actuated_point - actuated_n * contact_normal 
 
-    contact_n  = dot(contact_point,  contact_normal)
-    contact_t  = contact_point - contact_n * contact_normal
+    contact_n    = dot(contact_point,  contact_normal)
+    contact_t    = contact_point - contact_n * contact_normal
 
     tangent_dist = norm(contact_t - actuated_t)
 
-    out = {
-           'direction_limit': Constraint(-default_bound, 0, dot(contact_point, contact_normal)),
+    out = {'direction_limit': Constraint(-default_bound, 0, dot(contact_point, contact_normal)),
            'impenetrability': Constraint(-distance - alg_not(in_contact) * default_bound, default_bound, distance),
            #'motion_alignment_tangent': Constraint(-alg_not(in_contact), alg_not(in_contact), tangent_dist),
            #'motion_alignment_normal': Constraint(-alg_not(in_contact), alg_not(in_contact), actuated_n - contact_n)
@@ -508,8 +514,3 @@ class ContactHandler(object):
         if isinstance(other, ContactHandler):
             return self.obj_path == other.obj_path and self.state == other.state and self.var_map == other.state
         return False
-
-
-
-
-

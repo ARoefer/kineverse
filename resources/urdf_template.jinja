@@ -11,6 +11,7 @@
     <link name="{{n}}">
         {% for v in rb.geometry.values() %}
         <visual>
+            <origin xyz="{{v.to_parent_xyz_str()}}" rpy="{{v.to_parent_rpy_str()}}"/>
             <geometry>
             {% if v.type == 'box' %}
                 <box size="{{v.scale[0]}} {{v.scale[1]}} {{v.scale[2]}}"/>
