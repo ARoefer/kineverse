@@ -424,7 +424,7 @@ def generate_contact_model(actuated_point, actuated_symbols, contact_point, cont
 
     for s in affected_dof:
         contact_jac = vector3(*[x.diff(s) for x in contact_point[:3]]) * get_diff(s)
-        out['motion_alignment_{}'.format(s)] = Constraint(-in_contact * default_bound, 0, dot(contact_normal, contact_jac))
+        #out['motion_alignment_{}'.format(s)] = Constraint(-in_contact * default_bound, 0, dot(contact_normal, contact_jac))
         if set_inanimate:
             out['inanimate_{}'.format(s)] = Constraint(-in_contact * default_bound, in_contact * default_bound, s)
 
