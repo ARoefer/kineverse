@@ -12,7 +12,7 @@ from tqdm import tqdm
 DT_SYM = sp.symbols('T_p')
 
 class CommandIntegrator(object):
-    def __init__(self, qp_builder, integration_rules=None, start_state=None, recorded_terms={}, equilibrium=0.001):
+    def __init__(self, qp_builder, integration_rules=None, start_state=None, recorded_terms={}, equilibrium=0.001, printed_vars=set()):
         self.qp_builder = qp_builder
         if isinstance(qp_builder, TQPB):
             self.integration_rules = {}
@@ -26,8 +26,13 @@ class CommandIntegrator(object):
 
             if integration_rules is not None:
                 # Only add custom rules which are fully defined given the set of state variables and the set of command variables
-                cv_set = set(self.qp_builder.cv)
-                self.integration_rules.update({s: r for s, r in integration_rules.items() if len(r.free_symbols.difference(self.qp_builder.free_symbols).difference(cv_set)) == 0})
+                cv_set = set(self.qp_builder.cv).union({DT_SYM})
+                delta_set = {s: r.free_symbols.difference(self.qp_builder.free_symbols).difference(cv_set) for s, r in integration_rules.items()}
+                for s, r in integration_rules.items():
+                    if len(delta_set[s]) == 0:
+                        self.integration_rules[s] = r
+                    else:
+                        print('Dropping rule "{}: {}". Symbols missing from state: {}'.format(s, r, delta_set[s]))
         else:
             self.integration_rules = integration_rules if integration_rules is not None else {s: s*DT_SYM for s in self.qp_builder.free_symbols}
         
@@ -37,6 +42,7 @@ class CommandIntegrator(object):
         self.recorded_terms = recorded_terms
         self.equilibrium = equilibrium
         self.current_iteration = 0
+        self.printed_vars = printed_vars
 
     def restart(self, title='Integrator'):
         self.state    = self.start_state.copy()
@@ -44,7 +50,7 @@ class CommandIntegrator(object):
         self.sym_recorder = SymbolicRecorder(title, **{k: extract_expr(s) for k, s in self.recorded_terms.items() if is_symbolic(s)})
         self.current_iteration = 0
 
-    def run(self, dt=0.02, max_iterations=200):
+    def run(self, dt=0.02, max_iterations=200, logging=True):
         self.state[DT_SYM] = dt
         
         # Precompute geometry related values for better plots
@@ -58,11 +64,12 @@ class CommandIntegrator(object):
             if rospy.is_shutdown():
                 break
 
-            self.sym_recorder.log_symbols(self.state)
-            str_state = {str(s): v for s, v in self.state.items() if s != DT_SYM}
-            for s, v in str_state.items():
-                if s in self.recorder.data:
-                    self.recorder.log_data(s, v)
+            if logging:
+                self.sym_recorder.log_symbols(self.state)
+                str_state = {str(s): v for s, v in self.state.items() if s != DT_SYM}
+                for s, v in str_state.items():
+                    if s in self.recorder.data:
+                        self.recorder.log_data(s, v)
 
             cmd = self.qp_builder.get_cmd(self.state, deltaT=dt)
             cmd_accu = cmd_accu * 0.5 + self.qp_builder._cmd_log[-1] * dt
@@ -79,6 +86,15 @@ class CommandIntegrator(object):
                 # if s in cmd:
                 #     print('Command for {}: {} Update: {}'.format(s, cmd[s], update))
                 self.state[s] = update
+
+            if len(self.printed_vars) > 0:
+                strs = []
+                for s in sorted(self.printed_vars):
+                    if s in self.state:
+                        strs.append('{}: {}'.format(s, self.state[s]))
+                    elif s in cmd:
+                        strs.append('{}: {}'.format(s, cmd[s]))
+                print('\n'.join(strs))
 
             self._post_update(dt, cmd)
 
