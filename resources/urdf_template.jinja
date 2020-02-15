@@ -16,9 +16,9 @@
             {% if v.type == 'box' %}
                 <box size="{{v.scale[0]}} {{v.scale[1]}} {{v.scale[2]}}"/>
             {% elif v.type == 'sphere' %}
-                <sphere radius="{{v.size[0] * 0.5}}"/>
+                <sphere radius="{{v.scale[0] * 0.5}}"/>
             {% elif v.type == 'cylinder' %}
-                <cylinder radius="{{v.size[0] * 0.5}}" length="{{v.size[2]}}"/>
+                <cylinder radius="{{v.scale[0] * 0.5}}" length="{{v.scale[2]}}"/>
             {% elif v.type == 'mesh' %}
                 <mesh scale="{{v.scale[0]}} {{v.scale[1]}} {{v.scale[2]}}" filename="{{v.mesh}}"/>
             {% endif %}
