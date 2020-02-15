@@ -23,7 +23,8 @@ from kineverse.motion.min_qp_builder               import TypedQPBuilder as TQPB
                                                           depth_weight_controlled_values, \
                                                           SoftConstraint as SC, \
                                                           PID_Constraint as PIDC, \
-                                                          ControlledValue
+                                                          ControlledValue, \
+                                                          PANDA_LOGGING
 from kineverse.operations.basic_operations         import CreateComplexObject
 from kineverse.operations.urdf_operations          import load_urdf
 from kineverse.operations.special_kinematics       import create_roomba_joint_with_symbols, \
@@ -39,7 +40,8 @@ from kineverse.visualization.graph_generator       import generate_modifications
 from kineverse.visualization.bpb_visualizer        import ROSBPBVisualizer
 from kineverse.visualization.plotting              import draw_recorders,  \
                                                           split_recorders, \
-                                                          convert_qp_builder_log
+                                                          convert_qp_builder_log, \
+                                                          filter_contact_symbols
 from kineverse.visualization.trajectory_visualizer import TrajectoryVisualizer
 
 from sensor_msgs.msg     import JointState as JointStateMsg
@@ -50,7 +52,7 @@ from urdf_parser_py.urdf import URDF
 
 tucked_arm = {'wrist_roll_joint': 0.0, 'shoulder_pan_joint': 1.32, 'elbow_flex_joint': 1.72, 'forearm_roll_joint': 0.0, 'upperarm_roll_joint': -0.2, 'wrist_flex_joint': 1.66, 'shoulder_lift_joint': 1.4, 'torso_lift_joint': 0.2}
 
-use_omni = True
+use_omni = False
 
 if __name__ == '__main__':
     rospy.init_node('kineverse_sandbox')
@@ -111,7 +113,29 @@ if __name__ == '__main__':
     cam_forward = x_of(cam_pose)
 
 
-    parts = ['sink_area_trash_drawer_handle', 'iai_fridge_door_handle', 'sink_area_dish_washer_door_handle', 'sink_area_left_upper_drawer_handle', 'sink_area_left_middle_drawer_handle', 'sink_area_left_bottom_drawer_handle', 'oven_area_area_middle_upper_drawer_handle', 'oven_area_area_middle_lower_drawer_handle']
+    # parts = ['fridge_area_lower_drawer_handle',
+    # #'sink_area_trash_drawer_handle', 
+    #          #'iai_fridge_door_handle',
+    #          # 'sink_area_dish_washer_door_handle',
+    #          # 'sink_area_left_upper_drawer_handle',
+    #          # 'sink_area_left_middle_drawer_handle',
+    #          # 'sink_area_left_bottom_drawer_handle',
+    #          # 'oven_area_area_middle_upper_drawer_handle',
+    #          # 'oven_area_area_middle_lower_drawer_handle'
+    #          ]
+
+    parts = ['fridge_area_lower_drawer_handle',
+             'iai_fridge_door_handle',
+             'oven_area_area_left_drawer_handle',
+             'oven_area_area_middle_lower_drawer_handle',
+             'oven_area_area_middle_upper_drawer_handle',
+             'oven_area_area_right_drawer_handle',
+             'oven_area_oven_door_handle',
+             'sink_area_dish_washer_door_handle',
+             'sink_area_left_bottom_drawer_handle',
+             'sink_area_left_middle_drawer_handle',
+             'sink_area_left_upper_drawer_handle',
+             'sink_area_trash_drawer_handle']
     #kitchen_path = Path('kitchen/links/sink_area_trash_drawer_handle/pose')
     #kitchen_path = Path('kitchen/links/iai_fridge_door_handle/pose')
     
@@ -139,13 +163,14 @@ if __name__ == '__main__':
         k_joint_symbols = [j.position for j in km.get_data('kitchen/joints').values() if hasattr(j, 'position') and type(j.position) is Symbol]
         controlled_symbols = {get_diff_symbol(j) for j in joint_symbols}.union({get_diff_symbol(j) for j in obj_pose.free_symbols})
 
+        base_link  = km.get_data('fetch/links/base_link') 
         integration_rules = None
         if isinstance(base_joint, RoombaJoint):
             controlled_symbols |= {base_joint.lin_vel, base_joint.ang_vel}
-            integration_rules = {base_joint.x_pos: base_joint.x_pos + DT_SYM * get_diff(pos_of(base_link.to_parent)[0].subs({base_joint.x_pos: 0})),
-                                        base_joint.y_pos: base_joint.y_pos + DT_SYM * get_diff(pos_of(base_link.to_parent)[1].subs({base_joint.y_pos: 0})),
-                                        base_joint.z_pos: base_joint.z_pos + DT_SYM * get_diff(pos_of(base_link.to_parent)[2].subs({base_joint.z_pos: 0})),
-                                        base_joint.a_pos: base_joint.a_pos + DT_SYM * base_joint.ang_vel}
+            integration_rules   = {base_joint.x_pos: base_joint.x_pos + DT_SYM * get_diff(pos_of(base_link.to_parent)[0].subs({base_joint.x_pos: 0})),
+                                   base_joint.y_pos: base_joint.y_pos + DT_SYM * get_diff(pos_of(base_link.to_parent)[1].subs({base_joint.y_pos: 0})),
+                                   base_joint.z_pos: base_joint.z_pos + DT_SYM * get_diff(pos_of(base_link.to_parent)[2].subs({base_joint.z_pos: 0})),
+                                   base_joint.a_pos: base_joint.a_pos + DT_SYM * base_joint.ang_vel}
         else:
             controlled_symbols |= {get_diff(x) for x in [base_joint.x_pos, base_joint.y_pos, base_joint.a_pos]}
 
@@ -153,7 +178,7 @@ if __name__ == '__main__':
         constraints.update(generate_contact_model(robot_cp, controlled_symbols, object_cp, contact_normal, obj_pose.free_symbols))
 
         controlled_values, constraints = generate_controlled_values(constraints, controlled_symbols)
-        controlled_values = depth_weight_controlled_values(km, controlled_values, exp_factor=1.2)
+        controlled_values = depth_weight_controlled_values(km, controlled_values, exp_factor=0)
 
         print('Controlled values:\n{}'.format('\n'.join([str(x) for x in controlled_values.values()])))
         print('Additional joint constraints:\n{}'.format('\n'.join([str(c) for c in constraints.values() if c.expr in controlled_symbols])))
@@ -168,7 +193,6 @@ if __name__ == '__main__':
         start_state.update({s: 0.4 for s in obj_pose.free_symbols})
         start_state.update({Position(Path('fetch') + (k,)): v  for k, v in tucked_arm.items()})
 
-        base_link  = km.get_data('fetch/links/base_link') 
         integrator = CommandIntegrator(GQPB(coll_world, constraints, goal_constraints, controlled_values, visualizer=visualizer),
         #integrator = CommandIntegrator(TQPB(constraints, goal_constraints, controlled_values),
                                        integration_rules,
@@ -185,19 +209,22 @@ if __name__ == '__main__':
         # RUN
         int_factor = 0.1
         integrator.restart('Fetch Cartesian Goal Example')
+        # print('\n'.join(['{}: {}'.format(k, v) for k, v in integrator.integration_rules.items()]))
+        # exit(0)
         try:
             integrator.run(int_factor, 500)
         except Exception as e:
             print(e)
 
         # DRAW
-        # print('Drawing recorders')
-        # draw_recorders([integrator.recorder, integrator.sym_recorder], 4.0/9.0, 8, 4).savefig('{}/fetch_sandbox_{}_plots.png'.format(plot_dir, part))
-        # rec_w, rec_b, rec_c, recs = convert_qp_builder_log(integrator.qp_builder)
-        # draw_recorders([rec_b, rec_c] + [r for _, r in sorted(recs.items())], 1, 8, 4).savefig('{}/fetch_sandbox_{}_constraints.png'.format(plot_dir, part))
+        print('Drawing recorders')
+        draw_recorders([filter_contact_symbols(integrator.recorder, integrator.qp_builder), integrator.sym_recorder], 4.0/9.0, 8, 4).savefig('{}/fetch_sandbox_{}_plots.png'.format(plot_dir, part))
+        if PANDA_LOGGING:
+            rec_w, rec_b, rec_c, recs = convert_qp_builder_log(integrator.qp_builder)
+            draw_recorders([rec_b, rec_c] + [r for _, r in sorted(recs.items())], 1, 8, 4).savefig('{}/fetch_sandbox_{}_constraints.png'.format(plot_dir, part))
 
         if False:
             traj_vis.visualize(integrator.recorder.data, hz=50)
             pass
 
-    traj_vis.shutdown()    
+    traj_vis.shutdown()

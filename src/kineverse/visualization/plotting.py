@@ -6,6 +6,9 @@ import numpy             as np
 from collections import namedtuple
 from math import ceil, sqrt
 
+from kineverse.motion.min_qp_builder import GeomQPBuilder as GQPB, Symbol
+
+
 BASE_COLORS = [(35, 95, 100), (355, 95, 91), (261, 100, 100), (194, 95, 91), (123, 100, 100)]#, 
                #(15, 95, 100), (293, 95, 91), (244, 100, 100), (156, 95, 91), (76, 100, 100)]
 BASE_COLORS = [np.array(b) * np.array([1.0/360, 1e-2, 1e-2]) for b in BASE_COLORS]
@@ -79,17 +82,42 @@ def convert_qp_builder_log(qp_builder, constraints=[]):
             rec = ValueRecorder(cn, *[(n, colors[n]) for n in names])
             rec.data = {c: cs[c] for c in rec.data.keys()}
             constraint_recs[cn] = rec
+            rec.compute_limits()
 
     rec_w = ValueRecorder('weights', *[(c, colors[c]) for c in weights.columns if c in colors])
     rec_w.data = {c: weights[c] for c in rec_w.data.keys()}
+    rec_w.compute_limits()
 
     rec_b = ValueRecorder('bounds', *sum([[('{}_lb'.format(c), colors[c]), ('{}_ub'.format(c), colors[c])] for c in lbs.columns if c in colors], []))
     rec_b.data = dict(sum([[('{}_lb'.format(c), lbs[c]), ('{}_ub'.format(c), ubs[c])] for c in lbs.columns if c in colors], []))
+    rec_b.compute_limits()
 
     rec_c = ValueRecorder('commands', *[(c, colors[c]) for c in cmds.columns if c in colors])
     rec_c.data = {c: cmds[c] for c in rec_c.data.keys()}
+    rec_c.compute_limits()
 
     return rec_w, rec_b, rec_c, constraint_recs
+
+
+def filter_contact_symbols(recorder, qp_builder):
+    if not isinstance(qp_builder, GQPB):
+        return recorder
+
+    fields  = [f for f in recorder.data.keys() if max([Symbol(f) in ch.state for ch in qp_builder.collision_handlers.values()] + [False]) is False]
+    new_rec = ValueRecorder(recorder.title, *[(f, recorder.colors[f]) for f in fields])
+    new_rec.data = {f: recorder.data[f] for f in fields}
+    new_rec.data_lim = {f: recorder.data_lim[f] for f in fields}
+    new_rec.thresholds = recorder.thresholds.copy()
+    new_rec.x_labels   = recorder.x_labels
+    new_rec.x_title    = recorder.x_title
+    new_rec.x_space    = recorder.x_space
+    new_rec.y_labels   = recorder.y_labels
+    new_rec.y_title    = recorder.y_title
+    new_rec.y_space    = recorder.y_space
+    new_rec.grid       = recorder.grid
+    new_rec.legend_loc = recorder.legend_loc
+
+    return new_rec
 
 
 class PlotProp(object):

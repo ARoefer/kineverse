@@ -2,7 +2,7 @@
 import rospy
 import numpy as np
 
-from jinja2 import Environment, FileSystemLoader, select_autoescape
+from jinja2 import Environment, FileSystemLoader, select_autoescape, exceptions
 
 from giskardpy import BACKEND
 from kineverse.gradients.gradient_math import spw, Symbol
@@ -11,7 +11,7 @@ from kineverse.model.frames            import Frame
 from kineverse.model.geometry_model    import RigidBody, EventModel
 from kineverse.network.model_client    import ModelClient
 from kineverse.time_wrapper            import Time
-from kineverse.type_sets               import is_symbolic
+from kineverse.type_sets               import is_symbolic, GM
 from kineverse.utils                   import real_quat_from_matrix, res_pkg_path
 from kineverse.visualization.ros_visualizer import ROSVisualizer
 
@@ -124,9 +124,9 @@ class ModelTFBroadcaster(object):
                 frames = find_all_frames(self.model_path, model)
 
                 names, lframes = zip(*frames.items())
-                pose_matrix    = lframes[0].to_parent
+                pose_matrix    = lframes[0].to_parent if not isinstance(lframes[0].to_parent, GM) else lframes[0].to_parent.to_sym_matrix()
                 for f in lframes[1:]:
-                    pose_matrix = pose_matrix.col_join(f.to_parent)
+                    pose_matrix = pose_matrix.col_join(f.to_parent) if not isinstance(f.to_parent, GM) else pose_matrix.col_join(f.to_parent.to_sym_matrix())
                 
                 self.frame_info = list(zip([str(n) for n in names], lframes))
 
@@ -145,8 +145,9 @@ class ModelTFBroadcaster(object):
                                 self.s_frame_map[s] = []
                             self.s_frame_map[s].append(x)
                     else:
-                        position = (f.to_parent[0, 3], f.to_parent[1, 3], f.to_parent[2, 3])
-                        quat     = real_quat_from_matrix(f.to_parent)
+                        to_parent = f.to_parent if not isinstance(f.to_parent, GM) else f.to_parent.to_sym_matrix()
+                        position  = (to_parent[0, 3], to_parent[1, 3], to_parent[2, 3])
+                        quat      = real_quat_from_matrix(to_parent)
                         self.static_frames[n] = (position, quat, n, f.parent)
                         self.broadcaster.sendTransform(position, quat, now, n, f.parent)
 
@@ -161,7 +162,7 @@ class ModelTFBroadcaster_URDF(ModelTFBroadcaster):
         super(ModelTFBroadcaster_URDF, self).set_model(model)
 
         if self.model is not None:
-            print('[ModelTFBraodcasterURDF] Model was received.')
+            print('[ModelTFBroadcasterURDF] Model was received.')
             frames = dict(self.frame_info)
 
             # there can only be one root per published model
