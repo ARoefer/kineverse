@@ -9,14 +9,14 @@ from kineverse.model.frames                  import Frame, get_root_frames
 from kineverse.network.operations_client     import OperationsClient
 from kineverse.operations.basic_operations   import CreateComplexObject
 from kineverse.operations.urdf_operations    import load_urdf
-from kineverse.operations.special_kinematics import create_roomba_joint_with_symbols
+from kineverse.operations.special_kinematics import create_omnibase_joint_with_symbols
 from kineverse.urdf_fix                      import urdf_filler
-from kineverse.utils                         import res_pkg_path, find_all
+from kineverse.utils                         import res_pkg_path
 
 from urdf_parser_py.urdf import URDF
 
 if __name__ == '__main__':
-    rospy.init_node('kineverse_roomba_uploader')
+    rospy.init_node('kineverse_omnibase_uploader')
 
 
     if len(sys.argv) < 2:
@@ -33,15 +33,13 @@ if __name__ == '__main__':
     load_urdf(op_client, urdf_model.name, urdf_model)
     op_client.apply_operation_before('create map', 'create {}'.format(urdf_model.name), CreateComplexObject(Path('map'), Frame('')))
 
-
-
-    roomba_op = create_roomba_joint_with_symbols(Path('map/pose'), 
+    omni_op = create_omnibase_joint_with_symbols(Path('map/pose'), 
                                                  Path('{}/links/{}/pose'.format(urdf_model.name, urdf_model.get_root())),
                                                  Path('{}/joints/to_map'.format(urdf_model.name)),
                                                  vector3(0,0,1),
-                                                 vector3(1,0,0),
                                                  1.0, 0.6, Path(urdf_model.name))
-    op_client.apply_operation_after('connect map {}'.format(urdf_model.get_root()), 'create {}/{}'.format(urdf_model.name, urdf_model.get_root()), roomba_op)
+    op_client.apply_operation_after('connect map {}'.format(urdf_model.get_root()), 'create {}/{}'.format(urdf_model.name, urdf_model.get_root()), omni_op)
 
     op_client.apply_changes()
+
     op_client.kill()
