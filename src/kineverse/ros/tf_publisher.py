@@ -6,8 +6,8 @@ from jinja2 import Environment, FileSystemLoader, select_autoescape, exceptions
 
 from giskardpy import BACKEND
 from kineverse.gradients.gradient_math import spw, Symbol
-from kineverse.model.paths             import Path, stopping_set
-from kineverse.model.frames            import Frame
+from kineverse.model.paths             import Path, stopping_set, find_all
+from kineverse.model.frames            import Frame, get_root_frames
 from kineverse.model.geometry_model    import RigidBody, EventModel
 from kineverse.network.model_client    import ModelClient
 from kineverse.time_wrapper            import Time
@@ -27,26 +27,6 @@ env = Environment(
     autoescape=select_autoescape(['html', 'xml'])
 )
 urdf_template = env.get_template('urdf_template.jinja')
-
-
-def find_all_frames(path, model):
-    if isinstance(model, Frame):
-        return {path: model}
-
-    out = {}
-    t   = type(model)
-    if t not in stopping_set:
-        if t is dict:
-            for k, v in model.items():
-                if type(k) is str:
-                    out.update(find_all_frames(path + (k,), v))
-        elif t is list:
-            for x, d in enumerate(model):
-                out.update(find_all_frames(path + (x,), d))
-        else:
-            for a in [a for a in dir(model) if a[0] != '_' and not callable(getattr(model, a))]:
-                out.update(find_all_frames(path + (a,), getattr(model, a)))
-    return out
 
 
 class ModelTFBroadcaster(object):
@@ -121,7 +101,7 @@ class ModelTFBroadcaster(object):
             self.cythonized_matrix = None
 
             if self.model is not None:
-                frames = find_all_frames(self.model_path, model)
+                frames = find_all(self.model_path, model, Frame)
 
                 names, lframes = zip(*frames.items())
                 pose_matrix    = lframes[0].to_parent if not isinstance(lframes[0].to_parent, GM) else lframes[0].to_parent.to_sym_matrix()
@@ -166,10 +146,10 @@ class ModelTFBroadcaster_URDF(ModelTFBroadcaster):
             frames = dict(self.frame_info)
 
             # there can only be one root per published model
-            root_frames = list({f.parent for f in frames.values()}.difference({str(f) for f in frames.keys()}))
+            root_frames = get_root_frames(frames)
             if len(root_frames) != 1:
                 raise Exception('There should be exactly one root frame in a model. There are: {}\nFrames:\n {}\nRoots:\n {}'.format(len(root_frames), '\n '.join(frames.keys()), '\n '.join(root_frames)))
-            root_frame = root_frames[0]
+            root_frame = root_frames.values()[0].parent
 
             fs  = {}
             rbs = {}

@@ -80,7 +80,7 @@ def create_roomba_joint_with_symbols(parent_pose, child_pose, connection_path, r
 
 class OmnibaseJoint(KinematicJoint):
     def __init__(self, parent, child, x_pos, y_pos, a_pos):
-        super(OmnibaseJoint, self).__init__('roomba', parent, child)
+        super(OmnibaseJoint, self).__init__('omni', parent, child)
         self.x_pos = x_pos
         self.y_pos = y_pos
         self.a_pos = a_pos

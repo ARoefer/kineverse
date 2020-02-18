@@ -1,3 +1,4 @@
+from kineverse.model.paths             import Path
 from kineverse.json_wrapper            import JSONSerializable
 from kineverse.gradients.gradient_math import spw
 
@@ -49,3 +50,11 @@ class Transform(JSONSerializable):
         if isinstance(other, Transform):
             return self.from_frame == other.from_frame and self.pose == other.pose and self.to_frame == other.to_frame
         return False
+
+
+def get_root_frames(frame_dict):
+    if len(frame_dict) > 0:
+        if type(frame_dict.keys()[0]) == str:
+            return {k: f for k, f in frame_dict.items() if f.parent not in frame_dict}
+        return {k: f for k, f in frame_dict.items() if Path(f.parent) not in frame_dict}
+    return {}

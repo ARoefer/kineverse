@@ -119,14 +119,20 @@ def rot3_to_rpy(rot3, evaluate=False):
 
     if sy >= 1e-6:
         if evaluate:
-            return RPY(sp.atan2(rot3[2,1], rot3[2,2]).evalf(real=True), sp.atan2(-rot3[2,0], sy).evalf(real=True), sp.atan2(rot3[1,0], rot3[0,0]).evalf(real=True))
+            return RPY(sp.atan2(rot3[2,1], rot3[2,2]).evalf(real=True), 
+                       sp.atan2(-rot3[2,0], sy).evalf(real=True), 
+                       sp.atan2(rot3[1,0], rot3[0,0]).evalf(real=True))
         else:
-            return RPY(sp.atan2(rot3[2,1], rot3[2,2]), sp.atan2(-rot3[2,0], sy), sp.atan2(rot3[1,0], rot3[0,0]))
+            return RPY(sp.atan2(rot3[2,1], rot3[2,2]), 
+                       sp.atan2(-rot3[2,0], sy), 
+                       sp.atan2(rot3[1,0], rot3[0,0]))
     else:
         if evaluate:
-            return RPY(sp.atan2(-rot3[1,2], rot3[1,1]).evalf(real=True), sp.atan2(-rot3[2,0], sy).evalf(real=True), 0)
+            return RPY(sp.atan2(-rot3[1,2], rot3[1,1]).evalf(real=True), 
+                       sp.atan2(-rot3[2,0], sy).evalf(real=True), 0)
         else:
-            return RPY(sp.atan2(-rot3[1,2], rot3[1,1]), sp.atan2(-rot3[2,0], sy), 0)
+            return RPY(sp.atan2(-rot3[1,2], rot3[1,1]), 
+                       sp.atan2(-rot3[2,0], sy), 0)
 
 
 def real_quat_from_matrix(frame):
