@@ -178,7 +178,7 @@ if __name__ == '__main__':
         constraints.update(generate_contact_model(robot_cp, controlled_symbols, object_cp, contact_normal, obj_pose.free_symbols))
 
         controlled_values, constraints = generate_controlled_values(constraints, controlled_symbols)
-        controlled_values = depth_weight_controlled_values(km, controlled_values, exp_factor=0)
+        controlled_values = depth_weight_controlled_values(km, controlled_values, exp_factor=1.2)
 
         print('Controlled values:\n{}'.format('\n'.join([str(x) for x in controlled_values.values()])))
         print('Additional joint constraints:\n{}'.format('\n'.join([str(c) for c in constraints.values() if c.expr in controlled_symbols])))
