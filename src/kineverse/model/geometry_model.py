@@ -384,9 +384,10 @@ class CollisionSubworld(object):
 
 def contact_geometry(pose_a, pose_b, path_a, path_b):
     cont = ContactSymbolContainer(path_a, path_b)
+    normal = vector3(cont.normal_x, cont.normal_y, cont.normal_z)
     point_a = pose_a * point3(cont.on_a_x, cont.on_a_y, cont.on_a_z)
     point_b = pose_b * point3(cont.on_b_x, cont.on_b_y, cont.on_b_z)
-    return point_a, point_b, vector3(cont.normal_x, cont.normal_y, cont.normal_z)
+    return point_a, point_b, normal
 
 def closest_distance(pose_a, pose_b, path_a, path_b):
     point_a, point_b, _ = contact_geometry(pose_a, pose_b, path_a, path_b)
@@ -424,7 +425,7 @@ def generate_contact_model(actuated_point, actuated_symbols, contact_point, cont
 
     for s in affected_dof:
         contact_jac = vector3(*[x.diff(s) for x in contact_point[:3]]) * get_diff(s)
-        #out['motion_alignment_{}'.format(s)] = Constraint(-in_contact * default_bound, 0, dot(contact_normal, contact_jac))
+        #  out['motion_alignment_{}'.format(s)] = Constraint(-in_contact * default_bound, 0, dot(contact_normal, contact_jac))
         if set_inanimate:
             out['inanimate_{}'.format(s)] = Constraint(-in_contact * default_bound, in_contact * default_bound, s)
 
