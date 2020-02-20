@@ -61,11 +61,9 @@ class TrajectoryVisualizer(object):
                 state = {s: t[x] for s, t in traj.items()}
                 for pub in self.robot_publishers.values():
                     pub.update_state(state)
+                    pub.publish_state()
                 
                 stamp = now
                 x += 1
                 t.update()
         t.close()
-
-
-
