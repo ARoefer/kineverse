@@ -11,7 +11,7 @@ from kineverse.operations.basic_operations   import CreateComplexObject
 from kineverse.operations.urdf_operations    import load_urdf
 from kineverse.operations.special_kinematics import create_roomba_joint_with_symbols
 from kineverse.urdf_fix                      import urdf_filler
-from kineverse.utils                         import res_pkg_path, find_all
+from kineverse.utils                         import res_pkg_path
 
 from urdf_parser_py.urdf import URDF
 
