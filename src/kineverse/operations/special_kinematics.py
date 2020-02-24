@@ -6,75 +6,86 @@ from kineverse.operations.urdf_operations import KinematicJoint
 
 
 
-class RoombaJoint(KinematicJoint):
-    def __init__(self, parent, child, x_pos, y_pos, z_pos, a_pos, lin_vel, ang_vel):
-        super(RoombaJoint, self).__init__('roomba', parent, child)
+class DiffDriveJoint(KinematicJoint):
+    def __init__(self, parent, child, x_pos, y_pos, z_pos, a_pos, r_wheel_vel, l_wheel_vel, wheel_radius, wheel_distance):
+        super(DiffDriveJoint, self).__init__('roomba', parent, child)
         self.x_pos = x_pos
         self.y_pos = y_pos
         self.z_pos = z_pos
         self.a_pos = a_pos
-        self.lin_vel = lin_vel
-        self.ang_vel = ang_vel
+        self.r_wheel_vel = r_wheel_vel
+        self.l_wheel_vel = l_wheel_vel
+        self.wheel_radius = wheel_radius 
+        self.wheel_distance = wheel_distance 
 
     def _json_data(self, json_dict):
-        super(RoombaJoint, self)._json_data(json_dict)
+        super(DiffDriveJoint, self)._json_data(json_dict)
         del json_dict['jtype']
         json_dict.update({'x_pos'   : self.x_pos,
                           'y_pos'   : self.y_pos,
                           'z_pos'   : self.z_pos,
                           'a_pos'   : self.a_pos,
-                          'lin_vel' : self.lin_vel,
-                          'ang_vel' : self.ang_vel})
+                          'r_wheel_vel' : self.r_wheel_vel,
+                          'l_wheel_vel' : self.l_wheel_vel,
+                          'wheel_radius' : self.wheel_radius,
+                          'wheel_distance' : self.wheel_distance})
 
     def __eq__(self, other):
-        if isinstance(other, RoombaJoint):
-            return super(RoombaJoint, self).__eq__(other) and self.x_pos == other.x_pos and self.y_pos == other.y_pos and self.a_pos == other.a_pos and self.a_pos == other.a_pos and self.lin_vel == other.lin_vel and self.ang_vel == other.ang_vel
+        if isinstance(other, DiffDriveJoint):
+            return super(DiffDriveJoint, self).__eq__(other) and self.x_pos == other.x_pos and self.y_pos == other.y_pos and self.a_pos == other.a_pos and self.a_pos == other.a_pos and self.r_wheel_vel == other.r_wheel_vel and self.l_wheel_vel == other.l_wheel_vel and self.wheel_radius == other.wheel_radius and self.wheel_distance == other.wheel_distance
         return False
 
 
-class SetRoombaJoint(Operation):
-    def init(self, parent_pose, child_pose, connection_path, rot_axis, lin_axis, x_pos, y_pos, z_pos, a_pos, lin_vel, ang_vel, l_vel_limit, a_vel_limit):
-        self.joint_obj = RoombaJoint(str(parent_pose[:-1]), str(child_pose[:-1]), x_pos, y_pos, z_pos, a_pos, lin_vel, ang_vel)
+class DiffDriveJoint(Operation):
+    def init(self, parent_pose, child_pose, connection_path, x_pos, y_pos, z_pos, a_pos, r_wheel_vel, l_wheel_vel, wheel_vel_limit, wheel_radius, wheel_distance):
+        self.joint_obj = DiffDriveJoint(str(parent_pose[:-1]), str(child_pose[:-1]), x_pos, y_pos, z_pos, a_pos, r_wheel_vel, l_wheel_vel, wheel_radius, wheel_distance)
         self.conn_path = connection_path
-        op_construction_wrapper(super(SetRoombaJoint, self).init,
-                                'Roomba Joint', 
+        op_construction_wrapper(super(DiffDriveJoint, self).init,
+                                'DiffDrive Joint', 
                                 ['child_pose', 'child_parent', 'child_parent_tf'],
                                 (connection_path, 'connection', self.joint_obj),
                                 parent_pose=parent_pose,
                                 child_parent=child_pose[:-1] + ('parent',),
                                 child_parent_tf=child_pose[:-1] + ('to_parent',),
                                 child_pose=child_pose,
-                                rot_axis=rot_axis,
-                                lin_axis=lin_axis,
                                 x_pos=x_pos,
                                 y_pos=y_pos,
                                 z_pos=z_pos,
                                 a_pos=a_pos,
-                                lin_vel=lin_vel,
-                                ang_vel=ang_vel,
-                                lin_vel_limit=l_vel_limit,
-                                ang_vel_limit=a_vel_limit)
+                                r_wheel_vel=r_wheel_vel,
+                                l_wheel_vel=l_wheel_vel,
+                                wheel_vel_limit=wheel_vel_limit,
+                                wheel_radius=wheel_radius,
+                                wheel_distance=wheel_distance)
 
-    def _apply(self, ks, parent_pose, child_pose, child_parent_tf, rot_axis, lin_axis, x_pos, y_pos, z_pos, a_pos, lin_vel, ang_vel, lin_vel_limit, ang_vel_limit):
-        lin_axis  = wrap_matrix_mul(lin_axis, GC(0, {lin_vel: 1}))
-        rot_pos   = GC(a_pos, {ang_vel: 1})
-        child_parent_tf = frame3_axis_angle(rot_axis, rot_pos, point3(x_pos, y_pos, z_pos)) * translation3(*lin_axis[:3])
+    def _apply(self, ks, parent_pose, child_pose, child_parent_tf, x_pos, y_pos, z_pos, a_pos, r_wheel_vel, l_wheel_vel, wheel_vel_limit, wheel_radius, wheel_distance):
+
+        pos_pos = point3(GC(x_pos, {r_wheel_vel: cos(a_pos) * wheel_radius * 0.5,
+                                    l_wheel_vel: cos(a_pos) * wheel_radius * 0.5}), 
+                         GC(y_pos, {r_wheel_vel: sin(a_pos) * wheel_radius * 0.5,
+                                    l_wheel_vel: sin(a_pos) * wheel_radius * 0.5}), z_pos)
+
+        rot_pos = GC(a_pos, {r_wheel_vel:   wheel_radius / wheel_distance,
+                             l_wheel_vel: - wheel_radius / wheel_distance})
+        child_parent_tf = frame3_axis_angle(vector3(0,0,1), rot_pos, pos_pos)
         return {'child_parent': self.joint_obj.parent,
                 'child_parent_tf': child_parent_tf,
                 'child_pose': parent_pose * child_parent_tf,
                 'connection': self.joint_obj}, \
-               {'{}_lin_vel'.format(self.conn_path): Constraint(-lin_vel_limit, lin_vel_limit, lin_vel),
-                '{}_ang_vel'.format(self.conn_path): Constraint(-ang_vel_limit, ang_vel_limit, ang_vel),}        
+               {'{}'.format(self.r_wheel_vel): Constraint(-wheel_vel_limit, 
+                                                           wheel_vel_limit, r_wheel_vel),
+                '{}'.format(self.l_wheel_vel): Constraint(-wheel_vel_limit, 
+                                                           wheel_vel_limit, l_wheel_vel)} 
 
 
-def create_roomba_joint_with_symbols(parent_pose, child_pose, connection_path, rot_axis, lin_axis, lin_vel_limit, ang_vel_limit, var_prefix):
-    return SetRoombaJoint(parent_pose, child_pose, connection_path, rot_axis, lin_axis,
-                create_pos((var_prefix + ('localization_x',)).to_symbol()),
-                create_pos((var_prefix + ('localization_y',)).to_symbol()),
-                create_pos((var_prefix + ('localization_z',)).to_symbol()),
-                create_pos((var_prefix + ('localization_a',)).to_symbol()),
-                create_vel((var_prefix + ('linear_joint',)).to_symbol()),
-                create_vel((var_prefix + ('angular_joint',)).to_symbol()),
+def create_diff_drive_joint_with_symbols(parent_pose, child_pose, connection_path, lin_vel_limit, ang_vel_limit, var_prefix):
+    return DiffDriveJoint(parent_pose, child_pose, connection_path,
+                Position((var_prefix + ('localization_x',)).to_symbol()),
+                Position((var_prefix + ('localization_y',)).to_symbol()),
+                Position((var_prefix + ('localization_z',)).to_symbol()),
+                Position((var_prefix + ('localization_a',)).to_symbol()),
+                Velocity((var_prefix + ('l_wheel',)).to_symbol()),
+                Velocity((var_prefix + ('r_wheel',)).to_symbol()),
                 lin_vel_limit, ang_vel_limit)
 
 
@@ -103,7 +114,7 @@ class SetOmnibaseJoint(Operation):
         self.joint_obj = OmnibaseJoint(str(parent_pose[:-1]), str(child_pose[:-1]), x_pos, y_pos, a_pos)
         self.conn_path = connection_path
         op_construction_wrapper(super(SetOmnibaseJoint, self).init,
-                                'Roomba Joint', 
+                                'Omnibase Joint', 
                                 ['child_pose', 'child_parent', 'child_parent_tf'],
                                 (connection_path, 'connection', self.joint_obj),
                                 parent_pose=parent_pose,
@@ -128,9 +139,9 @@ class SetOmnibaseJoint(Operation):
 
 def create_omnibase_joint_with_symbols(parent_pose, child_pose, connection_path, rot_axis, lin_vel_limit, ang_vel_limit, var_prefix):
     return SetOmnibaseJoint(parent_pose, child_pose, connection_path, rot_axis,
-                create_pos((var_prefix + ('localization_x',)).to_symbol()),
-                create_pos((var_prefix + ('localization_y',)).to_symbol()),
-                create_pos((var_prefix + ('localization_a',)).to_symbol()),
+                Position((var_prefix + ('localization_x',)).to_symbol()),
+                Position((var_prefix + ('localization_y',)).to_symbol()),
+                Position((var_prefix + ('localization_a',)).to_symbol()),
                 lin_vel_limit, ang_vel_limit)
 
 
