@@ -210,6 +210,10 @@ class ValueRecorder(object):
         self.y_space  = None
         self.grid     = False
         self.legend_loc = None
+        self.marker   = None
+
+    def set_marker(self, marker):
+        self.marker = marker
 
     def set_xspace(self, min, max):
         self.x_space  = (min, max)
@@ -254,7 +258,10 @@ class ValueRecorder(object):
         else:
             labels = []
 
-        self.patches = [ax.plot(labels, d, color=self.colors[n], label=n)[0] for n, d in sorted(self.data.items())]
+        if self.marker is None:
+            self.patches = [ax.plot(labels, d, color=self.colors[n], label=n)[0] for n, d in sorted(self.data.items())]
+        else:
+            self.patches = [ax.plot(labels, d, color=self.colors[n], label=n, marker=self.marker)[0] for n, d in sorted(self.data.items())]
 
         data_lim_y = (float(min([l[0] for l in self.data_lim.values()])), float(max([l[1] for l in self.data_lim.values()])))
 

@@ -36,11 +36,11 @@ class DiffDriveJoint(KinematicJoint):
         return False
 
 
-class DiffDriveJoint(Operation):
+class SetDiffDriveJoint(Operation):
     def init(self, parent_pose, child_pose, connection_path, x_pos, y_pos, z_pos, a_pos, r_wheel_vel, l_wheel_vel, wheel_vel_limit, wheel_radius, wheel_distance):
         self.joint_obj = DiffDriveJoint(str(parent_pose[:-1]), str(child_pose[:-1]), x_pos, y_pos, z_pos, a_pos, r_wheel_vel, l_wheel_vel, wheel_radius, wheel_distance)
         self.conn_path = connection_path
-        op_construction_wrapper(super(DiffDriveJoint, self).init,
+        op_construction_wrapper(super(SetDiffDriveJoint, self).init,
                                 'DiffDrive Joint', 
                                 ['child_pose', 'child_parent', 'child_parent_tf'],
                                 (connection_path, 'connection', self.joint_obj),
@@ -72,21 +72,21 @@ class DiffDriveJoint(Operation):
                 'child_parent_tf': child_parent_tf,
                 'child_pose': parent_pose * child_parent_tf,
                 'connection': self.joint_obj}, \
-               {'{}'.format(self.r_wheel_vel): Constraint(-wheel_vel_limit, 
-                                                           wheel_vel_limit, r_wheel_vel),
-                '{}'.format(self.l_wheel_vel): Constraint(-wheel_vel_limit, 
-                                                           wheel_vel_limit, l_wheel_vel)} 
+               {'{}'.format(r_wheel_vel): Constraint(-wheel_vel_limit, 
+                                                      wheel_vel_limit, r_wheel_vel),
+                '{}'.format(l_wheel_vel): Constraint(-wheel_vel_limit, 
+                                                      wheel_vel_limit, l_wheel_vel)} 
 
 
-def create_diff_drive_joint_with_symbols(parent_pose, child_pose, connection_path, lin_vel_limit, ang_vel_limit, var_prefix):
-    return DiffDriveJoint(parent_pose, child_pose, connection_path,
+def create_diff_drive_joint_with_symbols(parent_pose, child_pose, connection_path, wheel_radius, wheel_distance, wheel_vel_limit, var_prefix):
+    return SetDiffDriveJoint(parent_pose, child_pose, connection_path,
                 Position((var_prefix + ('localization_x',)).to_symbol()),
                 Position((var_prefix + ('localization_y',)).to_symbol()),
                 Position((var_prefix + ('localization_z',)).to_symbol()),
                 Position((var_prefix + ('localization_a',)).to_symbol()),
                 Velocity((var_prefix + ('l_wheel',)).to_symbol()),
                 Velocity((var_prefix + ('r_wheel',)).to_symbol()),
-                lin_vel_limit, ang_vel_limit)
+                wheel_vel_limit, wheel_radius, wheel_distance)
 
 
 class OmnibaseJoint(KinematicJoint):
