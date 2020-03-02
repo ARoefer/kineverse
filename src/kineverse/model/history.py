@@ -85,9 +85,14 @@ class History(object):
                     # Fetch all dependents from predecessor which are going to depend on the new chunk
                     # Save them as dependents and mark them as dirty
                     if d.stamp > chunk.stamp:
-                        chunk.dependents.add(d)
-                        self.dirty_chunks.add(d)
-                        to_remove.add(d)
+                        dep_overlap_diff = d.dependencies.difference(chunk.modifications)
+                        # Is there at least one element overlap
+                        if len(dep_overlap_diff) < len(d.dependencies):  
+                            chunk.dependents.add(d)
+                            self.dirty_chunks.add(d)
+                            # If there is no remaining overlap with pred anymore, remove d
+                            if len(dep_overlap_diff.difference(pred.modifications)) == len(dep_overlap_diff):
+                                to_remove.add(d)
                 pred.dependents -= to_remove
             self.modification_history[path].add(chunk)
 

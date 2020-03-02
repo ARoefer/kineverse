@@ -99,13 +99,13 @@ class TestFrames(ut.TestCase):
         f_g  = Frame('lol', spw.eye(4))
 
 
-        km.apply_operation(CreateComplexObject(Path('a'), f_a), 'create a')
-        km.apply_operation(CreateRelativeFrame(Path('b'), f_b), 'create b')
-        km.apply_operation(CreateRelativeFrame(Path('c'), f_c), 'create c')
-        km.apply_operation(CreateRelativeFrame(Path('d'), f_d), 'create d')
-        km.apply_operation(CreateRelativeFrame(Path('e'), f_e), 'create e')
-        km.apply_operation(CreateComplexObject(Path('f'), f_f), 'create f')
-        km.apply_operation(CreateComplexObject(Path('g'), f_g), 'create g')
+        km.apply_operation('create a', CreateComplexObject(Path('a'), f_a))
+        km.apply_operation('create b', CreateRelativeFrame(Path('b'), f_b))
+        km.apply_operation('create c', CreateRelativeFrame(Path('c'), f_c))
+        km.apply_operation('create d', CreateRelativeFrame(Path('d'), f_d))
+        km.apply_operation('create e', CreateRelativeFrame(Path('e'), f_e))
+        km.apply_operation('create f', CreateComplexObject(Path('f'), f_f))
+        km.apply_operation('create g', CreateComplexObject(Path('g'), f_g))
 
         d_in_b = fk_a_in_b(km, f_d, f_b)
         b_in_d = fk_a_in_b(km, f_b, f_d)
