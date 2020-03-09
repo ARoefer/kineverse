@@ -3,7 +3,7 @@ import os
 import tf
 import subprocess
 
-from kineverse.model.kinematic_model      import Path
+from kineverse.model.articulation_model      import Path
 from kineverse.model.geometry_model       import GeometryModel   
 from kineverse.operations.urdf_operations import load_urdf
 from kineverse.utils                      import res_pkg_path

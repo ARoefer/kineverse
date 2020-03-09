@@ -9,7 +9,7 @@ from kineverse.motion.min_qp_builder   import Constraint, SoftConstraint, Contro
 from kineverse.motion.min_qp_builder   import TypedQPBuilder as TQPB
 from kineverse.gradients.diff_logic    import *
 from kineverse.gradients.gradient_math import *
-from kineverse.model.kinematic_model   import KinematicModel
+from kineverse.model.articulation_model   import ArticulationModel
 from kineverse.visualization.plotting  import split_recorders, draw_recorders
 
 def subs_if_sym(var, subs_dict):
@@ -24,7 +24,7 @@ def sign(x):
 class Scenario(object):
     def __init__(self, name):
         self.name = name
-        self.km   = KinematicModel()
+        self.km   = ArticulationModel()
         self.qp_type           = TQPB
         self.int_rules         = {}
         self.recorded_terms    = {}
@@ -135,7 +135,7 @@ class Lockbox(Scenario):
         self.lock_e_v = get_diff_symbol(self.lock_e_p)
         self.lock_f_v = get_diff_symbol(self.lock_f_p)
 
-        self.km = KinematicModel()
+        self.km = ArticulationModel()
 
         bc_open_threshold = 0.1
         d_open_threshold  = 0.5
@@ -280,4 +280,3 @@ if __name__ == '__main__':
 
     draw_recorders(list(sum([(s.value_recorder, s.symbol_recorder) for s in scenarios], tuple())), 4.0/9.0, 8, 4).savefig('tricky_kinematics.png')
     #draw_recorders(split_recorders(list(sum([(s.value_recorder, s.symbol_recorder) for s in scenarios], tuple()))), 4.0/9.0, 8, 4).savefig('tricky_kinematics.png')
-    

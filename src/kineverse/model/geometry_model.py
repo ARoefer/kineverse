@@ -6,7 +6,7 @@ from kineverse.gradients.diff_logic    import Position
 from kineverse.gradients.gradient_math import *
 from kineverse.json_wrapper            import JSONSerializable
 from kineverse.model.paths             import Path, PathSet, PathDict
-from kineverse.model.kinematic_model   import Constraint
+from kineverse.model.articulation_model   import Constraint
 from kineverse.model.event_model       import EventModel
 from kineverse.model.frames            import Frame
 from kineverse.bpb_wrapper             import pb, create_object, create_cube_shape, create_sphere_shape, create_cylinder_shape, create_compound_shape, load_convex_mesh_shape, matrix_to_transform

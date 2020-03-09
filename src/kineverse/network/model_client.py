@@ -1,7 +1,7 @@
 import rospy
 
 from kineverse.model.event_model      import EventModel
-from kineverse.model.kinematic_model  import Constraint
+from kineverse.model.articulation_model  import Constraint
 from kineverse.model.paths            import Path, PathSet
 from kineverse.network.ros_conversion import json, decode_constraint_filtered
 from kineverse.time_wrapper           import Time

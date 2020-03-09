@@ -1,11 +1,11 @@
 from kineverse.time_wrapper          import Time
 from kineverse.model.history         import Timeline, StampedData
-from kineverse.model.kinematic_model import KinematicModel
+from kineverse.model.articulation_model import ArticulationModel
 
 
 def TARDIS(super_type, *args):
-    if not issubclass(super_type, KinematicModel):
-        raise Exception('Type must be a subtype of KinematicModel. Given type: {}'.format(super_type))
+    if not issubclass(super_type, ArticulationModel):
+        raise Exception('Type must be a subtype of ArticulationModel. Given type: {}'.format(super_type))
 
     def init(self, *args):
         super_type.__init__(self, *args)

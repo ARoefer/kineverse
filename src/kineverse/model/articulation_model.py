@@ -104,7 +104,7 @@ class Constraint(object):
         return False
 
 
-class KinematicModel(object):
+class ArticulationModel(object):
     def __init__(self):
         self.data_tree         = DataTree()
         self.operation_history = History()
@@ -489,6 +489,6 @@ class KinematicModel(object):
 
 
     def __eq__(self, other):
-        if isinstance(other, KinematicModel):
+        if isinstance(other, ArticulationModel):
             return self.operation_history == other.operation_history and self.data_tree == other.data_tree and self.timeline_tags == other.timeline_tags and self.constraints == other.constraints 
         return False

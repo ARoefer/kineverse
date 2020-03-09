@@ -1,6 +1,6 @@
 from kineverse.gradients.diff_logic       import create_symbol, TYPE_POSITION, TYPE_VELOCITY
 from kineverse.gradients.gradient_math    import *
-from kineverse.model.kinematic_model      import Constraint
+from kineverse.model.articulation_model      import Constraint
 from kineverse.operations.operation       import Operation, op_construction_wrapper
 from kineverse.operations.urdf_operations import KinematicJoint
 

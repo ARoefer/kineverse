@@ -1,7 +1,7 @@
 import unittest as ut
 from kineverse.gradients.gradient_math import spw
 from kineverse.model.event_model       import EventModel, Path
-from kineverse.model.kinematic_model   import Constraint
+from kineverse.model.articulation_model   import Constraint
 from kineverse.operations.operation    import Operation
 from kineverse.utils                   import bb
 

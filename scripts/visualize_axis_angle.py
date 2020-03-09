@@ -20,7 +20,7 @@ def get_rot_vector(frame):
 if __name__ == '__main__':
     rospy.init_node('axis_angle_vis')
 
-    vis = ROSVisualizer('axis_vis', 'map')
+    vis = ROSVisualizer('axis_vis', 'world')
 
     az, ay = [Position(x) for x in 'ax az'.split(' ')]
     frame_rpy = frame3_rpy(0, ay, az, point3(0,0,0))

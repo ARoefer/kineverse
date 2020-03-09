@@ -9,7 +9,7 @@ import kineverse.network.names as stdn
 from kineverse.model.paths             import Path, PathDict, collect_paths
 from kineverse.model.tardis_wrapper    import TARDIS
 from kineverse.model.event_model       import EventModel
-from kineverse.model.kinematic_model   import ApplyAt, ApplyBefore, ApplyAfter, RemoveOp
+from kineverse.model.articulation_model   import ApplyAt, ApplyBefore, ApplyAfter, RemoveOp
 from kineverse.model.history           import Timeline, StampedData
 from kineverse.gradients.gradient_math import spw
 from kineverse.utils                   import import_class, res_pkg_path

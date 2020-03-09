@@ -78,26 +78,26 @@ if __name__ == '__main__':
     load_urdf(km, Path('kitchen'), kitchen_model)
 
     km.clean_structure()
-    km.apply_operation_before('create map', 'create fetch', CreateComplexObject(Path('map'), Frame('')))
+    km.apply_operation_before('create world', 'create fetch', CreateComplexObject(Path('world'), Frame('')))
 
     if use_omni:
-        base_op = create_omnibase_joint_with_symbols(Path('map/pose'), 
+        base_op = create_omnibase_joint_with_symbols(Path('world/pose'), 
                                                  Path('fetch/links/base_link/pose'),
-                                                 Path('fetch/joints/to_map'),
+                                                 Path('fetch/joints/to_world'),
                                                  vector3(0,0,1),
                                                  1.0, 0.6, Path('fetch'))
     else:
-        base_op = create_roomba_joint_with_symbols(Path('map/pose'), 
+        base_op = create_roomba_joint_with_symbols(Path('world/pose'), 
                                                  Path('fetch/links/base_link/pose'),
-                                                 Path('fetch/joints/to_map'),
+                                                 Path('fetch/joints/to_world'),
                                                  vector3(0,0,1),
                                                  vector3(1,0,0),
                                                  1.0, 0.6, Path('fetch'))
-    km.apply_operation_after('connect map base_link', 'create fetch/base_link', base_op)
+    km.apply_operation_after('connect world base_link', 'create fetch/base_link', base_op)
     km.clean_structure()
     km.dispatch_events()
 
-    visualizer = ROSBPBVisualizer('/bullet_test', base_frame='map')
+    visualizer = ROSBPBVisualizer('/bullet_test', base_frame='world')
     traj_vis   = TrajectoryVisualizer(visualizer)
 
     traj_vis.add_articulated_object(Path('fetch'),   km.get_data('fetch'))
@@ -158,7 +158,7 @@ if __name__ == '__main__':
         coll_world = km.get_active_geometry(geom_distance.free_symbols)
 
         # QP CONFIGURTION
-        base_joint    = km.get_data('fetch/joints/to_map')
+        base_joint    = km.get_data('fetch/joints/to_world')
         joint_symbols = [j.position for j in km.get_data('fetch/joints').values() if hasattr(j, 'position') and type(j.position) is Symbol]
         k_joint_symbols = [j.position for j in km.get_data('kitchen/joints').values() if hasattr(j, 'position') and type(j.position) is Symbol]
         controlled_symbols = {get_diff_symbol(j) for j in joint_symbols}.union({get_diff_symbol(j) for j in obj_pose.free_symbols})

@@ -42,7 +42,7 @@ class ModelTFBroadcaster(object):
         self.static_frames     = {}
         self.np_poses          = None
         self.lock              = RLock()
-        self.visualizer = ROSVisualizer('publisher_debug', 'map')
+        self.visualizer = ROSVisualizer('publisher_debug', 'world')
         self.set_model(model)
 
     @profile

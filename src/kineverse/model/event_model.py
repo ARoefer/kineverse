@@ -1,6 +1,6 @@
 import re
 
-from kineverse.model.kinematic_model import KinematicModel
+from kineverse.model.articulation_model import ArticulationModel
 from kineverse.model.paths           import Path, PathDict, PathSet
     
 def _dispatch_model_events(pdict, data, key, call_tracker=set()):
@@ -15,7 +15,7 @@ def _dispatch_model_events(pdict, data, key, call_tracker=set()):
         _dispatch_model_events(pdict.get_sub_dict(key[:1]), key[:1].get_data_no_throw(data), key[1:], call_tracker)
 
 
-class EventModel(KinematicModel):
+class EventModel(ArticulationModel):
     def __init__(self):
         super(EventModel, self).__init__()
         self.model_change_callbacks    = PathDict(set(), default_factory=set)

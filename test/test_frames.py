@@ -2,7 +2,7 @@ import unittest as ut
 
 from kineverse.gradients.gradient_math     import *
 from kineverse.model.frames                import Frame, Transform
-from kineverse.model.kinematic_model       import KinematicModel, Path
+from kineverse.model.articulation_model       import ArticulationModel, Path
 from kineverse.operations.frame_operations import collect_chain,           \
                                                   fk_a_in_b,               \
                                                   CreateRelativeTransform, \
@@ -13,9 +13,9 @@ from kineverse.operations.basic_operations import CreateComplexObject
 class TestFrames(ut.TestCase):
 
     def test_collect_chain(self):
-        km = KinematicModel()
+        km = ArticulationModel()
 
-        f_a = Frame('map', None)
+        f_a = Frame('world', None)
         f_b = Frame(  'a', None)
         f_c = Frame(  'b', None)
         f_d = Frame(  'c', None)
@@ -32,7 +32,7 @@ class TestFrames(ut.TestCase):
 
 
     def test_fk_a_in_b(self):
-        km = KinematicModel()
+        km = ArticulationModel()
         
         p1 = translation3(1,-3, 5)
         axis1  = vector3(1, -2, 5)
@@ -45,12 +45,12 @@ class TestFrames(ut.TestCase):
         p5 = translation3(0, 0, 4)
         p6 = frame3_rpy(1.2, -0.3, 0.67, [1,2,3])
 
-        f_a = Frame('map', p1, p1)
+        f_a = Frame('world', p1, p1)
         f_b = Frame(  'a', f_a.pose * p2, p2)
         f_c = Frame(  'b', f_b.pose * p3, p3)
         f_d = Frame(  'c', f_c.pose * p4, p4)
         f_e = Frame(  'b', f_b.pose * p5, p5)        
-        f_f = Frame('map', p6, p6)
+        f_f = Frame('world', p6, p6)
         f_g = Frame('lol', spw.eye(4))
 
         km.set_data('a', f_a)
@@ -76,7 +76,7 @@ class TestFrames(ut.TestCase):
 
 
     def test_create_relative_frame_and_transform(self):
-        km = KinematicModel()
+        km = ArticulationModel()
         
         p1 = translation3(1,-3, 5)
         axis1  = vector3(1, -2, 5)
@@ -89,13 +89,13 @@ class TestFrames(ut.TestCase):
         p5 = translation3(0, 0, 4)
         p6 = frame3_rpy(1.2, -0.3, 0.67, [1,2,3])
 
-        f_a  = Frame('map', p1, p1)
+        f_a  = Frame('world', p1, p1)
         f_b  = Frame(  'a', f_a.pose * p2, p2)
         f_c  = Frame(  'b', f_b.pose * p3, p3)
         f_c2 = Frame(  'b', f_b.pose * p6, p6)
         f_d  = Frame(  'c', f_c.pose * p4, p4)
         f_e  = Frame(  'b', f_b.pose * p5, p5)        
-        f_f  = Frame('map', p6, p6)
+        f_f  = Frame('world', p6, p6)
         f_g  = Frame('lol', spw.eye(4))
 
 

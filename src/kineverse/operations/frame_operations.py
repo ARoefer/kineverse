@@ -1,7 +1,7 @@
 from kineverse.gradients.gradient_math     import spw, inverse_frame
 from kineverse.model.data_tree             import DataTree
 from kineverse.model.frames                import Frame, Transform
-from kineverse.model.kinematic_model       import KinematicModel
+from kineverse.model.articulation_model       import ArticulationModel
 from kineverse.model.paths                 import Path, collect_paths
 from kineverse.operations.operation        import Operation
 

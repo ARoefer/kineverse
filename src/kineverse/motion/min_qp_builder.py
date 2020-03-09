@@ -8,7 +8,7 @@ from giskardpy.qp_solver  import QPSolver
 from kineverse.gradients.diff_logic         import get_symbol_type, get_int_symbol, Symbol
 from kineverse.gradients.gradient_container import GradientContainer as GC
 from kineverse.gradients.gradient_math      import spw, extract_expr, wrap_expr
-from kineverse.model.kinematic_model        import Constraint, Path
+from kineverse.model.articulation_model        import Constraint, Path
 from kineverse.model.geometry_model         import CollisionSubworld, ContactHandler, obj_to_obj_infix
 from kineverse.visualization.bpb_visualizer import ROSBPBVisualizer
 from kineverse.bpb_wrapper                  import transform_to_matrix as tf2mx

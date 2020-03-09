@@ -14,7 +14,7 @@ from kineverse.operations.basic_operations import Operation,           \
                                                   Path,                \
                                                   collect_paths#,       \
 from kineverse.operations.operation        import op_construction_wrapper
-from kineverse.model.kinematic_model       import Constraint
+from kineverse.model.articulation_model       import Constraint
 from kineverse.model.geometry_model        import RigidBody, \
                                                   KinematicJoint, \
                                                   Geometry, \
@@ -268,7 +268,7 @@ def urdf_to_geometry(urdf_geom, to_modify):
         raise Exception('Can not convert geometry of type "{}"'.format(to_modify.type))
         
 
-def load_urdf(ks, prefix, urdf, reference_frame='map'):
+def load_urdf(ks, prefix, urdf, reference_frame='world'):
     if type(prefix) == str:
         prefix = Path(prefix)
         

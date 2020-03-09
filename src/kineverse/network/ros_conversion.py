@@ -5,7 +5,7 @@ import kineverse.json_wrapper as json
 import kineverse.type_sets as ts
 
 from kineverse.gradients.gradient_math import spw
-from kineverse.model.kinematic_model import ApplyAt, ApplyBefore, ApplyAfter, RemoveOp, Constraint
+from kineverse.model.articulation_model import ApplyAt, ApplyBefore, ApplyAfter, RemoveOp, Constraint
 from kineverse.utils                 import import_class, real_quat_from_matrix
 
 from kineverse.msg import OperationCall    as OperationCallMsg

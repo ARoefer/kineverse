@@ -40,15 +40,15 @@ if __name__ == '__main__':
     op_client = OperationsClient(EventModel, True)
 
     load_urdf(op_client, urdf_model.name, urdf_model)
-    op_client.apply_operation_before('create map', 'create {}'.format(urdf_model.name), CreateComplexObject(Path('map'), Frame('')))
+    op_client.apply_operation_before('create world', 'create {}'.format(urdf_model.name), CreateComplexObject(Path('world'), Frame('')))
 
     r_limit = 1.0 / (pi * radius * 2)
 
-    drive_op = create_diff_drive_joint_with_symbols(Path('map/pose'), 
+    drive_op = create_diff_drive_joint_with_symbols(Path('world/pose'), 
                                                  Path('{}/links/{}/pose'.format(urdf_model.name, urdf_model.get_root())),
-                                                 Path('{}/joints/to_map'.format(urdf_model.name)),
+                                                 Path('{}/joints/to_world'.format(urdf_model.name)),
                                                  radius, distance, r_limit, Path(urdf_model.name))
-    op_client.apply_operation_after('connect map {}'.format(urdf_model.get_root()), 'create {}/{}'.format(urdf_model.name, urdf_model.get_root()), drive_op)
+    op_client.apply_operation_after('connect world {}'.format(urdf_model.get_root()), 'create {}/{}'.format(urdf_model.name, urdf_model.get_root()), drive_op)
 
     op_client.apply_changes()
     op_client.kill()

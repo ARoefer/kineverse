@@ -1,6 +1,6 @@
 import unittest as ut
 
-from kineverse.model.kinematic_model       import KinematicModel, Path
+from kineverse.model.articulation_model       import ArticulationModel, Path
 from kineverse.operations.basic_operations import CreateComplexObject
 from kineverse.model.tardis_wrapper        import TARDIS
 

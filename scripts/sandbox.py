@@ -7,7 +7,7 @@ import tf
 import kineverse.json_wrapper as json
 
 from kineverse.gradients.gradient_math       import *
-from kineverse.model.kinematic_model         import KinematicModel, Path
+from kineverse.model.articulation_model         import ArticulationModel, Path
 from kineverse.model.frames                  import Frame
 from kineverse.motion.integrator             import CommandIntegrator, DT_SYM
 from kineverse.motion.min_qp_builder         import TypedQPBuilder as TQPB
@@ -55,19 +55,19 @@ if __name__ == '__main__':
     #                         'joint_states:=/joint_states'])
 
     # KINEMATIC MODEL
-    km = KinematicModel()
+    km = ArticulationModel()
     load_urdf(km, Path('fetch'), urdf_model)
 
     km.clean_structure()
-    km.apply_operation_before('create map', 'create fetch', CreateComplexObject(Path('map'), Frame('')))
+    km.apply_operation_before('create world', 'create fetch', CreateComplexObject(Path('world'), Frame('')))
 
-    roomba_op = create_roomba_joint_with_symbols(Path('map/pose'), 
+    roomba_op = create_roomba_joint_with_symbols(Path('world/pose'), 
                                                  Path('fetch/links/base_link/pose'),
-                                                 Path('fetch/joints/to_map'),
+                                                 Path('fetch/joints/to_world'),
                                                  vector3(0,0,1),
                                                  vector3(1,0,0),
                                                  1.0, 0.6, Path('fetch'))
-    km.apply_operation_after('connect map base_link', 'create fetch/base_link', roomba_op)
+    km.apply_operation_after('connect world base_link', 'create fetch/base_link', roomba_op)
     km.clean_structure()
 
     with open(res_pkg_path('package://kineverse/test/fetch.json'), 'w') as fetch_json:
@@ -96,7 +96,7 @@ if __name__ == '__main__':
     dist = norm(goal - eef_pos)
 
     # QP CONFIGURTION
-    roomba_joint  = km.get_data('fetch/joints/to_map')
+    roomba_joint  = km.get_data('fetch/joints/to_world')
     joint_symbols = [j.position for j in km.get_data('fetch/joints').values() if hasattr(j, 'position') and type(j.position) is spw.Symbol]
     controlled_symbols = {get_diff_symbol(j) for j in joint_symbols}.union({roomba_joint.lin_vel, roomba_joint.ang_vel})
 
@@ -159,7 +159,7 @@ if __name__ == '__main__':
                 js_pub.publish(jsmsg)
                 # tf_broadcaster.sendTransform(base_trajectory[x][:3], 
                 #                              tf.transformations.quaternion_from_euler(0,0, base_trajectory[x][3]), 
-                #                              now, 'fetch/base_link', 'map')
+                #                              now, 'fetch/base_link', 'world')
                 x += 1 
     else:
         trajmsg = JointTrajectoryMsg()

@@ -21,7 +21,7 @@ def create_object(shape, transform=pb.Transform.identity()):
 if __name__ == '__main__':
     rospy.init_node('kineverse_bullet_test')
 
-    vis = ROSBPBVisualizer('bullet_test', 'map')
+    vis = ROSBPBVisualizer('bullet_test', 'world')
 
     kw = pb.KineverseWorld()
     kw.force_update_all_aabbs = True
@@ -96,4 +96,3 @@ if __name__ == '__main__':
                     vis.draw_lines('contacts', pb.Transform.identity(), 0.05, lines, r=c[0], g=c[1], b=c[2])
 
             vis.render()
-

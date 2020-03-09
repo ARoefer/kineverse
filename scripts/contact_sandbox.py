@@ -31,7 +31,7 @@ if __name__ == '__main__':
     rospy.init_node('contact_sandbox')
 
     km = GeometryModel()
-    visualizer = ROSBPBVisualizer('/debug_vis', 'map')
+    visualizer = ROSBPBVisualizer('/debug_vis', 'world')
 
     eef_start  = -1
     cube_goal  = point3(0.5, 0.5, 0)
@@ -47,14 +47,14 @@ if __name__ == '__main__':
     # cube_frame = rotation3_axis_angle(vector3(0,0,1), cube_pos_y) 
     cube_frame = translation3(0, 0, 0) * rotation3_axis_angle(vector3(0,0,1), cube_pos_a)
 
-    cube_rb    = RigidBody('map', cube_frame, geometry={0: cube_geom}, collision={0: cube_geom})
+    cube_rb    = RigidBody('world', cube_frame, geometry={0: cube_geom}, collision={0: cube_geom})
     cube_path  = Path('cube')
     cube_err   = -pi * 0.5 - cube_pos_a
 
     eef_pos    = Position('eef')
     eef_pos_y  = Position('eef_y')
     eef_frame  = rotation3_rpy(0, 0, pi * 0) * translation3(eef_pos, eef_pos_y, 0.2)
-    eef_rb     = RigidBody('map', eef_frame, geometry={0: eef_geom}, collision={0: eef_geom})
+    eef_rb     = RigidBody('world', eef_frame, geometry={0: eef_geom}, collision={0: eef_geom})
     eef_path   = Path('eef')
 
     km.set_data(cube_path, cube_rb)
