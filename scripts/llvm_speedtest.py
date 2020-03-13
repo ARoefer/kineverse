@@ -51,9 +51,8 @@ if __name__ == '__main__':
         rec_d.log_data('direct', avg_d / iterations)
         rec_d.log_data('llvm', avg_l / iterations)
 
-    rec_d.set_xspace(x_labels[0], x_labels[-1])
-    rec_d.set_xtitle('Number of Variables')
+    # rec_d.set_xspace(x_labels[0], x_labels[-1])
+    rec_d.set_xspace(-5, 105)
+    rec_d.set_xtitle('Number of Transformation Matrices')
     rec_d.set_ytitle('Time (s)')
-    draw_recorders([rec_d], ratio=1, plot_width=8, plot_height=5).savefig('llvm_speedtest.png')
-
-    
+    draw_recorders([rec_d], ratio=1, plot_width=8, plot_height=4).savefig('llvm_speedtest.png')

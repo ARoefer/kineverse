@@ -193,11 +193,12 @@ def trace(matrix):
 def axis_angle_from_matrix(rotation_matrix):
     rm = rotation_matrix
     if hasattr(rm, 'free_symbols') and len(rm.free_symbols) == 0:
-        if 1 - rm[0,0] <= 0.0001 and 1 - rm[1,1] <= 0.0001 and 1 - rm[2,2] <= 0.0001:
+        if 1 - rm[0,0] <= 1e-4 and 1 - rm[1,1] <= 1e-4 and 1 - rm[2,2] <= 1e-4:
             return unitX, 0
     
     angle = (trace(rm[:3, :3]) - 1) / 2
     angle = acos(angle)
+    angle = angle if type(angle) is not spw.sp.ComplexDouble else angle.real
     x = (rm[2, 1] - rm[1, 2])
     y = (rm[0, 2] - rm[2, 0])
     z = (rm[1, 0] - rm[0, 1])
