@@ -1,10 +1,10 @@
-import giskardpy.symengine_wrappers as spw
+import symengine as se
 
-symengine_matrix_types = set([spw.sp.DenseMatrix, 
-                              spw.sp.ImmutableMatrix, 
-                              spw.sp.ImmutableDenseMatrix, 
-                              spw.sp.MatrixBase, 
-                              spw.sp.MutableDenseMatrix])
+symengine_matrix_types = set([se.DenseMatrix, 
+                              se.ImmutableMatrix, 
+                              se.ImmutableDenseMatrix, 
+                              se.MatrixBase, 
+                              se.MutableDenseMatrix])
 
-symengine_types  = set([getattr(spw.sp.lib.symengine_wrapper, x) for x in dir(spw.sp.lib.symengine_wrapper) if type(getattr(spw.sp.lib.symengine_wrapper, x)) == type])
-symengine_floats = {spw.sp.RealDouble, spw.sp.RealNumber}
+symengine_types  = set([getattr(se.lib.symengine_wrapper, x) for x in dir(se.lib.symengine_wrapper) if type(getattr(se.lib.symengine_wrapper, x)) == type])
+symengine_floats = {se.RealDouble, se.RealNumber}

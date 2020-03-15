@@ -5,7 +5,7 @@ from kineverse.gradients.gradient_math     import frame3_rpy,           \
                                                   matrix_wrapper,       \
                                                   rotation3_rpy,        \
                                                   rotation3_axis_angle, \
-                                                  spw,                  \
+                                                  se,                   \
                                                   translation3,         \
                                                   vector3
 from kineverse.gradients.diff_logic        import create_pos
@@ -29,7 +29,7 @@ def urdf_origin_to_transform(origin):
         xyz = origin.xyz if origin.xyz is not None else [0.0,0.0,0.0]
         rpy = origin.rpy if origin.rpy is not None else [0.0,0.0,0.0]
         return translation3(*xyz) * rotation3_rpy(*rpy)
-    return spw.eye(4)
+    return se.eye(4)
 
 def urdf_axis_to_vector(axis):
     return vector3(*axis) if axis is not None else vector3(1.0,0.0,0.0)
@@ -278,7 +278,7 @@ def load_urdf(ks, prefix, urdf, reference_frame='world'):
         link_path = prefix + Path(['links', u_link.name])
         collision = None
         geometry  = None
-        inertial  = InertialData(link_path, spw.eye(4))
+        inertial  = InertialData(link_path, se.eye(4))
         if hasattr(u_link, 'collisions') and u_link.collisions is not None and len(u_link.collisions) > 0:
             collision = {}
             for x, c in enumerate(u_link.collisions):

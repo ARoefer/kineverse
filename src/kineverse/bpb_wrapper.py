@@ -1,7 +1,7 @@
 import betterpybullet as pb
 
 from kineverse.utils import res_pkg_path, real_quat_from_matrix
-from kineverse.gradients.gradient_math import GM, spw
+from kineverse.gradients.gradient_math import GM, se
 
 # Currently objects created through Python might get deleted accidentally,
 # as bullet mostly uses raw pointers, thus not keeping references alive.
@@ -20,7 +20,7 @@ def matrix_to_transform(matrix):
     pos  = matrix[:3,3]
     return pb.Transform(pb.Quaternion(*quat), pb.Vector3(*pos))
 
-def transform_to_matrix(transform, matrix_func=spw.Matrix):
+def transform_to_matrix(transform, matrix_func=se.Matrix):
     basis  = transform.basis
     origin = transform.origin
     col_0  = basis.get_col(0)

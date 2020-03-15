@@ -16,8 +16,8 @@ class TestGeometryModel(ut.TestCase):
         sym_b = create_pos('b')
         sym_c = create_pos('c')
 
-        box_shape  = Geometry('my_box', spw.eye(4), 'box')
-        mesh_shape = Geometry('my_mesh', spw.eye(4), 'mesh', mesh='package://kineverse/meshes/suzanne.obj')
+        box_shape  = Geometry('my_box',  se.eye(4), 'box')
+        mesh_shape = Geometry('my_mesh', se.eye(4), 'mesh', mesh='package://kineverse/meshes/suzanne.obj')
 
         box_link  = KinematicLink('world', translation3(sym_a, 1, 0), geometry={'0' : box_shape}, collision={'0' : box_shape})
         mesh_link = KinematicLink('world', translation3(1, sym_b, 0), geometry={'0' : mesh_shape}, collision={'0' : mesh_shape}) 
@@ -50,8 +50,8 @@ class TestGeometryModel(ut.TestCase):
         sym_b = create_pos('b')
         sym_c = create_pos('c')
 
-        box_shape  = Geometry('my_box', spw.eye(4), 'box')
-        mesh_shape = Geometry('my_mesh', spw.eye(4), 'mesh', mesh='package://kineverse/meshes/suzanne.obj')
+        box_shape  = Geometry('my_box',  se.eye(4), 'box')
+        mesh_shape = Geometry('my_mesh', se.eye(4), 'mesh', mesh='package://kineverse/meshes/suzanne.obj')
 
         box_link  = KinematicLink('world', translation3(sym_a, 1, 0), geometry={'0' : box_shape}, collision={'0' : box_shape})
         mesh_link = KinematicLink('world', translation3(1, sym_b, 0), geometry={'0' : mesh_shape}, collision={'0' : mesh_shape}) 

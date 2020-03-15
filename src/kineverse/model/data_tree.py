@@ -1,10 +1,9 @@
-from kineverse.json_serializable import JSONSerializable
-from kineverse.gradients.gradient_math import spw
-from kineverse.model.paths       import PathException
-
-from yaml import load, dump
-
 from multiprocessing import RLock
+
+from kineverse.json_serializable       import JSONSerializable
+from kineverse.gradients.gradient_math import se
+from kineverse.model.paths             import PathException
+
 
 
 class DataTree(JSONSerializable):
@@ -26,7 +25,7 @@ class DataTree(JSONSerializable):
     def json_factory(cls, parent, tree, values):
         out = DataTree(parent)
         out.data_tree = tree
-        out.value_table = {spw.Symbol(k.encode('utf-8')): v for k, v in values.items()}
+        out.value_table = {se.Symbol(k.encode('utf-8')): v for k, v in values.items()}
         return out
 
     def __str__(self):

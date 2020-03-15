@@ -2,17 +2,18 @@
 import rospy
 import numpy as np
 
+import kineverse.gradients.llvm_wrapper as llvm
+
 from jinja2 import Environment, FileSystemLoader, select_autoescape, exceptions
 
-from giskardpy import BACKEND
-from kineverse.gradients.gradient_math import spw, Symbol
-from kineverse.model.paths             import Path, stopping_set, find_all
-from kineverse.model.frames            import Frame, get_root_frames
-from kineverse.model.geometry_model    import RigidBody, EventModel
-from kineverse.network.model_client    import ModelClient
-from kineverse.time_wrapper            import Time
-from kineverse.type_sets               import is_symbolic, GM
-from kineverse.utils                   import real_quat_from_matrix, res_pkg_path
+from kineverse.gradients.gradient_math      import se
+from kineverse.model.paths                  import Path, stopping_set, find_all
+from kineverse.model.frames                 import Frame, get_root_frames
+from kineverse.model.geometry_model         import RigidBody, EventModel
+from kineverse.network.model_client         import ModelClient
+from kineverse.time_wrapper                 import Time
+from kineverse.type_sets                    import is_symbolic, GM
+from kineverse.utils                        import real_quat_from_matrix, res_pkg_path
 from kineverse.visualization.ros_visualizer import ROSVisualizer
 
 from multiprocessing import RLock
@@ -70,7 +71,7 @@ class ModelTFBroadcaster(object):
                 indices = sum(self.s_frame_map.values(), []) # set(sum([self.s_frame_map[s] for s in update if s in self.s_frame_map], []))
                 now     = Time.now()
                 self.visualizer.begin_draw_cycle('debug')
-                self.visualizer.draw_poses('debug', spw.eye(4), 0.1, 0.01, [spw.Matrix(self.np_poses[x * 4:x * 4 + 4].tolist()) for x in range(self.np_poses.shape[0]/4)])
+                self.visualizer.draw_poses('debug', se.eye(4), 0.1, 0.01, [se.Matrix(self.np_poses[x * 4:x * 4 + 4].tolist()) for x in range(self.np_poses.shape[0]/4)])
                 self.visualizer.render('debug')
 
                 published_frames = []
@@ -110,7 +111,7 @@ class ModelTFBroadcaster(object):
                 
                 self.frame_info = list(zip([str(n) for n in names], lframes))
 
-                self.cythonized_matrix = spw.speed_up(pose_matrix, pose_matrix.free_symbols, backend=BACKEND)
+                self.cythonized_matrix = llvm.speed_up(pose_matrix, pose_matrix.free_symbols)
 
                 self.state = {p: 0.0 for p in self.cythonized_matrix.str_params}
                 self._state_complete = True
@@ -187,6 +188,6 @@ class NetworkedTFBroadcaster(ModelTFBroadcaster_URDF):
 
     def cb_state_update(self, msg):
         if self.use_js_msg:
-            self.update_state({Symbol(n): v for n, v in zip(msg.name, msg.position)})
+            self.update_state({se.Symbol(n): v for n, v in zip(msg.name, msg.position)})
         else:
-            self.update_state({Symbol(n): v for n, v in zip(msg.symbol, msg.value)})
+            self.update_state({se.Symbol(n): v for n, v in zip(msg.symbol, msg.value)})

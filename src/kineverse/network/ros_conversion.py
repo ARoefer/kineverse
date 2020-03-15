@@ -4,9 +4,9 @@ import betterpybullet as pb
 import kineverse.json_wrapper as json
 import kineverse.type_sets as ts
 
-from kineverse.gradients.gradient_math import spw
+from kineverse.gradients.gradient_math  import se
 from kineverse.model.articulation_model import ApplyAt, ApplyBefore, ApplyAfter, RemoveOp, Constraint
-from kineverse.utils                 import import_class, real_quat_from_matrix
+from kineverse.utils                    import import_class, real_quat_from_matrix
 
 from kineverse.msg import OperationCall    as OperationCallMsg
 from kineverse.msg import Operation        as OperationMsg
@@ -14,10 +14,10 @@ from kineverse.msg import Constraint       as ConstraintMsg
 from kineverse.msg import OperationsUpdate as OperationsUpdateMsg
 
 from std_msgs.msg      import Header, String, Float64, Bool, Int32
-from geometry_msgs.msg import Pose    as PoseMsg
-from geometry_msgs.msg import Point   as PointMsg
-from geometry_msgs.msg import Vector3 as Vector3Msg
-from geometry_msgs.msg import Quaternion as QuaternionMsg
+from geometry_msgs.msg import Pose        as PoseMsg
+from geometry_msgs.msg import Point       as PointMsg
+from geometry_msgs.msg import Vector3     as Vector3Msg
+from geometry_msgs.msg import Quaternion  as QuaternionMsg
 from geometry_msgs.msg import PoseStamped as PoseStampedMsg
 
 operations_registry = {}
@@ -144,7 +144,7 @@ def auto_encode(data):
 
         s_t = type(data[0])
         if s_t is float or s_t is int or s_t is list or s_t is tuple:
-            return auto_encode(spw.Matrix(data))
+            return auto_encode(se.Matrix(data))
         raise Exception('Can not encode list with inner type {}'.format(s_t))
     elif t == pb.Transform:
         out = PoseMsg()

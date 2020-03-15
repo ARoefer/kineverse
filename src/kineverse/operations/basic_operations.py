@@ -37,4 +37,3 @@ class CallFunctionOperator(Operation):
 
     def _apply(self, ks, **kwargs):
         return {'path': self.fn(**{k: v for k, v in kwargs.items() if k != 'path'})}, {}
-

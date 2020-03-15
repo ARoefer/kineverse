@@ -1,6 +1,6 @@
-import giskardpy.symengine_wrappers as spw
+import symengine as se
 
-Symbol = spw.Symbol
+Symbol = se.Symbol
 
 TYPE_UNKNOWN  = 0
 TYPE_POSITION = 1

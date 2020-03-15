@@ -1,8 +1,9 @@
 import rospy
 import numpy as np
 
-from giskardpy import BACKEND
-from kineverse.gradients.gradient_math import spw
+import kineverse.gradients.llvm_wrapper as llvm
+
+from kineverse.gradients.gradient_math import se
 from kineverse.visualization.plotting  import ValueRecorder, SymbolicRecorder
 from kineverse.gradients.diff_logic    import get_symbol_type, Position
 from kineverse.motion.min_qp_builder   import TypedQPBuilder as TQPB, \
@@ -56,8 +57,8 @@ class CommandIntegrator(object):
         self.current_iteration = 0
 
         self._aligned_state_vars, rules = zip(*self.integration_rules.items())
-        rule_matrix = spw.Matrix([rules])
-        self._cythonized_integration = spw.speed_up(rule_matrix, rule_matrix.free_symbols, backend=BACKEND)
+        rule_matrix = se.Matrix([rules])
+        self._cythonized_integration = llvm.speed_up(rule_matrix, rule_matrix.free_symbols)
 
 
     @profile

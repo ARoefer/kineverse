@@ -1,11 +1,11 @@
 from kineverse.model.paths             import Path
 from kineverse.json_wrapper            import JSONSerializable
-from kineverse.gradients.gradient_math import spw
+from kineverse.gradients.gradient_math import se
 
 class Frame(JSONSerializable):
     def __init__(self, parent_path, pose=None, to_parent=None):
         self.parent    = parent_path
-        self.pose      = pose if pose is not None else spw.eye(4)
+        self.pose      = pose if pose is not None else se.eye(4)
         self.to_parent = to_parent if to_parent is not None else self.pose
 
     def _json_data(self, json_dict):

@@ -2,9 +2,11 @@
 import random
 import time
 
+import kineverse.gradients.llvm_wrapper as llvm
+
 from tqdm import tqdm
 
-from kineverse.gradients.gradient_math import spw, frame3_rpy, point3, Position
+from kineverse.gradients.gradient_math import frame3_rpy, point3, Position
 from kineverse.visualization.plotting  import ValueRecorder, draw_recorders
 
 
@@ -30,7 +32,7 @@ if __name__ == '__main__':
 
         x_labels.append(len(matrix.free_symbols))
 
-        cython_m = spw.speed_up(matrix, matrix.free_symbols, 'llvm')
+        cython_m = llvm.speed_up(matrix, matrix.free_symbols)
 
         avg_d = 0.0
         avg_l = 0.0

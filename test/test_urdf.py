@@ -2,14 +2,15 @@ import unittest as ut
 
 from kineverse.utils                       import res_pkg_path
 from kineverse.operations.basic_operations import CreateComplexObject
-from kineverse.gradients.gradient_math     import translation3, \
+from kineverse.gradients.gradient_math     import translation3,         \
                                                   rotation3_axis_angle, \
-                                                  frame3_axis_angle, \
-                                                  vector3, \
-                                                  point3, \
-                                                  norm, \
-                                                  spw
-from kineverse.model.articulation_model       import ArticulationModel, Path
+                                                  frame3_axis_angle,    \
+                                                  vector3,              \
+                                                  point3,               \
+                                                  norm,                 \
+                                                  se,                   \
+                                                  Position
+from kineverse.model.articulation_model    import ArticulationModel, Path
 from kineverse.operations.urdf_operations  import load_urdf,         \
                                                   KinematicLink,     \
                                                   SetFixedJoint,     \
@@ -52,14 +53,14 @@ class TestURDF(ut.TestCase):
     def test_fixed_joint(self):
         ks = ArticulationModel()
 
-        a  = spw.Symbol('a_p')
-        b  = spw.Symbol('b_p')
+        a  = Position('a')
+        b  = Position('b')
         parent_pose     = frame3_axis_angle(vector3(0,1,0), a, point3(0, b, 5))
         joint_transform = translation3(7, -5, 33)
         child_pose      = parent_pose * joint_transform
 
         ks.apply_operation('create parent', CreateComplexObject(Path('parent'), KinematicLink('', parent_pose)))
-        ks.apply_operation('create child', CreateComplexObject(Path('child'),  KinematicLink('', spw.eye(4))))
+        ks.apply_operation('create child', CreateComplexObject(Path('child'),  KinematicLink('', se.eye(4))))
         self.assertTrue(ks.has_data('parent/pose'))
         self.assertTrue(ks.has_data('child/pose'))
 
@@ -70,9 +71,9 @@ class TestURDF(ut.TestCase):
     def test_prismatic_joint(self):
         ks = ArticulationModel()
 
-        a  = spw.Symbol('a_p')
-        b  = spw.Symbol('b_p')
-        c  = spw.Symbol('c_p')
+        a  = Position('a')
+        b  = Position('b')
+        c  = Position('c')
         parent_pose     = frame3_axis_angle(vector3(0,1,0), a, point3(0, b, 5))
         joint_transform = translation3(7, -5, 33)
         axis            = vector3(1, -3, 7)
@@ -80,7 +81,7 @@ class TestURDF(ut.TestCase):
         child_pose      = parent_pose * joint_transform * translation3(*(axis[:,:3] * position))
 
         ks.apply_operation('create parent', CreateComplexObject(Path('parent'), KinematicLink('', parent_pose)))
-        ks.apply_operation('create child', CreateComplexObject(Path('child'),  KinematicLink('', spw.eye(4))))
+        ks.apply_operation('create child', CreateComplexObject(Path('child'),  KinematicLink('', se.eye(4))))
         self.assertTrue(ks.has_data('parent/pose'))
         self.assertTrue(ks.has_data('child/pose'))
 
@@ -98,9 +99,9 @@ class TestURDF(ut.TestCase):
     def test_revolute_and_continuous_joint(self):
         ks = ArticulationModel()
 
-        a  = spw.Symbol('a_p')
-        b  = spw.Symbol('b_p')
-        c  = spw.Symbol('c_p')
+        a  = Position('a')
+        b  = Position('b')
+        c  = Position('c')
         parent_pose     = frame3_axis_angle(vector3(0,1,0), a, point3(0, b, 5))
         joint_transform = translation3(7, -5, 33)
         axis            = vector3(1, -3, 7)
@@ -109,7 +110,7 @@ class TestURDF(ut.TestCase):
         child_pose      = parent_pose * joint_transform * rotation3_axis_angle(axis, position)
 
         ks.apply_operation('create parent', CreateComplexObject(Path('parent'), KinematicLink('', parent_pose)))
-        ks.apply_operation('create child', CreateComplexObject(Path('child'),  KinematicLink('', spw.eye(4))))
+        ks.apply_operation('create child', CreateComplexObject(Path('child'),  KinematicLink('', se.eye(4))))
         self.assertTrue(ks.has_data('parent/pose'))
         self.assertTrue(ks.has_data('child/pose'))
 
@@ -135,9 +136,9 @@ class TestURDF(ut.TestCase):
     def test_model_reform(self):
         ks = ArticulationModel()
 
-        a  = spw.Symbol('a_p')
-        b  = spw.Symbol('b_p')
-        c  = spw.Symbol('c_p')
+        a  = Position('a')
+        b  = Position('b')
+        c  = Position('c')
         parent_pose_a   = frame3_axis_angle(vector3(0,1,0), a, point3(0, b, 5))
         parent_pose_b   = frame3_axis_angle(vector3(1,0,0), b, point3(7* b, 0, 5))
         joint_transform = translation3(7, -5, 33)
@@ -148,7 +149,7 @@ class TestURDF(ut.TestCase):
         child_pose_b    = parent_pose_b * joint_transform * translation3(*(axis[:,:3] * position))
 
         ks.apply_operation('create parent', CreateComplexObject(Path('parent'), KinematicLink('', parent_pose_a)))
-        ks.apply_operation('create child', CreateComplexObject(Path('child'),  KinematicLink('', spw.eye(4))))
+        ks.apply_operation('create child', CreateComplexObject(Path('child'),  KinematicLink('', se.eye(4))))
         self.assertTrue(ks.has_data('parent/pose'))
         self.assertTrue(ks.has_data('child/pose'))
 

@@ -1,24 +1,24 @@
 import numpy  as np
 import pandas as pd
 
-from giskardpy import BACKEND
-from giskardpy.exceptions import QPSolverException
-from giskardpy.qp_solver  import QPSolver
+import kineverse.gradients.llvm_wrapper as llvm
+
+from kineverse.motion.qp_solver             import QPSolver, QPSolverException
 
 from kineverse.gradients.diff_logic         import get_symbol_type, get_int_symbol, Symbol
 from kineverse.gradients.gradient_container import GradientContainer as GC
-from kineverse.gradients.gradient_math      import spw, extract_expr, wrap_expr
-from kineverse.model.articulation_model        import Constraint, Path
+from kineverse.gradients.gradient_math      import se, extract_expr, wrap_expr
+from kineverse.model.articulation_model     import Constraint, Path
 from kineverse.model.geometry_model         import CollisionSubworld, ContactHandler, obj_to_obj_infix
 from kineverse.visualization.bpb_visualizer import ROSBPBVisualizer
 from kineverse.bpb_wrapper                  import transform_to_matrix as tf2mx
 from kineverse.type_sets                    import is_symbolic
 
-default_bound = 1e9    
+default_bound  = 1e9    
 
 HardConstraint = Constraint
 
-PANDA_LOGGING = False
+PANDA_LOGGING  = False
 
 class SoftConstraint(Constraint):
     def __init__(self, lower, upper, weight, expr):
@@ -61,14 +61,14 @@ class MinimalQPBuilder(object):
         cv = [(k, ControlledValue(extract_expr(c.lower), extract_expr(c.upper), c.symbol, extract_expr(c.weight))) for k, c in controlled_values.items()]
 
         self.np_g = np.zeros(len(cv + sc))
-        self.H    = spw.diag(*[extract_expr(c.weight) for _, c in cv + sc])
-        self.lb   = spw.Matrix([c.lower if c.lower is not None else -default_bound for _, c in cv] + [-default_bound] * len(sc))
-        self.ub   = spw.Matrix([c.upper if c.upper is not None else  default_bound for _, c in cv] + [default_bound] * len(sc))
-        self.lbA  = spw.Matrix([c.lower if c.lower is not None else -default_bound for _, c in hc + sc])
-        self.ubA  = spw.Matrix([c.upper if c.upper is not None else  default_bound for _, c in hc + sc])
+        self.H    = se.diag(*[extract_expr(c.weight) for _, c in cv + sc])
+        self.lb   = se.Matrix([c.lower if c.lower is not None else -default_bound for _, c in cv] + [-default_bound] * len(sc))
+        self.ub   = se.Matrix([c.upper if c.upper is not None else  default_bound for _, c in cv] + [default_bound] * len(sc))
+        self.lbA  = se.Matrix([c.lower if c.lower is not None else -default_bound for _, c in hc + sc])
+        self.ubA  = se.Matrix([c.upper if c.upper is not None else  default_bound for _, c in hc + sc])
 
         M_cv      = [c.symbol for _, c in cv]
-        self.A    = spw.Matrix([[c.expr[s] if s in c.expr else 0 for s in M_cv] for _, c in hc + sc]).row_join(spw.zeros(len(hc), len(sc)).col_join(spw.eye(len(sc))))
+        self.A    = se.Matrix([[c.expr[s] if s in c.expr else 0 for s in M_cv] for _, c in hc + sc]).row_join(se.zeros(len(hc), len(sc)).col_join(se.eye(len(sc))))
 
         self.cv        = [c.symbol for _, c in cv]
         self.n_cv      = len(cv)
@@ -86,7 +86,7 @@ class MinimalQPBuilder(object):
         self.big_ass_M = self.A.row_join(self.lbA).row_join(self.ubA).col_join(self.H.row_join(self.lb).row_join(self.ub))
 
         self.free_symbols     = self.big_ass_M.free_symbols
-        self.cython_big_ass_M = spw.speed_up(self.big_ass_M, self.free_symbols, backend=BACKEND)
+        self.cython_big_ass_M = llvm.speed_up(self.big_ass_M, self.free_symbols)
 
         self.shape1    = self.A.shape[0]
         self.shape2    = self.A.shape[1]

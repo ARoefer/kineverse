@@ -1,4 +1,4 @@
-import giskardpy.symengine_wrappers as spw
+import symengine as se
 
 from kineverse.gradients.diff_logic import DiffSymbol, get_int_symbol, Symbol
 from kineverse.json_serializable    import JSONSerializable
@@ -233,9 +233,9 @@ class GradientContainer(JSONSerializable):
             gradients = {s: d * other.expr * (self.expr ** (other.expr - 1)) for s, d in self.gradients.items()}
             for s, d in other.gradients.items():
                 if s in gradients:
-                    gradients[s] += d * self.expr * spw.log(self.expr) * (self.expr ** (other.expr - 1))
+                    gradients[s] += d * self.expr * se.log(self.expr) * (self.expr ** (other.expr - 1))
                 else:
-                    gradients[s] = spw.log(self.expr) * d * (self.expr ** other.expr)
+                    gradients[s] = se.log(self.expr) * d * (self.expr ** other.expr)
             return GradientContainer(self.expr**other.expr, gradients)
         return GradientContainer(self.expr**other, {s: d * other * (self.expr** (other - 1)) for s, d in self.gradients.items()})
 
@@ -469,4 +469,4 @@ class GradientMatrix(JSONSerializable):
         """Converts the stored matrix to a symengine.Matrix, erasing all additional gradient information.
         :rtype: symengine.Matrix
         """
-        return spw.Matrix(floatify_nested_list(self.expr))
+        return se.Matrix(floatify_nested_list(self.expr))

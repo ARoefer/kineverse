@@ -2,7 +2,7 @@ import unittest as ut
 
 from kineverse.gradients.gradient_math     import *
 from kineverse.model.frames                import Frame, Transform
-from kineverse.model.articulation_model       import ArticulationModel, Path
+from kineverse.model.articulation_model    import ArticulationModel, Path
 from kineverse.operations.frame_operations import collect_chain,           \
                                                   fk_a_in_b,               \
                                                   CreateRelativeTransform, \
@@ -51,7 +51,7 @@ class TestFrames(ut.TestCase):
         f_d = Frame(  'c', f_c.pose * p4, p4)
         f_e = Frame(  'b', f_b.pose * p5, p5)        
         f_f = Frame('world', p6, p6)
-        f_g = Frame('lol', spw.eye(4))
+        f_g = Frame('lol', se.eye(4))
 
         km.set_data('a', f_a)
         km.set_data('b', f_b)
@@ -96,7 +96,7 @@ class TestFrames(ut.TestCase):
         f_d  = Frame(  'c', f_c.pose * p4, p4)
         f_e  = Frame(  'b', f_b.pose * p5, p5)        
         f_f  = Frame('world', p6, p6)
-        f_g  = Frame('lol', spw.eye(4))
+        f_g  = Frame('lol', se.eye(4))
 
 
         km.apply_operation('create a', CreateComplexObject(Path('a'), f_a))

@@ -1,16 +1,24 @@
 import re
 import numpy as np
 
-from giskardpy import BACKEND
-from kineverse.gradients.diff_logic    import Position
-from kineverse.gradients.gradient_math import *
-from kineverse.json_wrapper            import JSONSerializable
-from kineverse.model.paths             import Path, PathSet, PathDict
-from kineverse.model.articulation_model   import Constraint
-from kineverse.model.event_model       import EventModel
-from kineverse.model.frames            import Frame
-from kineverse.bpb_wrapper             import pb, create_object, create_cube_shape, create_sphere_shape, create_cylinder_shape, create_compound_shape, load_convex_mesh_shape, matrix_to_transform
-from kineverse.utils                   import rot3_to_rpy
+import kineverse.gradients.llvm_wrapper as llvm
+
+from kineverse.gradients.diff_logic     import Position
+from kineverse.gradients.gradient_math  import *
+from kineverse.json_wrapper             import JSONSerializable
+from kineverse.model.paths              import Path, PathSet, PathDict
+from kineverse.model.articulation_model import Constraint
+from kineverse.model.event_model        import EventModel
+from kineverse.model.frames             import Frame
+from kineverse.bpb_wrapper              import pb,                     \
+                                               create_object,          \
+                                               create_cube_shape,      \
+                                               create_sphere_shape,    \
+                                               create_cylinder_shape,  \
+                                               create_compound_shape,  \
+                                               load_convex_mesh_shape, \
+                                               matrix_to_transform
+from kineverse.utils                    import rot3_to_rpy
 
 
 class KinematicJoint(JSONSerializable):
@@ -62,7 +70,7 @@ class Geometry(Frame):
 
 
 class InertialData(Frame):
-    def __init__(self, parent_path, pose, mass=1, inertia_matrix=spw.eye(3)):
+    def __init__(self, parent_path, pose, mass=1, inertia_matrix=se.eye(3)):
         super(InertialData, self).__init__(parent_path, pose)
         if mass < 0:
             raise Exception('Mass can not be negative!')
@@ -286,27 +294,6 @@ class GeometryModel(EventModel):
 
     def get_constraints_by_symbols(self, symbol_set, n_dist_constraints=1):
         out = {}
-        # for s in symbol_set:
-        #     if str(s)[:len(obj_to_obj_prefix)] == obj_to_obj_prefix:
-        #         obj_a, obj_b = str(s)[len(obj_to_obj_prefix):].split(obj_to_obj_infix)
-        #         obj_a = str(Path(obj_a))
-        #         obj_b = str(Path(obj_b))
-        #         if obj_a not in self._co_pose_expr:
-        #             raise Exception('Object A "{}" is not a physical object that a distance constraint can be generated for.'.format(obj_a))
-        #         if obj_b not in self._co_pose_expr:
-        #             raise Exception('Object B "{}" is not a physical object that a distance constraint can be generated for.'.format(obj_a))
-        #         out['minimal distance {} {}'.format(obj_a, obj_b)] = ClosestDistanceConstraint(self._co_pose_expr[obj_a], self._co_pose_expr[obj_b], Path(obj_a), Path(obj_b))
-
-        #     elif str(s)[:len(obj_to_world_prefix)] == obj_to_world_prefix:
-        #         obj_a = str(Path(str(s)[len(obj_to_world_prefix):]))
-        #         if obj_a not in self._co_pose_expr:
-        #             raise Exception('Can not generate minimal distance constraint for object "{}"'.format(obj_a))
-        #         obj_pose = self._co_pose_expr[obj_a]
-        #         handler = ContactHandler(Path(obj_a))
-        #         for x in range(n_dist_constraints):
-        #             handler.add_passive_handle()
-        #             c = handler.var_map[x]
-        #             out['minimal distance {} WORLD {}'.format(obj_a, x)] = ClosestDistanceConstraint(obj_pose, spw.eye(4), Path(obj_a), Path('world/{}'.format(x)))
         out.update(super(GeometryModel, self).get_constraints_by_symbols(symbol_set))
         return out
 
@@ -331,7 +318,7 @@ class GeometryModel(EventModel):
         if static_state is not None:
             pose_matrix = pose_matrix.subs({s: static_state[s] for s in pose_matrix.free_symbols.difference(symbols) if s in static_state})
 
-        cythonized_matrix = spw.speed_up(pose_matrix, pose_matrix.free_symbols, backend=BACKEND)
+        cythonized_matrix = llvm.speed_up(pose_matrix, pose_matrix.free_symbols)
 
         # world = pb.KineverseWorld()
         # filtered_objs = objs if not include_static else objs + self._static_objects

@@ -3,7 +3,7 @@ import unittest as ut
 from kineverse.utils import bb
 from kineverse.operations.basic_operations import *
 from kineverse.gradients.gradient_math     import *
-from kineverse.model.articulation_model       import ArticulationModel
+from kineverse.model.articulation_model    import ArticulationModel
 
 
 class TestOperations(ut.TestCase):
@@ -54,8 +54,8 @@ class TestOperations(ut.TestCase):
     def test_add_fn_call(self):
         ks  = ArticulationModel()
         ks.apply_operation('create my_var', CreateSingleValue('my_var', 5))
-        ks.apply_operation('create vec_a',  CreateSingleValue('vec_a', spw.vector3(1,0,0)))
-        ks.apply_operation('create vec_b',  CreateSingleValue('vec_b', spw.vector3(0,1,0)))
+        ks.apply_operation('create vec_a',  CreateSingleValue('vec_a', vector3(1,0,0)))
+        ks.apply_operation('create vec_b',  CreateSingleValue('vec_b', vector3(0,1,0)))
 
         with self.assertRaises(Exception):
             op = CallFunctionOperator('sin_of_my_var', sin)
@@ -79,7 +79,7 @@ class TestOperations(ut.TestCase):
         self.assertEquals(op.args_paths['v'], 'vec_b')
         ks.apply_operation('compute cross of vectors', op)
         self.assertTrue(ks.has_data('cross_of_a_b'))
-        self.assertEquals(ks.get_data('cross_of_a_b'), spw.vector3(0,0,1))
+        self.assertEquals(ks.get_data('cross_of_a_b'), vector3(0,0,1))
         ks.remove_operation('compute cross of vectors')
         self.assertFalse(ks.has_data('cross_of_a_b'))
 

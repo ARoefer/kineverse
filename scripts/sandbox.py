@@ -7,7 +7,7 @@ import tf
 import kineverse.json_wrapper as json
 
 from kineverse.gradients.gradient_math       import *
-from kineverse.model.articulation_model         import ArticulationModel, Path
+from kineverse.model.articulation_model      import ArticulationModel, Path
 from kineverse.model.frames                  import Frame
 from kineverse.motion.integrator             import CommandIntegrator, DT_SYM
 from kineverse.motion.min_qp_builder         import TypedQPBuilder as TQPB
@@ -97,7 +97,7 @@ if __name__ == '__main__':
 
     # QP CONFIGURTION
     roomba_joint  = km.get_data('fetch/joints/to_world')
-    joint_symbols = [j.position for j in km.get_data('fetch/joints').values() if hasattr(j, 'position') and type(j.position) is spw.Symbol]
+    joint_symbols = [j.position for j in km.get_data('fetch/joints').values() if hasattr(j, 'position') and type(j.position) is se.Symbol]
     controlled_symbols = {get_diff_symbol(j) for j in joint_symbols}.union({roomba_joint.lin_vel, roomba_joint.ang_vel})
 
     constraints = km.get_constraints_by_symbols(dist.free_symbols.union(controlled_symbols))
@@ -105,7 +105,7 @@ if __name__ == '__main__':
     controlled_values = {}
     to_remove = set()
     for k, c in constraints.items():
-        if type(c.expr) is spw.Symbol and c.expr in controlled_symbols:
+        if type(c.expr) is se.Symbol and c.expr in controlled_symbols:
             weight = 0.01 if c.expr != roomba_joint.lin_vel and c.expr != roomba_joint.ang_vel else 0.2
             controlled_values[str(c.expr)] = ControlledValue(c.lower, c.upper, c.expr, weight)
             to_remove.add(k)
@@ -142,7 +142,7 @@ if __name__ == '__main__':
     draw_recorders([integrator.recorder] + split_recorders([integrator.sym_recorder]), 4.0/9.0, 8, 4).savefig('{}/fetch_sandbox_plots.png'.format(plot_dir))
 
     trajectory = {Path(j)[-1][:-2]: [0.0] * len(integrator.recorder.data.values()[0]) for j in joint_symbols}
-    trajectory.update({Path(spw.Symbol(j))[-1][:-2]: d for j, d in integrator.recorder.data.items()})
+    trajectory.update({Path(se.Symbol(j))[-1][:-2]: d for j, d in integrator.recorder.data.items()})
     base_trajectory = list(zip(integrator.sym_recorder.data['location_x'],
                                integrator.sym_recorder.data['location_y'],
                                integrator.sym_recorder.data['location_z'],
