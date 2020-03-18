@@ -8,7 +8,6 @@ from pprint import pprint
 from kineverse.visualization.bpb_visualizer  import ROSBPBVisualizer
 from kineverse.gradients.diff_logic          import Symbol, erase_type
 from kineverse.model.paths                   import Path
-from kineverse.operations.special_kinematics import RoombaJoint
 from kineverse.ros.tf_publisher              import ModelTFBroadcaster_URDF
 from kineverse.time_wrapper                  import Time
 

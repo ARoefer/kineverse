@@ -29,22 +29,30 @@ class TestTimeline(ut.TestCase):
             self.assertEqual(x, y)
 
     def test_get_floor(self):
-        l = [1, 2, 4, 33, 84, 91, 100]
+        l = [1, 2, 3, 4, 33, 84, 91, 100]
         t = Timeline(l)
 
+        self.assertEqual(t.get_floor(2)[1],     2)
         self.assertEqual(t.get_floor(4)[1],     4)
         self.assertEqual(t.get_floor(83)[1],   33)
         self.assertEqual(t.get_floor(200)[1], 100)
         self.assertEqual(t.get_floor(0)[1],  None)
 
     def test_get_ceil(self):
-        l = [1, 2, 4, 33, 84, 91, 100]
+        l = [1, 2, 3, 4, 33, 84, 91, 100]
         t = Timeline(l)
 
+        self.assertEqual(t.get_ceil(2)[1],      2)
         self.assertEqual(t.get_ceil(4)[1],      4)
         self.assertEqual(t.get_ceil(34)[1],    84)
         self.assertEqual(t.get_ceil(200)[1], None)
         self.assertEqual(t.get_ceil(0)[1],      1)
+
+    def test_get_ceil_odd_error_case(self):
+        l = [1, 2, 3]
+        t = Timeline(l)
+
+        self.assertEqual(t.get_ceil(2)[0],      1)
 
 
 class TestHistory(ut.TestCase):

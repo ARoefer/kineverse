@@ -94,6 +94,7 @@ class GradientContainer(JSONSerializable):
             self[symbol] = new_term
             return new_term
         else:
+            # return 0
             raise Exception('Cannot reproduce or generate gradient terms for variable "{}".\n  Free symbols: {}\n  Free diff symbols: {}'.format(symbol, self.free_symbols, self.free_diff_symbols))
 
     def __setitem__(self, symbol, expr):

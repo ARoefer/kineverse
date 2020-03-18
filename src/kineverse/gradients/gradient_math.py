@@ -143,8 +143,8 @@ def fake_abs(expr):
 def abs(expr):
     """Absolute value"""
     if type(expr) == GC:
-        return GC(fake_Abs(expr.expr), {s: d * expr.expr / se.sqrt(expr.expr ** 2) for s, d in expr.gradients.items()})
-    return fake_Abs(expr)
+        return GC(fake_abs(expr.expr), {s: d * expr.expr / se.sqrt(expr.expr ** 2) for s, d in expr.gradients.items()})
+    return fake_abs(expr)
 
 def is_gradient(m_list):
     """Returns a nested list of booleans indicating which of the original elements are gradient containers."""
@@ -315,11 +315,10 @@ def frame3_quaternion(x, y, z, qx, qy, qz, qw):
 
 def inverse_frame(frame):
     mf = GM if type(frame) == GM else se.Matrix
-    inv = GM(se.eye(4))
+    inv = mf(se.eye(4))
     inv[:3, :3] = frame[:3, :3].T
     inv[:3, 3] = -inv[:3, :3] * frame[:3, 3]
     return inv
-    return se.inverse_frame(frame)
 
 def wrap_matrix_mul(a, b):
     if type(a) == GC or type(b) == GC:

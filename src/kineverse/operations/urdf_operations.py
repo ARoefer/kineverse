@@ -181,8 +181,8 @@ class SetPrismaticJoint(Operation):
     def _apply(self, ks, parent_pose, child_pose, child_parent_tf, connection_tf, axis, position, lower_limit, upper_limit, vel_limit, mimic_m, mimic_o):
         vel = get_diff(position)
         return {'child_parent': self.joint_obj.parent,
-                'child_parent_tf': connection_tf * translation3(*(axis[:,:3] * position)) * child_parent_tf,
-                'child_pose': parent_pose * connection_tf * translation3(*(axis[:,:3] * position)) * child_pose,
+                'child_parent_tf': connection_tf * translation3(*(axis * position)[:3]) * child_parent_tf,
+                'child_pose': parent_pose * connection_tf * translation3(*(axis * position)[:3]) * child_pose,
                 'connection': self.joint_obj}, \
                {'{}_position'.format(self.conn_path): Constraint(lower_limit - position, upper_limit - position, position),
                 '{}_velocity'.format(self.conn_path): Constraint(-vel_limit, vel_limit, vel)}

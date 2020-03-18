@@ -1,5 +1,7 @@
 import rospy
 
+from multiprocessing import RLock
+
 from kineverse.model.event_model      import EventModel
 from kineverse.model.articulation_model  import Constraint
 from kineverse.model.paths            import Path, PathSet
@@ -13,14 +15,14 @@ from kineverse.srv import GetConstraints as GetConstraintsSrv
 
 
 
-
 class ModelClient_NoROS(object):
     """Client for mirroring a complete or partial kinematic model."""
     def __init__(self, model_type, *args):
         if model_type is not None and not issubclass(model_type, EventModel):
             raise Exception('Model type must be a subclass of EventModel. Type "{}" is not.'.format(model_type))
 
-        self.km = model_type(*args) if model_type is not None else EventModel()
+        self.lock = RLock()
+        self.km   = model_type(*args) if model_type is not None else EventModel()
         
         self._last_update    = Time(0)
         self.tracked_paths   = PathSet()
@@ -70,22 +72,23 @@ class ModelClient_NoROS(object):
 
 
     def cb_model_update(self, msg):
-        if msg.stamp < self._last_update:
-            return
+        with self.lock:
+            if msg.stamp < self._last_update:
+                return
 
-        self._last_update = msg.stamp
+            self._last_update = msg.stamp
 
-        self._update_model(msg.update)
+            self._update_model(msg.update)
 
-        for p in msg.deleted_paths:
-            self.km.remove_data(p)
+            for p in msg.deleted_paths:
+                self.km.remove_data(p)
 
 
-        for k in msg.deleted_constraints:
-            self.km.remove_constraint(k)
+            for k in msg.deleted_constraints:
+                self.km.remove_constraint(k)
 
-        self.km.clean_structure()
-        self.km.dispatch_events()
+            self.km.clean_structure()
+            self.km.dispatch_events()
 
 
     def get_constraints_by_symbols(self, symbol_set):
@@ -99,15 +102,16 @@ class ModelClient_NoROS(object):
 
 
     def _start_tracking(self, path):
-        print('Started tracking {}'.format(path))
-        self.tracked_paths.add(path)
-        for x in range(len(path)):
-            if not self.km.has_data(path[:x]):
-                self.km.set_data(path[:x], {})
+        with self.lock:
+            print('Started tracking {}'.format(path))
+            self.tracked_paths.add(path)
+            for x in range(len(path)):
+                if not self.km.has_data(path[:x]):
+                    self.km.set_data(path[:x], {})
 
-        self._update_model(self.srv_get_model([str(path)],[]).model)
-        self.km.clean_structure()
-        self.km.dispatch_events()
+            self._update_model(self.srv_get_model([str(path)],[]).model)
+            self.km.clean_structure()
+            self.km.dispatch_events()
 
 
     def register_on_model_changed(self, path, callback):

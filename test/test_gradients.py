@@ -355,7 +355,7 @@ class TestFunctions(ut.TestCase):
     def test_abs(self):
         x, y = [Position(x) for x in 'xy']
 
-        baseline = fake_Abs(x + 5 * y)
+        baseline = abs(x + 5 * y)
         gc_x = GC(x)
         gc_y = GC(5 * y)
 

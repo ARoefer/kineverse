@@ -291,6 +291,10 @@ class Chunk(StampedData):
         return 'Stamp: {}\n Arguments: {}\n Modifications: {}\n Dependents: {}\n'.format(self.stamp, ', '.join(self.dependencies), ', '.join(self.modifications), ', '.join([str(d.stamp) for d in self.dependents]))
 
     def __eq__(self, other):
-        if isinstance(other, Chunk):
+        if type(other) == int:
+            return self.stamp == other
+        elif type(other) == float:
+            return self.stamp == other
+        elif isinstance(other, Chunk):
             return super(Chunk, self).__eq__(other) and self.operation == other.operation and self.dependencies == other.dependencies and self.modifications == other.modifications
         return False

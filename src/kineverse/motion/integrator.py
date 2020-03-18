@@ -25,8 +25,10 @@ class CommandIntegrator(object):
                     if str(s)[:-2] == str(c)[:-2]:
                         t_s = get_symbol_type(s)
                         t_c = get_symbol_type(c)
-                        if t_s <= t_c:
+                        if t_s < t_c:
                             self.integration_rules[s] = s + c * (DT_SYM ** (t_c - t_s))
+                        elif t_s == t_c:
+                            self.integration_rules[s] = s
 
             if integration_rules is not None:
                 # Only add custom rules which are fully defined given the set of state variables and the set of command variables
@@ -37,6 +39,7 @@ class CommandIntegrator(object):
                         self.integration_rules[s] = r
                     else:
                         print('Dropping rule "{}: {}". Symbols missing from state: {}'.format(s, r, delta_set[s]))
+            # print('\n  '.join(['{}: {}'.format(k, r) for k, r in sorted([(str(k), str(r)) for k, r in self.integration_rules.items()])]))
         else:
             self.integration_rules = integration_rules if integration_rules is not None else {s: s*DT_SYM for s in self.qp_builder.free_symbols}
 
