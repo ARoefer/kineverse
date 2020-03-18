@@ -30,7 +30,7 @@ sudo apt install llvm-6.0-dev  # Install LLVM dev-kit
 
 # GMP is needed to build Symengine
 sudo apt-get install cmake libgmp-dev libz-dev python-dev
-pip install cython
+pip install 'cython>=0.20.0'
 
 # Clone Symengine
 cd libs # Go to a directory where you want to store the symengine code
@@ -66,7 +66,7 @@ Once you are done cloning the package, you can rebuild and re-source your worksp
 Kineverse depends on a number of Python pacakges that can be installed from pip.
 
 ```bash
-pip install numpy pandas matplotlib tqdm sortedcontainers jinja2
+pip install 'numpy<=1.16.6' 'pandas==0.24.2' 'matplotlib<=2.2.5' tqdm sortedcontainers jinja2
 ```
 
 
@@ -75,6 +75,7 @@ Kineverse includes a small geometry query system which uses a custom wrapper for
 
 ```bash
 sudo apt install python-dev 
+pip install 'pytest<5.0'
 
 cd libs  # Go to a directory where you want to store the bullet code
 git clone https://github.com/pybind/pybind11.git
