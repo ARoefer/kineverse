@@ -29,7 +29,8 @@ pip install symengine
 sudo apt install llvm-6.0-dev  # Install LLVM dev-kit
 
 # GMP is needed to build Symengine
-sudo apt-get install cmake libgmp-dev
+sudo apt-get install cmake libgmp-dev libz-dev python-dev
+pip install cython
 
 # Clone Symengine
 cd libs # Go to a directory where you want to store the symengine code
@@ -65,7 +66,7 @@ Once you are done cloning the package, you can rebuild and re-source your worksp
 Kineverse depends on a number of Python pacakges that can be installed from pip.
 
 ```bash
-pip install numpy pandas matplotlib tqdm sortedcontainers
+pip install numpy pandas matplotlib tqdm sortedcontainers jinja2
 ```
 
 
@@ -73,7 +74,16 @@ pip install numpy pandas matplotlib tqdm sortedcontainers
 Kineverse includes a small geometry query system which uses a custom wrapper for the Bullet Physics Engine. Unfortunately the installation is quite manual and requires a modification of the `PYTHONPATH` variable.
 
 ```bash
+sudo apt install python-dev 
+
 cd libs  # Go to a directory where you want to store the bullet code
+git clone https://github.com/pybind/pybind11.git
+cd pybind11
+mkdir build
+cd build 
+cmake .. -DCMAKE_BUILD_TYPE=Release -DPYTHON_EXECUTABLE=/usr/bin/python2.7
+make install -j4
+
 git clone https://github.com/ARoefer/bullet3.git
 cd bullet3
 ./build_cmake_pybullet_2.7_double.sh
