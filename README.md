@@ -21,27 +21,32 @@ git clone https://github.com/ARoefer/kineverse.git
 ### Installing Symengine
 Symengine is a symbolic math framework that forms the backbone of Kineverse. There are two ways of installing Symengine: from `pip`, or from source. I would suggest installing it from source, since the pip version lacks the LLVM feature of Symengine. While that feature is not strictly required for Kineverse, there are functions which do rely on it.
 
+#### OPTION 1: Pip install
 ```bash
-# OPTION 1: Pip install
 pip install symengine
+```
 
-# OPTION 2: Source install
-sudo apt install llvm-6.0-dev  # Install LLVM dev-kit
+#### OPTION 2: Source install
+```bash
+# Install LLVM dev-kit and other dependencies
+sudo apt install llvm-6.0-dev cmake libgmp-dev libz-dev python-dev
 
-# GMP is needed to build Symengine
-sudo apt-get install cmake libgmp-dev libz-dev python-dev
 pip install 'cython>=0.20.0'
 
-# Clone Symengine
+# Clone Symengine and build it
 cd libs # Go to a directory where you want to store the symengine code
 git clone https://github.com/symengine/symengine.git
 git clone https://github.com/symengine/symengine.py.git
 cd symengine
 git checkout `cat ../symengine.py/symengine_version.txt`
-cmake -DWITH_LLVM:BOOL=ON .
+mkdir build
+cd build
+cmake .. -DWITH_LLVM=ON -DBUILD_BENCHMARKS=OFF -DBUILD_TESTS=OFF
 make -j8
 sudo make install
-cd ../symengine.py
+
+# Build Symengine.py
+cd ../../symengine.py
 sudo python setup.py install
 ```
 
