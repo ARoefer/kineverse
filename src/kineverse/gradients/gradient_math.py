@@ -13,7 +13,8 @@ from kineverse.gradients.diff_logic         import get_diff_symbol, \
                                                    Jerk, \
                                                    Snap, \
                                                    Symbol, \
-                                                   DiffSymbol
+                                                   DiffSymbol, \
+                                                   IntSymbol
 from kineverse.gradients.gradient_container import GradientContainer as GC
 from kineverse.gradients.gradient_matrix    import GradientMatrix    as GM
 from kineverse.symengine_types              import symengine_types, symengine_matrix_types

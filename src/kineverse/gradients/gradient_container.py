@@ -1,6 +1,6 @@
 import symengine as se
 
-from kineverse.gradients.diff_logic import DiffSymbol, get_int_symbol, Symbol
+from kineverse.gradients.diff_logic import DiffSymbol, IntSymbol, Symbol
 from kineverse.json_serializable    import JSONSerializable
 from kineverse.symengine_types      import symengine_matrix_types
 
@@ -67,7 +67,7 @@ class GradientContainer(JSONSerializable):
         """
         return GradientContainer(self.expr.subs(subs), 
                                 {s: g.subs(subs) for s, g in self.gradients.items() 
-                                                 if get_int_symbol(s) not in subs})
+                                                 if IntSymbol(s) not in subs})
 
     def __contains__(self, symbol):
         """Checks whether a derivative expression can be derived for the given symbol.
@@ -90,12 +90,12 @@ class GradientContainer(JSONSerializable):
         if symbol in self.gradients:
             return self.gradients[symbol]
         elif symbol in self.free_diff_symbols:
-            new_term = self.expr.diff(get_int_symbol(symbol))
+            new_term = self.expr.diff(IntSymbol(symbol))
             self[symbol] = new_term
             return new_term
         else:
-            # return 0
-            raise Exception('Cannot reproduce or generate gradient terms for variable "{}".\n  Free symbols: {}\n  Free diff symbols: {}'.format(symbol, self.free_symbols, self.free_diff_symbols))
+            return 0
+            # raise Exception('Cannot reproduce or generate gradient terms for variable "{}".\n  Free symbols: {}\n  Free diff symbols: {}'.format(symbol, self.free_symbols, self.free_diff_symbols))
 
     def __setitem__(self, symbol, expr):
         """Adds custom derivative for given symbol.
