@@ -1,6 +1,4 @@
-import symengine as se
-
-Symbol = se.Symbol
+import kineverse.gradients.common_math as cm
 
 TYPE_UNKNOWN  = 0
 TYPE_POSITION = 1
@@ -34,9 +32,9 @@ def create_symbol(symbol, stype):
 
     if stype not in TYPE_SUFFIXES_INV:
         raise Exception('Can not create symbol for type {}: Type id not defined.'.format(stype))
-    return Symbol('{}{}'.format(str(symbol), TYPE_SUFFIXES_INV[stype]))
+    return cm.Symbol('{}{}'.format(str(symbol), TYPE_SUFFIXES_INV[stype]))
 
-def create_pos(symbol):
+def Position(symbol):
     """Shorthand for creating a position symbol.
 
     :param symbol: Symbol to be typed
@@ -46,7 +44,7 @@ def create_pos(symbol):
     """
     return create_symbol(symbol, TYPE_POSITION)
 
-def create_vel(symbol):
+def Velocity(symbol):
     """Shorthand for creating a velocity symbol.
 
     :param symbol: Symbol to be typed
@@ -56,7 +54,7 @@ def create_vel(symbol):
     """
     return create_symbol(symbol, TYPE_VELOCITY)
 
-def create_acc(symbol):
+def Acceleration(symbol):
     """Shorthand for creating an acceleration symbol.
 
     :param symbol: Symbol to be typed
@@ -66,7 +64,7 @@ def create_acc(symbol):
     """
     return create_symbol(symbol, TYPE_ACCEL)
 
-def create_jerk(symbol):
+def Jerk(symbol):
     """Shorthand for creating a jerk symbol.
 
     :param symbol: Symbol to be typed
@@ -76,7 +74,7 @@ def create_jerk(symbol):
     """
     return create_symbol(symbol, TYPE_JERK)
 
-def create_snap(symbol):
+def Snap(symbol):
     """Shorthand for creating a snap symbol.
 
     :param symbol: Symbol to be typed
@@ -96,7 +94,7 @@ def erase_type(symbol):
     """
     st = get_symbol_type(symbol)
     if st != TYPE_UNKNOWN:
-        return Symbol(str(symbol)[:-len(TYPE_SUFFIXES_INV[st])])
+        return cm.Symbol(str(symbol)[:-len(TYPE_SUFFIXES_INV[st])])
     return symbol
 
 def get_symbol_type(symbol):
@@ -109,7 +107,7 @@ def get_symbol_type(symbol):
     """
     return TYPE_SUFFIXES[str(symbol)[-2:]] if str(symbol)[-2:] in TYPE_SUFFIXES else TYPE_UNKNOWN
 
-def get_diff_symbol(symbol):
+def DiffSymbol(symbol):
     """Returns the derivative symbol of the given symbol.
 
     :param symbol: Symbol to convert
@@ -121,9 +119,9 @@ def get_diff_symbol(symbol):
     s_type = get_symbol_type(symbol)
     if s_type == TYPE_UNKNOWN or s_type == TYPE_SNAP:
         raise CastException('Cannot generate derivative symbol for {}! The type is {}'.format(symbol, s_type))
-    return Symbol('{}{}'.format(str(symbol)[:-2], TYPE_SUFFIXES_INV[s_type + 1]))
+    return cm.Symbol('{}{}'.format(str(symbol)[:-2], TYPE_SUFFIXES_INV[s_type + 1]))
 
-def get_int_symbol(symbol):
+def IntSymbol(symbol):
     """Returns the integral symbol of the given symbol.
 
     :param symbol: Symbol to convert
@@ -135,13 +133,4 @@ def get_int_symbol(symbol):
     s_type = get_symbol_type(symbol)
     if s_type == TYPE_UNKNOWN or s_type == TYPE_POSITION:
         raise CastException('Cannot generate integrated symbol for {}! The type is {}'.format(symbol, s_type))
-    return Symbol('{}{}'.format(str(symbol)[:-2], TYPE_SUFFIXES_INV[s_type - 1]))
-
-Position     = create_pos
-Velocity     = create_vel
-Acceleration = create_acc
-Jerk         = create_jerk
-Snap         = create_snap
-
-DiffSymbol   = get_diff_symbol
-IntSymbol    = get_int_symbol
+    return cm.Symbol('{}{}'.format(str(symbol)[:-2], TYPE_SUFFIXES_INV[s_type - 1]))
