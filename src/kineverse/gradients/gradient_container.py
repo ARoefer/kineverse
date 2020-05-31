@@ -1,6 +1,6 @@
-import symengine as se
+import kineverse.gradients.common_math as cm
 
-from kineverse.gradients.diff_logic import DiffSymbol, get_int_symbol, Symbol
+from kineverse.gradients.diff_logic import DiffSymbol, IntSymbol, Symbol
 from kineverse.json_serializable    import JSONSerializable
 from kineverse.symengine_types      import symengine_matrix_types
 
@@ -27,7 +27,7 @@ class GradientContainer(JSONSerializable):
         else:
             self.expr      = expr if type(expr) is not GradientContainer else expr.expr
             self.gradients = gradient_exprs if gradient_exprs is not None else {}
-        self.free_symbols = expr.free_symbols if hasattr(expr, 'free_symbols') else set()
+        self.free_symbols = cm.free_symbols(expr)
         self.free_diff_symbols = {DiffSymbol(s) for s in self.free_symbols if DiffSymbol(s) not in self.gradients}
 
     @property
@@ -65,9 +65,9 @@ class GradientContainer(JSONSerializable):
         :return: Gradient resulting from substitution
         :rtype: GradientContainer
         """
-        return GradientContainer(self.expr.subs(subs), 
+        return GradientContainer(cm.subs(self.expr, subs), 
                                 {s: g.subs(subs) for s, g in self.gradients.items() 
-                                                 if get_int_symbol(s) not in subs})
+                                                 if IntSymbol(s) not in subs})
 
     def __contains__(self, symbol):
         """Checks whether a derivative expression can be derived for the given symbol.
@@ -90,7 +90,7 @@ class GradientContainer(JSONSerializable):
         if symbol in self.gradients:
             return self.gradients[symbol]
         elif symbol in self.free_diff_symbols:
-            new_term = self.expr.diff(get_int_symbol(symbol))
+            new_term = cm.diff(self.expr, IntSymbol(symbol))
             self[symbol] = new_term
             return new_term
         else:
@@ -171,10 +171,10 @@ class GradientContainer(JSONSerializable):
             if hasattr(other, 'free_symbols'):
                 for f in other.free_symbols:
                     if DiffSymbol(f) in self.gradients:
-                        self.gradients[DiffSymbol(f)] += self.expr.diff(f)
+                        self.gradients[DiffSymbol(f)] += cm.diff(self.expr, f)
                     else:
                         self.free_diff_symbols.add(DiffSymbol(f))
-        self.free_symbols = self.expr.free_symbols if hasattr(self.expr, 'free_symbols') else set()
+        self.free_symbols = cm.free_self.expr, symbols if hasattr(self.expr, 'free_symbols') else set()
         return self
 
     def __isub__(self, other):
@@ -191,10 +191,10 @@ class GradientContainer(JSONSerializable):
             if hasattr(other, 'free_symbols'):
                 for f in other.free_symbols:
                     if DiffSymbol(f) in self.gradients:
-                        self.gradients[DiffSymbol(f)] -= self.expr.diff(f)
+                        self.gradients[DiffSymbol(f)] -= cm.diff(self.expr, f)
                     else:
                         self.free_diff_symbols.add(DiffSymbol(f))
-        self.free_symbols = self.expr.free_symbols if hasattr(self.expr, 'free_symbols') else set()
+        self.free_symbols = cm.free_self.expr, symbols if hasattr(self.expr, 'free_symbols') else set()
         return self
 
     def __imul__(self, other):
@@ -211,7 +211,7 @@ class GradientContainer(JSONSerializable):
             self.expr      = temp.expr
             self.gradients = temp.gradients
             self.free_diff_symbols = temp.free_diff_symbols
-        self.free_symbols = self.expr.free_symbols if hasattr(self.expr, 'free_symbols') else set()
+        self.free_symbols = cm.free_self.expr, symbols if hasattr(self.expr, 'free_symbols') else set()
         return self
 
     def __div__(self, other):
@@ -234,9 +234,9 @@ class GradientContainer(JSONSerializable):
             gradients = {s: d * other.expr * (self.expr ** (other.expr - 1)) for s, d in self.gradients.items()}
             for s, d in other.gradients.items():
                 if s in gradients:
-                    gradients[s] += d * self.expr * se.log(self.expr) * (self.expr ** (other.expr - 1))
+                    gradients[s] += d * self.expr * cm.log(self.expr) * (self.expr ** (other.expr - 1))
                 else:
-                    gradients[s] = se.log(self.expr) * d * (self.expr ** other.expr)
+                    gradients[s] = cm.log(self.expr) * d * (self.expr ** other.expr)
             return GradientContainer(self.expr**other.expr, gradients)
         return GradientContainer(self.expr**other, {s: d * other * (self.expr** (other - 1)) for s, d in self.gradients.items()})
 
@@ -380,7 +380,7 @@ class GradientMatrix(JSONSerializable):
             self.expr[idx[0]][idx[1]] = expr if type(expr) == GC else GC(expr)
 
     def __len__(self):
-        return self.expr.ncols() * self.expr.nrows()
+        return cm.ncolsself.expr, () * cm.nrowsself.expr, ()
 
     def __iter__(self):
         return iter(sum(self.expr, []))
@@ -470,4 +470,4 @@ class GradientMatrix(JSONSerializable):
         """Converts the stored matrix to a symengine.Matrix, erasing all additional gradient information.
         :rtype: symengine.Matrix
         """
-        return se.Matrix(floatify_nested_list(self.expr))
+        return cm.Matrix(floatify_nested_list(self.expr))

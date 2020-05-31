@@ -13,6 +13,7 @@ TYPE_SUFFIXES = {'_p': TYPE_POSITION,
                  '_s': TYPE_SNAP}
 TYPE_SUFFIXES_INV = {v: k for k, v in TYPE_SUFFIXES.items()}
 
+Symbol = cm.Symbol
 
 class CastException(Exception):
     pass    

@@ -1,7 +1,7 @@
 import unittest as ut
 import betterpybullet as pb
 
-from kineverse.gradients.diff_logic       import create_pos
+from kineverse.gradients.diff_logic       import Position
 from kineverse.gradients.gradient_math    import *
 from kineverse.model.paths                import Path
 from kineverse.model.geometry_model       import GeometryModel, CollisionSubworld
@@ -12,9 +12,9 @@ class TestGeometryModel(ut.TestCase):
     def test_link_insertion(self):
         gm = GeometryModel()
 
-        sym_a = create_pos('a')
-        sym_b = create_pos('b')
-        sym_c = create_pos('c')
+        sym_a = Position('a')
+        sym_b = Position('b')
+        sym_c = Position('c')
 
         box_shape  = Geometry('my_box',  se.eye(4), 'box')
         mesh_shape = Geometry('my_mesh', se.eye(4), 'mesh', mesh='package://kineverse/meshes/suzanne.obj')
@@ -46,9 +46,9 @@ class TestGeometryModel(ut.TestCase):
     def test_urdf_insertion(self):
         gm = GeometryModel()
 
-        sym_a = create_pos('a')
-        sym_b = create_pos('b')
-        sym_c = create_pos('c')
+        sym_a = Position('a')
+        sym_b = Position('b')
+        sym_c = Position('c')
 
         box_shape  = Geometry('my_box',  se.eye(4), 'box')
         mesh_shape = Geometry('my_mesh', se.eye(4), 'mesh', mesh='package://kineverse/meshes/suzanne.obj')

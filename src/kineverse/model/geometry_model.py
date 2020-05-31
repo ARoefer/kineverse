@@ -1,6 +1,7 @@
 import re
 import numpy as np
 
+import kineverse.gradients.common_math  as cm
 import kineverse.gradients.llvm_wrapper as llvm
 
 from kineverse.gradients.diff_logic     import Position
@@ -70,7 +71,7 @@ class Geometry(Frame):
 
 
 class InertialData(Frame):
-    def __init__(self, parent_path, pose, mass=1, inertia_matrix=se.eye(3)):
+    def __init__(self, parent_path, pose, mass=1, inertia_matrix=cm.eye(3)):
         super(InertialData, self).__init__(parent_path, pose)
         if mass < 0:
             raise Exception('Mass can not be negative!')
