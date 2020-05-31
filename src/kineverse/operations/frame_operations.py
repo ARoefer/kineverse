@@ -1,4 +1,6 @@
-from kineverse.gradients.gradient_math     import se, inverse_frame
+import kineverse.gradients.common_math as cm
+
+from kineverse.gradients.gradient_math     import inverse_frame
 from kineverse.model.data_tree             import DataTree
 from kineverse.model.frames                import Frame, Transform
 from kineverse.model.articulation_model    import ArticulationModel
@@ -24,12 +26,12 @@ def fk_a_in_b(ks, frame_a, frame_b):
         raise Exception('Frames "{}" and "{}" have no common root!'.format(frame_a, frame_b))
 
     if frame_b in tf_chain_a:
-        out = se.eye(4)
+        out = cm.eye(4)
         for x in range(tf_chain_a.index(frame_b) + 1, len(tf_chain_a)):
              out *= tf_chain_a[x].to_parent
         return out
     elif frame_a in tf_chain_b:
-        out = se.eye(4)
+        out = cm.eye(4)
         for x in range(tf_chain_b.index(frame_a) + 1, len(tf_chain_b)):
              out *= tf_chain_b[x].to_parent
         return inverse_frame(out)
@@ -38,11 +40,11 @@ def fk_a_in_b(ks, frame_a, frame_b):
         while tf_chain_a[x] == tf_chain_b[x]:
             x += 1
 
-        a_in_root = se.eye(4)
+        a_in_root = cm.eye(4)
         for y in range(x, len(tf_chain_a)):
             a_in_root *= tf_chain_a[y].to_parent
 
-        b_in_root = se.eye(4)
+        b_in_root = cm.eye(4)
         for y in range(x, len(tf_chain_b)):
             b_in_root *= tf_chain_b[y].to_parent
 

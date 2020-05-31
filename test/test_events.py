@@ -1,5 +1,7 @@
 import unittest as ut
-from kineverse.gradients.gradient_math  import se
+
+import kineverse.gradients.common_math  as cm
+
 from kineverse.model.event_model        import EventModel, Path
 from kineverse.model.articulation_model import Constraint
 from kineverse.operations.operation     import Operation
@@ -117,7 +119,7 @@ class TestEventModel(ut.TestCase):
 
             return cb
 
-        s_a, s_b, s_c, s_d = se.symbols('a b c d')
+        s_a, s_b, s_c, s_d = [cm.Symbol(x) for x in 'abcd']
 
         km.register_on_constraints_changed({s_a}, gen_cb(s_a_constraints))
         km.register_on_constraints_changed({s_b}, gen_cb(s_b_constraints))

@@ -1,5 +1,7 @@
 import unittest as ut
 
+import kineverse.gradients.common_math as cm
+
 from kineverse.utils                       import res_pkg_path
 from kineverse.operations.basic_operations import CreateComplexObject
 from kineverse.gradients.gradient_math     import translation3,         \
@@ -8,7 +10,6 @@ from kineverse.gradients.gradient_math     import translation3,         \
                                                   vector3,              \
                                                   point3,               \
                                                   norm,                 \
-                                                  se,                   \
                                                   Position
 from kineverse.model.articulation_model    import ArticulationModel, Path
 from kineverse.operations.urdf_operations  import load_urdf,         \
@@ -60,7 +61,7 @@ class TestURDF(ut.TestCase):
         child_pose      = parent_pose * joint_transform
 
         ks.apply_operation('create parent', CreateComplexObject(Path('parent'), KinematicLink('', parent_pose)))
-        ks.apply_operation('create child', CreateComplexObject(Path('child'),  KinematicLink('', se.eye(4))))
+        ks.apply_operation('create child', CreateComplexObject(Path('child'),  KinematicLink('', cm.eye(4))))
         self.assertTrue(ks.has_data('parent/pose'))
         self.assertTrue(ks.has_data('child/pose'))
 
@@ -81,7 +82,7 @@ class TestURDF(ut.TestCase):
         child_pose      = parent_pose * joint_transform * translation3(*(axis[:,:3] * position))
 
         ks.apply_operation('create parent', CreateComplexObject(Path('parent'), KinematicLink('', parent_pose)))
-        ks.apply_operation('create child', CreateComplexObject(Path('child'),  KinematicLink('', se.eye(4))))
+        ks.apply_operation('create child', CreateComplexObject(Path('child'),  KinematicLink('', cm.eye(4))))
         self.assertTrue(ks.has_data('parent/pose'))
         self.assertTrue(ks.has_data('child/pose'))
 
@@ -110,7 +111,7 @@ class TestURDF(ut.TestCase):
         child_pose      = parent_pose * joint_transform * rotation3_axis_angle(axis, position)
 
         ks.apply_operation('create parent', CreateComplexObject(Path('parent'), KinematicLink('', parent_pose)))
-        ks.apply_operation('create child', CreateComplexObject(Path('child'),  KinematicLink('', se.eye(4))))
+        ks.apply_operation('create child', CreateComplexObject(Path('child'),  KinematicLink('', cm.eye(4))))
         self.assertTrue(ks.has_data('parent/pose'))
         self.assertTrue(ks.has_data('child/pose'))
 
@@ -149,7 +150,7 @@ class TestURDF(ut.TestCase):
         child_pose_b    = parent_pose_b * joint_transform * translation3(*(axis[:,:3] * position))
 
         ks.apply_operation('create parent', CreateComplexObject(Path('parent'), KinematicLink('', parent_pose_a)))
-        ks.apply_operation('create child', CreateComplexObject(Path('child'),  KinematicLink('', se.eye(4))))
+        ks.apply_operation('create child', CreateComplexObject(Path('child'),  KinematicLink('', cm.eye(4))))
         self.assertTrue(ks.has_data('parent/pose'))
         self.assertTrue(ks.has_data('child/pose'))
 

@@ -1,7 +1,9 @@
 import betterpybullet as pb
 
+import kineverse.gradients.common_math as cm
+
 from kineverse.utils import res_pkg_path, real_quat_from_matrix
-from kineverse.gradients.gradient_math import GM, se
+from kineverse.gradients.gradient_math import GM
 
 # Currently objects created through Python might get deleted accidentally,
 # as bullet mostly uses raw pointers, thus not keeping references alive.
@@ -18,9 +20,10 @@ def track_shape(f):
 def matrix_to_transform(matrix):
     quat = real_quat_from_matrix(matrix)
     pos  = matrix[:3,3]
-    return pb.Transform(pb.Quaternion(*quat), pb.Vector3(*pos))
+    return pb.Transform(pb.Quaternion(quat[0], quat[1], quat[2], quat[3]), 
+                        pb.Vector3(pos[0], pos[1], pos[2]))
 
-def transform_to_matrix(transform, matrix_func=se.Matrix):
+def transform_to_matrix(transform, matrix_func=cm.Matrix):
     basis  = transform.basis
     origin = transform.origin
     col_0  = basis.get_col(0)
@@ -33,7 +36,7 @@ def transform_to_matrix(transform, matrix_func=se.Matrix):
 
 @track_shape
 def create_cube_shape(extents):
-    return pb.BoxShape(pb.Vector3(*[x * 0.5 for x in extents[:3]])) if type(extents) is not pb.Vector3 else pb.BoxShape(extents)
+    return pb.BoxShape(pb.Vector3(*[extents[x] * 0.5 for x in range(3)])) if type(extents) is not pb.Vector3 else pb.BoxShape(extents)
 
 @track_shape
 def create_cylinder_shape(diameter, height):

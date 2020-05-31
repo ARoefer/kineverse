@@ -3,9 +3,9 @@ import os
 import copy      as copy_module
 import importlib
 import math
+import kineverse.gradients.common_math as cm
 
 from collections                       import namedtuple
-from kineverse.gradients.gradient_math import se
 from kineverse.time_wrapper            import Time
 from kineverse.symengine_types         import symengine_types
 
@@ -57,24 +57,24 @@ def import_class(class_path):
 RPY = namedtuple('RPY', ['r', 'p', 'y'])
 
 def rot3_to_rpy(rot3, evaluate=False):
-    sy = se.sqrt(rot3[0,0] * rot3[0,0] + rot3[2,2] * rot3[2,2])
+    sy = cm.sqrt(rot3[0,0] * rot3[0,0] + rot3[2,2] * rot3[2,2])
 
     if sy >= 1e-6:
         if evaluate:
-            return RPY(se.atan2(rot3[2,1], rot3[2,2]).evalf(real=True), 
-                       se.atan2(-rot3[2,0], sy).evalf(real=True), 
-                       se.atan2(rot3[1,0], rot3[0,0]).evalf(real=True))
+            return RPY(cm.atan2(rot3[2,1], rot3[2,2]).evalf(real=True), 
+                       cm.atan2(-rot3[2,0], sy).evalf(real=True), 
+                       cm.atan2(rot3[1,0], rot3[0,0]).evalf(real=True))
         else:
-            return RPY(se.atan2(rot3[2,1], rot3[2,2]), 
-                       se.atan2(-rot3[2,0], sy), 
-                       se.atan2(rot3[1,0], rot3[0,0]))
+            return RPY(cm.atan2(rot3[2,1], rot3[2,2]), 
+                       cm.atan2(-rot3[2,0], sy), 
+                       cm.atan2(rot3[1,0], rot3[0,0]))
     else:
         if evaluate:
-            return RPY(se.atan2(-rot3[1,2], rot3[1,1]).evalf(real=True), 
-                       se.atan2(-rot3[2,0], sy).evalf(real=True), 0)
+            return RPY(cm.atan2(-rot3[1,2], rot3[1,1]).evalf(real=True), 
+                       cm.atan2(-rot3[2,0], sy).evalf(real=True), 0)
         else:
-            return RPY(se.atan2(-rot3[1,2], rot3[1,1]), 
-                       se.atan2(-rot3[2,0], sy), 0)
+            return RPY(cm.atan2(-rot3[1,2], rot3[1,1]), 
+                       cm.atan2(-rot3[2,0], sy), 0)
 
 
 def real_quat_from_matrix(frame):

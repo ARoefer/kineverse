@@ -1,3 +1,5 @@
+import kineverse.gradients.common_math as cm
+
 import urdf_parser_py.urdf as urdf
 
 from kineverse.gradients.gradient_math     import frame3_rpy,           \
@@ -5,10 +7,9 @@ from kineverse.gradients.gradient_math     import frame3_rpy,           \
                                                   matrix_wrapper,       \
                                                   rotation3_rpy,        \
                                                   rotation3_axis_angle, \
-                                                  se,                   \
                                                   translation3,         \
                                                   vector3
-from kineverse.gradients.diff_logic        import create_pos
+from kineverse.gradients.diff_logic        import Position
 from kineverse.operations.basic_operations import Operation,           \
                                                   CreateComplexObject, \
                                                   Path,                \
@@ -29,7 +30,7 @@ def urdf_origin_to_transform(origin):
         xyz = origin.xyz if origin.xyz is not None else [0.0,0.0,0.0]
         rpy = origin.rpy if origin.rpy is not None else [0.0,0.0,0.0]
         return translation3(*xyz) * rotation3_rpy(*rpy)
-    return se.eye(4)
+    return cm.eye(4)
 
 def urdf_axis_to_vector(axis):
     return vector3(*axis) if axis is not None else vector3(1.0,0.0,0.0)
@@ -278,7 +279,7 @@ def load_urdf(ks, prefix, urdf, reference_frame='world'):
         link_path = prefix + Path(['links', u_link.name])
         collision = None
         geometry  = None
-        inertial  = InertialData(link_path, se.eye(4))
+        inertial  = InertialData(link_path, cm.eye(4))
         if hasattr(u_link, 'collisions') and u_link.collisions is not None and len(u_link.collisions) > 0:
             collision = {}
             for x, c in enumerate(u_link.collisions):
@@ -328,7 +329,7 @@ def load_urdf(ks, prefix, urdf, reference_frame='world'):
                 offset     = u_joint.mimic.offset
                 position   = prefix + ('joints', u_joint.mimic.joint, 'position')
             else:
-                position   = create_pos((prefix + (u_joint.name, )).to_symbol())
+                position   = Position((prefix + (u_joint.name, )).to_symbol())
                 multiplier = None
                 offset     = None
 

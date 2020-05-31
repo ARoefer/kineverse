@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 import rospy
+import kineverse.gradients.common_math as cm
 
 from kineverse.gradients.gradient_math      import *
 from kineverse.model.geometry_model         import GeometryModel, \
@@ -37,8 +38,8 @@ if __name__ == '__main__':
     cube_goal  = point3(0.5, 0.5, 0)
     cube_width = 0.1
     eef_width  = 0.1
-    cube_geom  = Geometry('cube', se.eye(4), 'box',    vector3(cube_width, 1, 1))
-    eef_geom   = Geometry('eef',  se.eye(4), 'sphere', vector3(*[eef_width]*3))
+    cube_geom  = Geometry('cube', cm.eye(4), 'box',    vector3(cube_width, 1, 1))
+    eef_geom   = Geometry('eef',  cm.eye(4), 'sphere', vector3(*[eef_width]*3))
 
     cube_pos_x = Position('cube_x')
     cube_pos_y = Position('cube_y')

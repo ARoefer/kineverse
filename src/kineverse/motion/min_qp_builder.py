@@ -1,13 +1,14 @@
 import numpy  as np
 import pandas as pd
 
+import kineverse.gradients.common_math  as cm
 import kineverse.gradients.llvm_wrapper as llvm
 
 from kineverse.motion.qp_solver             import QPSolver, QPSolverException
 
 from kineverse.gradients.diff_logic         import get_symbol_type, get_int_symbol, Symbol
 from kineverse.gradients.gradient_container import GradientContainer as GC
-from kineverse.gradients.gradient_math      import se, extract_expr, wrap_expr
+from kineverse.gradients.gradient_math      import extract_expr, wrap_expr
 from kineverse.model.articulation_model     import Constraint, Path
 from kineverse.model.geometry_model         import CollisionSubworld, ContactHandler, obj_to_obj_infix
 from kineverse.visualization.bpb_visualizer import ROSBPBVisualizer
@@ -61,14 +62,14 @@ class MinimalQPBuilder(object):
         cv = [(k, ControlledValue(extract_expr(c.lower), extract_expr(c.upper), c.symbol, extract_expr(c.weight))) for k, c in controlled_values.items()]
 
         self.np_g = np.zeros(len(cv + sc))
-        self.H    = se.diag(*[extract_expr(c.weight) for _, c in cv + sc])
-        self.lb   = se.Matrix([c.lower if c.lower is not None else -default_bound for _, c in cv] + [-default_bound] * len(sc))
-        self.ub   = se.Matrix([c.upper if c.upper is not None else  default_bound for _, c in cv] + [default_bound] * len(sc))
-        self.lbA  = se.Matrix([c.lower if c.lower is not None else -default_bound for _, c in hc + sc])
-        self.ubA  = se.Matrix([c.upper if c.upper is not None else  default_bound for _, c in hc + sc])
+        self.H    = cm.diag(*[extract_expr(c.weight) for _, c in cv + sc])
+        self.lb   = cm.Matrix([c.lower if c.lower is not None else -default_bound for _, c in cv] + [-default_bound] * len(sc))
+        self.ub   = cm.Matrix([c.upper if c.upper is not None else  default_bound for _, c in cv] + [default_bound] * len(sc))
+        self.lbA  = cm.Matrix([c.lower if c.lower is not None else -default_bound for _, c in hc + sc])
+        self.ubA  = cm.Matrix([c.upper if c.upper is not None else  default_bound for _, c in hc + sc])
 
         M_cv      = [c.symbol for _, c in cv]
-        self.A    = se.Matrix([[c.expr[s] if s in c.expr else 0 for s in M_cv] for _, c in hc + sc]).row_join(se.zeros(len(hc), len(sc)).col_join(se.eye(len(sc))))
+        self.A    = cm.Matrix([[c.expr[s] if s in c.expr else 0 for s in M_cv] for _, c in hc + sc]).row_join(cm.zeros(len(hc), len(sc)).col_join(cm.eye(len(sc))))
 
         self.cv        = [c.symbol for _, c in cv]
         self.n_cv      = len(cv)
@@ -376,7 +377,7 @@ def generate_controlled_values(constraints, symbols, weights={}, bounds={}, defa
     to_remove  = set()
 
     for k, c in constraints.items():
-        if type(c.expr) is Symbol and c.expr in symbols and str(c.expr) not in controlled_values:
+        if cm.is_symbol(c.expr) and c.expr in symbols and str(c.expr) not in controlled_values:
             weight = default_weight if c.expr not in weights else weights[c.expr] 
             controlled_values[str(c.expr)] = ControlledValue(c.lower, c.upper, c.expr, weight)
             to_remove.add(k)
@@ -400,7 +401,7 @@ def find_constant_bounds(constraints):
     maxes = {}
 
     for c in constraints.values():
-        if type(c.expr) is Symbol:
+        if cm.is_symbol(c.expr):
             if not is_symbolic(c.lower):
                 mins[c.expr] = c.lower if c.expr not in mins  else max(mins[c.expr], c.lower)
 

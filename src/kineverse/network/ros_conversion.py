@@ -1,10 +1,9 @@
 import traceback
 import betterpybullet as pb
 
+import kineverse.gradients.gradient_math as gm
 import kineverse.json_wrapper as json
-import kineverse.type_sets as ts
 
-from kineverse.gradients.gradient_math  import se
 from kineverse.model.articulation_model import ApplyAt, ApplyBefore, ApplyAfter, RemoveOp, Constraint
 from kineverse.utils                    import import_class, real_quat_from_matrix
 
@@ -126,8 +125,8 @@ def encode_pose(data):
 
 def auto_encode(data):
     t = type(data)
-    if t in ts.matrix_types:
-        m = data if t in ts.symengine_matrix_types else data.to_sym_matrix()
+    if gm.is_matrix(m):
+        m = data if type(data) != GM else data.to_sym_matrix()
         if m.shape == (4, 4):
             return encode_pose(m)
         elif m.shape == (3, 3):
@@ -144,7 +143,7 @@ def auto_encode(data):
 
         s_t = type(data[0])
         if s_t is float or s_t is int or s_t is list or s_t is tuple:
-            return auto_encode(se.Matrix(data))
+            return auto_encode(gm.cm.Matrix(data))
         raise Exception('Can not encode list with inner type {}'.format(s_t))
     elif t == pb.Transform:
         out = PoseMsg()

@@ -1,5 +1,6 @@
 import traceback 
-import kineverse.json_wrapper       as json
+import kineverse.gradients.common_math as cm
+import kineverse.json_wrapper          as json
 
 from kineverse.model.data_tree      import DataTree
 from kineverse.model.history        import History, Timeline, StampedData, Chunk
@@ -85,11 +86,11 @@ class Constraint(object):
     def free_symbols(self):
         out = set()
         if hasattr(self.lower, 'free_symbols'):
-            out.update(self.lower.free_symbols)
+            out.update(cm.free_symbols(self.lower))
         if hasattr(self.upper, 'free_symbols'):
-            out.update(self.upper.free_symbols) 
+            out.update(cm.free_symbols(self.upper)) 
         if hasattr(self.expr, 'free_symbols'):
-            out.update(self.expr.free_symbols)
+            out.update(cm.free_symbols(self.expr))
         return out
 
     def __str__(self):
@@ -265,10 +266,10 @@ class ArticulationModel(object):
     def add_constraint(self, key, constraint):
         if key in self.constraints:
             c = self.constraints[key]
-            for s in c.expr.free_symbols:
+            for s in cm.free_symbols(c.expr):
                 self.constraint_symbol_map[s].remove(key)    
         self.constraints[key] = constraint
-        for s in constraint.expr.free_symbols:
+        for s in cm.free_symbols(constraint.expr):
             if s not in self.constraint_symbol_map:
                 self.constraint_symbol_map[s] = set()
             self.constraint_symbol_map[s].add(key)
@@ -284,7 +285,7 @@ class ArticulationModel(object):
 
     def remove_constraint(self, key):
         c = self.constraints[key]
-        for s in c.expr.free_symbols:
+        for s in cm.free_symbols(c.expr):
             self.constraint_symbol_map[s].remove(key)
         del self.constraints[key]
 

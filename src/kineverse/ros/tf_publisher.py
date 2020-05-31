@@ -2,11 +2,11 @@
 import rospy
 import numpy as np
 
+import kineverse.gradients.common_math  as cm
 import kineverse.gradients.llvm_wrapper as llvm
 
 from jinja2 import Environment, FileSystemLoader, select_autoescape, exceptions
 
-from kineverse.gradients.gradient_math      import se
 from kineverse.model.paths                  import Path, stopping_set, find_all
 from kineverse.model.frames                 import Frame, get_root_frames
 from kineverse.model.geometry_model         import RigidBody, EventModel
@@ -71,7 +71,7 @@ class ModelTFBroadcaster(object):
                 indices = sum(self.s_frame_map.values(), []) # set(sum([self.s_frame_map[s] for s in update if s in self.s_frame_map], []))
                 now     = Time.now()
                 self.visualizer.begin_draw_cycle('debug')
-                self.visualizer.draw_poses('debug', se.eye(4), 0.1, 0.01, [se.Matrix(self.np_poses[x * 4:x * 4 + 4].tolist()) for x in range(self.np_poses.shape[0]/4)])
+                self.visualizer.draw_poses('debug', cm.eye(4), 0.1, 0.01, [cm.Matrix(self.np_poses[x * 4:x * 4 + 4].tolist()) for x in range(self.np_poses.shape[0]/4)])
                 self.visualizer.render('debug')
 
                 published_frames = []
@@ -188,6 +188,6 @@ class NetworkedTFBroadcaster(ModelTFBroadcaster_URDF):
 
     def cb_state_update(self, msg):
         if self.use_js_msg:
-            self.update_state({se.Symbol(n): v for n, v in zip(msg.name, msg.position)})
+            self.update_state({cm.Symbol(n): v for n, v in zip(msg.name, msg.position)})
         else:
-            self.update_state({se.Symbol(n): v for n, v in zip(msg.symbol, msg.value)})
+            self.update_state({cm.Symbol(n): v for n, v in zip(msg.symbol, msg.value)})

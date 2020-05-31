@@ -1,6 +1,7 @@
 import re
 import numpy as np
 
+import kineverse.gradients.common_math  as cm
 import kineverse.gradients.llvm_wrapper as llvm
 
 from kineverse.gradients.diff_logic     import Position
@@ -70,7 +71,7 @@ class Geometry(Frame):
 
 
 class InertialData(Frame):
-    def __init__(self, parent_path, pose, mass=1, inertia_matrix=se.eye(3)):
+    def __init__(self, parent_path, pose, mass=1, inertia_matrix=cm.eye(3)):
         super(InertialData, self).__init__(parent_path, pose)
         if mass < 0:
             raise Exception('Mass can not be negative!')
@@ -265,7 +266,7 @@ class GeometryModel(EventModel):
                     if type(pose_expr) is GM:
                         symbol_set  = symbol_set.union(pose_expr.diff_symbols)
                         pose_expr   = pose_expr.to_sym_matrix()
-                    symbol_set |= pose_expr.free_symbols.union({get_diff_symbol(s) for s in pose_expr.free_symbols})
+                    symbol_set |= cm.free_symbols(pose_expr).union({DiffSymbol(s) for s in cm.free_symbols(pose_expr)})
                     self._co_pose_expr[str_k]  = pose_expr
                     self._co_symbol_map[str_k] = symbol_set
                     if len(symbol_set) > 0:
@@ -273,7 +274,7 @@ class GeometryModel(EventModel):
                             if s not in self._symbol_co_map:
                                 self._symbol_co_map[s] = set()
                             self._symbol_co_map[s].add(str_k)
-                        dynamic_poses[str_k] = np.array(pose_expr.subs({s: 0 for s in pose_expr.free_symbols}).tolist())
+                        dynamic_poses[str_k] = cm.to_numpy(cm.subs(pose_expr, {s: 0 for s in cm.free_symbols(pose_expr)}))
                     else:
                         #print('{} is static, setting its pose to:\n{}'.format(k, pose_expr))
                         static_objects.append(self._collision_objects[str_k])
@@ -316,16 +317,16 @@ class GeometryModel(EventModel):
             pose_matrix = pose_matrix.col_join(self._co_pose_expr[n])
 
         if static_state is not None:
-            pose_matrix = pose_matrix.subs({s: static_state[s] for s in pose_matrix.free_symbols.difference(symbols) if s in static_state})
+            pose_matrix = cm.subs(pose_matrix, {s: static_state[s] for s in cm.free_symbols(pose_matrix).difference(symbols) if s in static_state})
 
-        cythonized_matrix = llvm.speed_up(pose_matrix, pose_matrix.free_symbols)
+        cythonized_matrix = llvm.speed_up(pose_matrix, cm.free_symbols(pose_matrix))
 
         # world = pb.KineverseWorld()
         # filtered_objs = objs if not include_static else objs + self._static_objects
         # for obj in filtered_objs:
         #     world.add_collision_object(obj)
 
-        return CollisionSubworld(self.kw, obj_names, objs, pose_matrix.free_symbols, cythonized_matrix)
+        return CollisionSubworld(self.kw, obj_names, objs, cm.free_symbols(pose_matrix), cythonized_matrix)
 
 
 class CollisionSubworld(object):
