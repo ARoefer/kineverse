@@ -7,6 +7,8 @@ if SYM_MATH_ENGINE == 'CASADI':
 
     __SYMBOL_CACHE = {}
 
+    __SYMBOL_CACHE = {}
+
     def Symbol(data):
         if isinstance(data, str) or isinstance(data, unicode):
             if data not in __SYMBOL_CACHE:
@@ -48,6 +50,28 @@ if SYM_MATH_ENGINE == 'CASADI':
     asinh  = ca.asinh
     atan   = ca.atan
     atan2  = ca.atan2
+    atanh  = ca.atanh
+    cos    = ca.cos
+    cosh   = ca.cosh
+    exp    = ca.exp
+    log    = ca.log
+    sin    = ca.sin
+    sinh   = ca.sinh
+    sqrt   = ca.sqrt
+    tan    = ca.tan
+    tanh   = ca.tanh
+
+    eq     = ca.eq
+    le     = ca.le
+    ge     = ca.ge
+    lt     = ca.lt
+    gt     = ca.gt
+
+    acos   = ca.acos
+    acosh  = ca.acosh
+    asin   = ca.asin
+    asinh  = ca.asinh
+    atan   = ca.atan
     atanh  = ca.atanh
     cos    = ca.cos
     cosh   = ca.cosh
@@ -126,6 +150,7 @@ elif SYM_MATH_ENGINE == 'SYMENGINE':
 
     zeros  = se.zeros
     eye    = se.eye
+
     diag   = se.diag
     
     acos   = se.acos
