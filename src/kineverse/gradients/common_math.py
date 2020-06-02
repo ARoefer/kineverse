@@ -41,6 +41,10 @@ if SYM_MATH_ENGINE == 'CASADI':
                     m[i] = data[i]
             return m
 
+    ca.SX.__mul__ = ca.mtimes
+    ca.MX.__mul__ = ca.mtimes
+    ca.DM.__mul__ = ca.mtimes
+
     zeros  = ca.SX.zeros
     dot    = ca.dot
 
@@ -142,11 +146,12 @@ if SYM_MATH_ENGINE == 'CASADI':
         height = sum([m.shape[0] for m in matrices])
         out    = ca.SX(height, width)
         
-        start_idx = 0
+        start_row = 0
         for m in matrices:
-            for x in range(m.shape[0] * m.shape[1]):
-                out[start_idx + x] = m[x]
-            start_idx += m.shape[0] * m.shape[1]
+            for y in range(m.shape[0]):
+                for x in range(m.shape[1]):
+                    out[start_row + y, x] = m[y, x]
+            start_row += m.shape[0]
 
         return out
 
@@ -257,7 +262,7 @@ elif SYM_MATH_ENGINE == 'SYMENGINE':
         return se.sqrt(r)
 
     def dot(a, b):
-        return (a.T*b)[0]
+        return (a.T * b)[0]
 
     def to_numpy(matrix):
         return np.array([float(x) for x in matrix]).astype(float).reshape(matrix.shape)

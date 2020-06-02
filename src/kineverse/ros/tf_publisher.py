@@ -80,13 +80,13 @@ class ModelTFBroadcaster(object):
                     position = (pose[0, 3], pose[1, 3], pose[2, 3])
                     quat     = real_quat_from_matrix(pose)
                     self.broadcaster.sendTransform(position, quat, now, n, f.parent)
-                    published_frames.append((n, f.parent))
+                    # published_frames.append((n, f.parent))
 
                 for n, param in self.static_frames.items():
                     self.broadcaster.sendTransform(param[0], param[1], now, param[2], param[3])
                     # published_frames.append(n)
 
-            print('---\n{}'.format('\n'.join(['{} -> {}'.format(c, p) for c, p in sorted(published_frames)])))
+            # print('---\n{}'.format('\n'.join(['{} -> {}'.format(c, p) for c, p in sorted(published_frames)])))
 
 
 
