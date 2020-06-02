@@ -3,7 +3,6 @@ import rospy
 import numpy as np
 
 import kineverse.gradients.common_math  as cm
-import kineverse.gradients.llvm_wrapper as llvm
 
 from jinja2 import Environment, FileSystemLoader, select_autoescape, exceptions
 
@@ -66,9 +65,9 @@ class ModelTFBroadcaster(object):
     def publish_state(self):
         with self.lock:
             if self.np_poses is not None:
-                #print('---\n{}'.format('\n'.join(['{}: {}'.format(k, v) for k, v in sorted(self.state.items())])))
+                # print('---\n{}'.format('\n'.join(['{}: {}'.format(k, v) for k, v in sorted(self.state.items())])))
                 
-                indices = sum(self.s_frame_map.values(), []) # set(sum([self.s_frame_map[s] for s in update if s in self.s_frame_map], []))
+                indices = set(sum(self.s_frame_map.values(), [])) # set(sum([self.s_frame_map[s] for s in update if s in self.s_frame_map], []))
                 now     = Time.now()
                 self.visualizer.begin_draw_cycle('debug')
                 self.visualizer.draw_poses('debug', cm.eye(4), 0.1, 0.01, [cm.Matrix(self.np_poses[x * 4:x * 4 + 4].tolist()) for x in range(self.np_poses.shape[0]/4)])
@@ -81,13 +80,14 @@ class ModelTFBroadcaster(object):
                     position = (pose[0, 3], pose[1, 3], pose[2, 3])
                     quat     = real_quat_from_matrix(pose)
                     self.broadcaster.sendTransform(position, quat, now, n, f.parent)
-                    published_frames.append(n)
+                    published_frames.append((n, f.parent))
 
                 for n, param in self.static_frames.items():
                     self.broadcaster.sendTransform(param[0], param[1], now, param[2], param[3])
                     # published_frames.append(n)
 
-            # print('---\n{}'.format('\n'.join(published_frames)))
+            print('---\n{}'.format('\n'.join(['{} -> {}'.format(c, p) for c, p in sorted(published_frames)])))
+
 
 
     def set_model(self, model):
@@ -105,13 +105,13 @@ class ModelTFBroadcaster(object):
                 frames = find_all(self.model_path, model, Frame)
 
                 names, lframes = zip(*frames.items())
-                pose_matrix    = lframes[0].to_parent if not isinstance(lframes[0].to_parent, GM) else lframes[0].to_parent.to_sym_matrix()
-                for f in lframes[1:]:
-                    pose_matrix = pose_matrix.col_join(f.to_parent) if not isinstance(f.to_parent, GM) else pose_matrix.col_join(f.to_parent.to_sym_matrix())
-                
+                pose_matrix    = cm.vstack(*[f.to_parent if not isinstance(f.to_parent, GM) 
+                                                         else f.to_parent.to_sym_matrix() 
+                                                         for f in lframes])
+
                 self.frame_info = list(zip([str(n) for n in names], lframes))
 
-                self.cythonized_matrix = llvm.speed_up(pose_matrix, pose_matrix.free_symbols)
+                self.cythonized_matrix = cm.speed_up(pose_matrix, cm.free_symbols(pose_matrix))
 
                 self.state = {p: 0.0 for p in self.cythonized_matrix.str_params}
                 self._state_complete = True
@@ -120,8 +120,8 @@ class ModelTFBroadcaster(object):
 
                 now = Time.now()
                 for x, (n, f) in enumerate(self.frame_info):
-                    if len(f.to_parent.free_symbols) > 0:
-                        for s in f.to_parent.free_symbols:
+                    if cm.is_symbolic(f.to_parent):
+                        for s in cm.free_symbols(f.to_parent):
                             if s not in self.s_frame_map:
                                 self.s_frame_map[s] = []
                             self.s_frame_map[s].append(x)

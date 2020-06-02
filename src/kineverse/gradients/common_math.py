@@ -5,7 +5,7 @@ if SYM_MATH_ENGINE == 'CASADI':
     import casadi as ca
     import numpy  as np
 
-    __SYMBOL_CACHE = {}
+    print('New instance of __SYMBOL_CACHE created')
 
     __SYMBOL_CACHE = {}
 
@@ -91,7 +91,7 @@ if SYM_MATH_ENGINE == 'CASADI':
 
     def free_symbols(expression):
         if type(expression) == ca.SX or type(expression) == ca.MX:
-            return set(ca.symvar(expression))
+            return {Symbol(str(x)) for x in ca.symvar(expression)}
         if hasattr(expression, 'free_symbols'):
             return expression.free_symbols
         return set()
@@ -132,6 +132,77 @@ if SYM_MATH_ENGINE == 'CASADI':
 
     def is_symbolic(expr):
         return len(free_symbols(expr)) > 0
+
+    def vstack(*matrices):
+        width = matrices[0].shape[1]
+        for x, m in enumerate(matrices[1:]):
+            if width != m.shape[1]:
+                raise Exception('Matrices for stacking need to be of equal width. Initial width is {} but matrix {} has width {}'.format(width, x, m.shape[1]))
+
+        height = sum([m.shape[0] for m in matrices])
+        out    = ca.SX(height, width)
+        
+        start_idx = 0
+        for m in matrices:
+            for x in range(m.shape[0] * m.shape[1]):
+                out[start_idx + x] = m[x]
+            start_idx += m.shape[0] * m.shape[1]
+
+        return out
+
+    def hstack(*matrices):
+        height = matrices[0].shape[0]
+        for x, m in enumerate(matrices[1:]):
+            if height != m.shape[0]:
+                raise Exception('Matrices for stacking need to be of equal height. Initial height is {} but matrix {} has height {}'.format(height, x, m.shape[0]))
+
+        width = sum([m.shape[0] for m in matrices])
+        out   = ca.SX(height, width)
+        
+        start_col = 0
+        for m in matrices:
+            for x in range(m.shape[1]):
+                for y in range(m.shape[0]):
+                    out[y, start_col + x] = m[y, x]
+            start_col += m.shape[1]
+
+        return out
+
+    class CompiledFunction(object):
+        def __init__(self, str_params, fast_f, l, shape):
+            self.str_params = str_params
+            self.fast_f = fast_f
+            self.shape = shape
+            self.buf, self.f_eval = fast_f.buffer()
+            self.out = np.zeros(self.shape, order='F')
+            self.buf.set_res(0, memoryview(self.out))
+
+        def __call__(self, **kwargs):
+            filtered_args = [kwargs[k] for k in self.str_params]
+            return self.call2(filtered_args)
+
+        def call2(self, filtered_args):
+            """
+            :param filtered_args: parameter values in the same order as in self.str_params
+            :type filtered_args: list
+            :return:
+            """
+
+            filtered_args = np.array(filtered_args, dtype=float)
+            self.buf.set_arg(0, memoryview(filtered_args))
+            self.f_eval()
+            return self.out
+
+    def speed_up(function, parameters, backend=u'clang'):
+        params     = list(parameters)
+        str_params = [str(x) for x in params]
+        print(str_params)
+        try:
+            f = ca.Function('f', [Matrix(params)], [ca.densify(function)])
+        except:
+            f = ca.Function('f', [Matrix(params)], ca.densify(function))
+        return CompiledFunction(str_params, f, 0, function.shape)
+
 
 elif SYM_MATH_ENGINE == 'SYMENGINE':
     import symengine as se
@@ -217,6 +288,10 @@ elif SYM_MATH_ENGINE == 'SYMENGINE':
         for m in matrices[1:]:
             out = out.row_join(m)
         return out
+
+    from kineverse.gradients.llvm_wrapper import speed_up
+
+
 
 def vector3(x, y, z):
     return Matrix([x, y, z, 0])

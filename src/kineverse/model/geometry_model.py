@@ -59,10 +59,12 @@ class Geometry(Frame):
                           'mesh':      self.mesh})
 
     def to_parent_xyz_str(self):
-        return ' '.join([str(x) for x in pos_of(self.to_parent)[:3]])
+        pos = cm.pos_of(self.to_parent)
+        return ' '.join([str(pos[x]) for x in range(3)])
     
     def to_parent_rpy_str(self):
-        return ' '.join([str(x) for x in rot3_to_rpy(self.to_parent, True)])
+        rot = rot3_to_rpy(self.to_parent, True)
+        return ' '.join([str(rot[x]) for x in range(3)])
 
     def __eq__(self, other):
         if isinstance(other, Geometry):
@@ -312,14 +314,12 @@ class GeometryModel(EventModel):
             return CollisionSubworld(self.kw, [], [], set(), None)
 
         objs = [self._collision_objects[n] for n in obj_names]
-        pose_matrix = self._co_pose_expr[obj_names[0]]
-        for n in obj_names[1:]:
-            pose_matrix = pose_matrix.col_join(self._co_pose_expr[n])
+        pose_matrix = cm.vstack(*[self._co_pose_expr[n] for n in obj_names])
 
         if static_state is not None:
             pose_matrix = cm.subs(pose_matrix, {s: static_state[s] for s in cm.free_symbols(pose_matrix).difference(symbols) if s in static_state})
 
-        cythonized_matrix = llvm.speed_up(pose_matrix, cm.free_symbols(pose_matrix))
+        cythonized_matrix = cm.speed_up(pose_matrix, cm.free_symbols(pose_matrix))
 
         # world = pb.KineverseWorld()
         # filtered_objs = objs if not include_static else objs + self._static_objects
@@ -345,7 +345,7 @@ class CollisionSubworld(object):
     @profile
     def update_world(self, state):
         self._state.update({str(s): v for s, v in state.items() if s in self.free_symbols})
-        #print('Subworld state: \n {}'.format('\n '.join(['{:>20}: {}'.format(s, v) for s, v in self._state.items()])))
+        # print('Subworld state: \n {}'.format('\n '.join(['{:>20}: {}'.format(s, v) for s, v in self._state.items()])))
         if self.pose_generator != None:
             self.world.batch_set_transforms(self.collision_objects, self.pose_generator(**self._state))
             self._needs_update = True

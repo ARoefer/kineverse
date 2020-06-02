@@ -61,17 +61,17 @@ def rot3_to_rpy(rot3, evaluate=False):
 
     if sy >= 1e-6:
         if evaluate:
-            return RPY(cm.atan2(rot3[2,1], rot3[2,2]).evalf(real=True), 
-                       cm.atan2(-rot3[2,0], sy).evalf(real=True), 
-                       cm.atan2(rot3[1,0], rot3[0,0]).evalf(real=True))
+            return RPY(float(cm.atan2(rot3[2,1], rot3[2,2])), 
+                       float(cm.atan2(-rot3[2,0], sy)), 
+                       float(cm.atan2(rot3[1,0], rot3[0,0])))
         else:
             return RPY(cm.atan2(rot3[2,1], rot3[2,2]), 
                        cm.atan2(-rot3[2,0], sy), 
                        cm.atan2(rot3[1,0], rot3[0,0]))
     else:
         if evaluate:
-            return RPY(cm.atan2(-rot3[1,2], rot3[1,1]).evalf(real=True), 
-                       cm.atan2(-rot3[2,0], sy).evalf(real=True), 0)
+            return RPY(float(cm.atan2(-rot3[1,2], rot3[1,1])), 
+                       float(cm.atan2(-rot3[2,0], sy)), 0)
         else:
             return RPY(cm.atan2(-rot3[1,2], rot3[1,1]), 
                        cm.atan2(-rot3[2,0], sy), 0)

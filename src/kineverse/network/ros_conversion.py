@@ -125,8 +125,8 @@ def encode_pose(data):
 
 def auto_encode(data):
     t = type(data)
-    if gm.is_matrix(m):
-        m = data if type(data) != GM else data.to_sym_matrix()
+    if gm.is_matrix(data):
+        m = data if type(data) != gm.GM else data.to_sym_matrix()
         if m.shape == (4, 4):
             return encode_pose(m)
         elif m.shape == (3, 3):
