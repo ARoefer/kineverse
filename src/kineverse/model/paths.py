@@ -1,7 +1,7 @@
 import kineverse.gradients.common_math as cm
 
 from kineverse.json_wrapper            import JSONSerializable
-from kineverse.type_sets               import atomic_types, matrix_types, symengine_types
+from kineverse.type_sets               import atomic_types, matrix_types, symbolic_types
 
 class PathException(Exception):
     def __init__(self, path, obj):
@@ -17,7 +17,7 @@ class Path(tuple, JSONSerializable):
             if parts[0] == '':
                 return super(Path, cls).__new__(Path, parts[1:])
             return super(Path, cls).__new__(Path, parts)
-        elif type(path) == cm.Symbol:
+        elif cm.is_symbol(path):
             return super(Path, cls).__new__(Path, str(path).split('__'))
         return super(Path, cls).__new__(Path, path)
 
@@ -78,7 +78,7 @@ class Path(tuple, JSONSerializable):
             return None
 
 
-stopping_set = atomic_types.union(matrix_types).union(symengine_types)
+stopping_set = atomic_types.union(matrix_types).union(symbolic_types)
 
 def collect_paths(obj, root, depth=10000):
     t = type(obj)

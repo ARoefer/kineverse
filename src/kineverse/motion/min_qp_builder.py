@@ -6,7 +6,7 @@ import kineverse.gradients.llvm_wrapper as llvm
 
 from kineverse.motion.qp_solver             import QPSolver, QPSolverException
 
-from kineverse.gradients.diff_logic         import get_symbol_type, get_int_symbol, Symbol
+from kineverse.gradients.diff_logic         import get_symbol_type, IntSymbol, Symbol
 from kineverse.gradients.gradient_container import GradientContainer as GC
 from kineverse.gradients.gradient_math      import extract_expr, wrap_expr
 from kineverse.model.articulation_model     import Constraint, Path
@@ -69,7 +69,8 @@ class MinimalQPBuilder(object):
         self.ubA  = cm.Matrix([c.upper if c.upper is not None else  default_bound for _, c in hc + sc])
 
         M_cv      = [c.symbol for _, c in cv]
-        self.A    = cm.Matrix([[c.expr[s] if s in c.expr else 0 for s in M_cv] for _, c in hc + sc]).row_join(cm.zeros(len(hc), len(sc)).col_join(cm.eye(len(sc))))
+        self.A    = cm.hstack(cm.Matrix([[c.expr[s] if s in c.expr else 0 for s in M_cv] for _, c in hc + sc]), 
+                              cm.vstack(cm.zeros(len(hc), len(sc)), cm.eye(len(sc))))
 
         self.cv        = [c.symbol for _, c in cv]
         self.n_cv      = len(cv)
@@ -84,10 +85,11 @@ class MinimalQPBuilder(object):
         self._build_M()
 
     def _build_M(self):
-        self.big_ass_M = self.A.row_join(self.lbA).row_join(self.ubA).col_join(self.H.row_join(self.lb).row_join(self.ub))
+        self.big_ass_M = cm.vstack(cm.hstack(self.A, self.lbA, self.ubA), 
+                                   cm.hstack(self.H, self.lb,  self.ub))
 
-        self.free_symbols     = self.big_ass_M.free_symbols
-        self.cython_big_ass_M = llvm.speed_up(self.big_ass_M, self.free_symbols)
+        self.free_symbols     = cm.free_symbols(self.big_ass_M)
+        self.cython_big_ass_M = cm.speed_up(self.big_ass_M, self.free_symbols)
 
         self.shape1    = self.A.shape[0]
         self.shape2    = self.A.shape[1]
@@ -100,13 +102,13 @@ class MinimalQPBuilder(object):
     @profile
     def get_cmd(self, substitutions, nWSR=None, deltaT=None):
         substitutions = {str(s): v for s, v in substitutions.items()}
-        np_big_ass_M = self.cython_big_ass_M(**substitutions)
-        self.np_H   = np.array(np_big_ass_M[self.shape1:, :-2])
-        self.np_A   = np.array(np_big_ass_M[:self.shape1, :self.shape2])
-        self.np_lb  = np.array(np_big_ass_M[self.shape1:, -2])
-        self.np_ub  = np.array(np_big_ass_M[self.shape1:, -1])
-        self.np_lbA = np.array(np_big_ass_M[:self.shape1, -2])
-        self.np_ubA = np.array(np_big_ass_M[:self.shape1, -1])
+        np_big_ass_M = np.nan_to_num(self.cython_big_ass_M(**substitutions), copy=False)
+        self.np_H   = np_big_ass_M[self.shape1:, :-2].copy()
+        self.np_A   = np_big_ass_M[:self.shape1, :self.shape2].copy()
+        self.np_lb  = np_big_ass_M[self.shape1:, -2].copy()
+        self.np_ub  = np_big_ass_M[self.shape1:, -1].copy()
+        self.np_lbA = np_big_ass_M[:self.shape1, -2].copy()
+        self.np_ubA = np_big_ass_M[:self.shape1, -1].copy()
 
         self._post_process_matrices(deltaT)
 
@@ -114,8 +116,8 @@ class MinimalQPBuilder(object):
             dfH = pd.DataFrame(np.vstack((self.np_lb, self.np_ub, self.np_H.diagonal())), index=['lb', 'ub', 'weight'], columns=self.col_names)
             dfA = pd.DataFrame(np.hstack((self.np_lbA.reshape((self.shape1, 1)), 
                                           self.np_ubA.reshape((self.shape1, 1)), 
-                                          self.np_A[:, :-self.n_sc])), 
-                                          index=self.row_names, columns=['lbA', 'ubA'] + self.col_names[:self.n_cv])
+                                          self.np_A)),
+                                          index=self.row_names, columns=['lbA', 'ubA'] + self.col_names) # [:self.n_cv]
 
         try:
             xdot_full = self.qp_solver.solve(self.np_H, self.np_g, self.np_A, self.np_lb,  self.np_ub, 
@@ -132,7 +134,7 @@ class MinimalQPBuilder(object):
                                           self.np_A[:, :-self.n_sc])), 
                                           index=self.row_names, columns=['lbA', 'ubA'] + self.col_names[:self.n_cv])
 
-            print('INFEASIBLE CONFIGURATION!\nH:{}\nA:\n{}\nFull data written to "solver_crash_H.csv" and "solver_crash_A.csv"'.format(dfH, dfA))
+            print('INFEASIBLE CONFIGURATION!\nH:{}\nA:\n{}\nFull data written to "solver_crash_H.csv" and "solver_crash_A.csv"'.format(dfH.T, dfA))
             dfH.to_csv('solver_crash_H.csv')
             dfA.to_csv('solver_crash_A.csv')
             b_comp  = np.greater(self.np_lb,  self.np_ub)

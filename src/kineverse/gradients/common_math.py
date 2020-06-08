@@ -1,9 +1,11 @@
 SYM_MATH_ENGINE = 'CASADI'
+# SYM_MATH_ENGINE = 'SYMENGINE'
+
+import numpy  as np
 
 
 if SYM_MATH_ENGINE == 'CASADI':
     import casadi as ca
-    import numpy  as np
 
     print('New instance of __SYMBOL_CACHE created')
 
@@ -93,8 +95,15 @@ if SYM_MATH_ENGINE == 'CASADI':
     lt     = ca.lt
     gt     = ca.gt
 
+    matrix_types = {ca.SX, ca.DM, ca.MX}
+    math_types   = set(matrix_types)
+    symfloats    = set()
+
+    _CASADI_SUBS_CACHE = {}
+
+
     def free_symbols(expression):
-        if type(expression) == ca.SX or type(expression) == ca.MX:
+        if type(expression) in math_types:
             return {Symbol(str(x)) for x in ca.symvar(expression)}
         if hasattr(expression, 'free_symbols'):
             return expression.free_symbols
@@ -103,6 +112,10 @@ if SYM_MATH_ENGINE == 'CASADI':
     def subs(expr, subs_dict):
         if hasattr(expr, 'subs') and callable(expr.subs):
             return expr.subs(subs_dict)
+        if SYM_MATH_ENGINE == 'CASADI' and type(expr) in math_types:
+            if id(expr) not in _CASADI_SUBS_CACHE:
+                _CASADI_SUBS_CACHE[id(expr)] = speed_up(expr, free_symbols(expr))
+            return _CASADI_SUBS_CACHE[id(expr)](**{str(s): v for s, v in subs_dict.items()})
         return expr
 
     def cross(a, b):
@@ -119,17 +132,23 @@ if SYM_MATH_ENGINE == 'CASADI':
         return ca.SX.eye(n)
 
     def to_numpy(matrix):
-        return np.array(matrix.elements()).astype(float).reshape(matrix.shape)
+        if type(matrix) != np.ndarray:
+            return np.array(matrix.elements()).astype(float).reshape(matrix.shape).T
+        return matrix
 
     def diff(expression, symbol):
         return ca.jacobian(expression, Matrix(symbol))
 
     def eq_expr(a, b):
         # print(ca.simplify(a), ca.simplify(b))
-        return ca.is_equal(ca.simplify(a), ca.simplify(b), 10000)
+        if type(a) in math_types and type(b) in math_types:
+            return ca.is_equal(ca.simplify(a), ca.simplify(b), 10000)
+        return a == b
 
     def is_symbol(expr):
-        return expr.shape[0] * expr.shape[1] == 1
+        if type(expr) in math_types:
+            return expr.shape[0] * expr.shape[1] == 1 and expr.is_leaf() and len(free_symbols(expr)) > 0
+        return False
 
     def is_matrix(expr):
         return hasattr(expr, 'shape') and expr.shape[0] * expr.shape[1] > 1
@@ -161,7 +180,7 @@ if SYM_MATH_ENGINE == 'CASADI':
             if height != m.shape[0]:
                 raise Exception('Matrices for stacking need to be of equal height. Initial height is {} but matrix {} has height {}'.format(height, x, m.shape[0]))
 
-        width = sum([m.shape[0] for m in matrices])
+        width = sum([m.shape[1] for m in matrices])
         out   = ca.SX(height, width)
         
         start_col = 0
@@ -201,25 +220,24 @@ if SYM_MATH_ENGINE == 'CASADI':
     def speed_up(function, parameters, backend=u'clang'):
         params     = list(parameters)
         str_params = [str(x) for x in params]
-        print(str_params)
+        # print(str_params)
         try:
             f = ca.Function('f', [Matrix(params)], [ca.densify(function)])
         except:
             f = ca.Function('f', [Matrix(params)], ca.densify(function))
         return CompiledFunction(str_params, f, 0, function.shape)
 
-
 elif SYM_MATH_ENGINE == 'SYMENGINE':
     import symengine as se
 
-    symengine_matrix_types = set([se.DenseMatrix, 
-                                  se.ImmutableMatrix, 
-                                  se.ImmutableDenseMatrix, 
-                                  se.MatrixBase, 
-                                  se.MutableDenseMatrix])
+    matrix_types = set([se.DenseMatrix, 
+                        se.ImmutableMatrix, 
+                        se.ImmutableDenseMatrix, 
+                        se.MatrixBase, 
+                        se.MutableDenseMatrix])
 
-    symengine_types  = set([getattr(se.lib.symengine_wrapper, x) for x in dir(se.lib.symengine_wrapper) if type(getattr(se.lib.symengine_wrapper, x)) == type])
-    symengine_floats = {se.RealDouble, se.RealNumber}
+    math_types   = set([getattr(se.lib.symengine_wrapper, x) for x in dir(se.lib.symengine_wrapper) if type(getattr(se.lib.symengine_wrapper, x)) == type])
+    symfloats = {se.RealDouble, se.RealNumber}
 
     Symbol = se.Symbol
     Matrix = se.Matrix
@@ -245,9 +263,14 @@ elif SYM_MATH_ENGINE == 'SYMENGINE':
     tan    = se.tan
     tanh   = se.tanh
 
+    import math
+    atan2 = math.atan2
+
 
     def free_symbols(expression):
-        return expression.free_symbols
+        if hasattr(expression, 'free_symbols'):
+            return expression.free_symbols
+        return set()
 
     def subs(expr, subs_dict):
         if hasattr(expr, 'subs') and callable(expr.subs):
@@ -277,10 +300,10 @@ elif SYM_MATH_ENGINE == 'SYMENGINE':
         return type(expr) == se.Symbol
 
     def is_symbolic(expr):
-        return type(expr) in symengine_types and len(expr.free_symbols) > 0
+        return type(expr) in math_types and len(expr.free_symbols) > 0
 
     def is_matrix(expr):
-        return type(expr) in symengine_matrix_types
+        return type(expr) in matrix_types
 
     def vstack(*matrices):
         out = matrices[0]

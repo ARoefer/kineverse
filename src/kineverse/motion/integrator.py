@@ -1,5 +1,6 @@
 import rospy
-import numpy as np
+import numpy  as np
+import pandas as pd
 
 import kineverse.gradients.common_math  as cm
 import kineverse.gradients.llvm_wrapper as llvm
@@ -33,7 +34,7 @@ class CommandIntegrator(object):
             if integration_rules is not None:
                 # Only add custom rules which are fully defined given the set of state variables and the set of command variables
                 cv_set = set(self.qp_builder.cv).union({DT_SYM})
-                delta_set = {s: r.free_symbols.difference(self.qp_builder.free_symbols).difference(cv_set) for s, r in integration_rules.items()}
+                delta_set = {s: cm.free_symbols(r).difference(self.qp_builder.free_symbols).difference(cv_set) for s, r in integration_rules.items()}
                 for s, r in integration_rules.items():
                     if len(delta_set[s]) == 0:
                         self.integration_rules[s] = r
@@ -56,12 +57,13 @@ class CommandIntegrator(object):
     def restart(self, title='Integrator'):
         self.state    = self.start_state.copy()
         self.recorder = ValueRecorder(title, *sorted([str(s) for s in self.state.keys()]))
-        self.sym_recorder = SymbolicRecorder(title, **{k: extract_expr(s) for k, s in self.recorded_terms.items() if is_symbolic(s)})
+        self.sym_recorder = SymbolicRecorder(title, **{k: extract_expr(s) for k, s in self.recorded_terms.items() 
+                                                                                   if is_symbolic(s)})
         self.current_iteration = 0
 
         self._aligned_state_vars, rules = zip(*self.integration_rules.items())
         rule_matrix = cm.Matrix([rules])
-        self._cythonized_integration = llvm.speed_up(rule_matrix, rule_matrix.free_symbols)
+        self._cythonized_integration = cm.speed_up(rule_matrix, cm.free_symbols(rule_matrix))
 
 
     @profile
@@ -73,8 +75,8 @@ class CommandIntegrator(object):
             self.qp_builder.compute_queries(self.state)
 
         cmd_accu = np.zeros(self.qp_builder.n_cv)
-        for x in range(max_iterations):
-        # for x in tqdm(range(max_iterations), desc='Running "{}" for {} iterations'.format(self.recorder.title, max_iterations)):
+        # for x in range(max_iterations):
+        for x in tqdm(range(max_iterations), desc='Running "{}" for {} iterations'.format(self.recorder.title, max_iterations)):
             self.current_iteration = x
             if rospy.is_shutdown():
                 break

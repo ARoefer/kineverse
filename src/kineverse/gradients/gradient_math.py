@@ -13,6 +13,37 @@ from kineverse.symengine_types              import symengine_types, symengine_ma
 
 contrast = 1e10
 
+
+if cm.SYM_MATH_ENGINE == 'CASADI':
+
+    def op_wrapper(cls, name_o_op):
+        o_op = getattr(cls, '__{}__'.format(name_o_op))
+
+        def wrapped_op(self, other):
+            if type(other) in {GC, GM}:
+                return getattr(other, '__r{}__'.format(name_o_op))(self)
+            return o_op(self, other)
+
+        return wrapped_op
+    
+
+    cm.ca.SX.__add__ = op_wrapper(cm.ca.SX, 'add')
+    cm.ca.MX.__add__ = op_wrapper(cm.ca.MX, 'add')
+    cm.ca.DM.__add__ = op_wrapper(cm.ca.DM, 'add')
+
+    cm.ca.SX.__sub__ = op_wrapper(cm.ca.SX, 'sub')
+    cm.ca.MX.__sub__ = op_wrapper(cm.ca.MX, 'sub')
+    cm.ca.DM.__sub__ = op_wrapper(cm.ca.DM, 'sub')
+
+    cm.ca.SX.__mul__ = op_wrapper(cm.ca.SX, 'mul')
+    cm.ca.MX.__mul__ = op_wrapper(cm.ca.MX, 'mul')
+    cm.ca.DM.__mul__ = op_wrapper(cm.ca.DM, 'mul')
+
+    cm.ca.SX.__div__ = op_wrapper(cm.ca.SX, 'div')
+    cm.ca.MX.__div__ = op_wrapper(cm.ca.MX, 'div')
+    cm.ca.DM.__div__ = op_wrapper(cm.ca.DM, 'div')
+
+
 def is_symbolic(expr):
     return (type(expr) == GC and len(expr.free_symbols) > 0) or cm.is_symbolic(expr)
 
@@ -27,7 +58,7 @@ def wrap_expr(expr):
 
 def get_diff(term, symbols=None):
     """Returns the derivative of a passed expression."""
-    if type(term) == Symbol:
+    if cm.is_symbol(term):
         return DiffSymbol(term)
     
     if type(term) != GC:
@@ -39,10 +70,7 @@ def get_diff(term, symbols=None):
     else:
         return sum([s * term[s] for s in symbols if s in term])
 
-def subs(expr, subs_dict):
-    if hasattr(expr, 'subs') and callable(expr.subs):
-        return expr.subs(subs_dict)
-    return expr
+subs = cm.subs
 
 def sin(expr):
     """Sine"""
@@ -311,28 +339,34 @@ def merge_gradients_add(ga, gb):
 
 def greater_than(x, y):
     """Creates a gradient approximating the :math:`x > y` expression. The gradient contains a fake derivative mapping the velocity of x to True and the velocity of y to False."""
+    # if cm.SYM_MATH_ENGINE == 'SYMENGINE':
     fake_diffs = {}
-    if type(y) == Symbol:
+    if cm.is_symbol(y):
         fake_diffs[DiffSymbol(y)] = -1
     else:
-        if type(y) in symengine_types: 
+        if type(y) in cm.math_types: 
             y = GC(y)
         if type(y) == GC:
             y.do_full_diff()
             fake_diffs = {s: -g for s, g in y.gradients.items()}
-    if type(x) == Symbol:
+    if cm.is_symbol(x):
         x_d = DiffSymbol(x)
         if x_d in fake_diffs:
             fake_diffs[x_d] += 1
         else:
             fake_diffs[x_d] = 1
     else:
-        if type(x) in symengine_types: 
+        if type(x) in cm.math_types: 
             x = GC(x)
         if type(x) == GC:
             x.do_full_diff()
             fake_diffs = merge_gradients_add(fake_diffs, x.gradients)
     return GC(0.5 * tanh((x - y) * contrast) + 0.5, fake_diffs)
+
+    # if type(x) not in cm.math_types and type(y) not in cm.math_types:
+    #     return cm.ca.SX(x) > y
+    # return x > y
+
 
 def less_than(x, y):
     """Creates a gradient approximating the :math:`x < y` expression. The gradient contains a fake derivative mapping the velocity of x to False and the velocity of y to Ture."""
@@ -340,23 +374,24 @@ def less_than(x, y):
 
 def alg_and(x, y):
     """Creates a gradient approximating the :math:`x \wedge y` expression by means of multiplication. x, y are assumed to be boolean approximations resulting in 1 for truth and 0 for falsehood."""
-    if type(x) is GC:
-        if type(y) in symengine_types:
-            y = GC(y)
-
-        if type(y) is GC:
-            y.do_full_diff()
-            return GC(x.expr * y.expr, merge_gradients_add(x.gradients, y.gradients))
-        return GC(x.expr * y, x.gradients)
-    elif type(y) is GC:
-        if type(x) in symengine_types:
-            x = GC(x)
+    if cm.SYM_MATH_ENGINE == 'SYMENGINE':
         if type(x) is GC:
-            x.do_full_diff()
-            return GC(y.expr * y.expr, merge_gradients_add(x.gradients, y.gradients))
-        return GC(y.expr * x, y.gradients)
+            if type(y) in symengine_types:
+                y = GC(y)
 
+            if type(y) is GC:
+                y.do_full_diff()
+                return GC(x.expr * y.expr, merge_gradients_add(x.gradients, y.gradients))
+            return GC(x.expr * y, x.gradients)
+        elif type(y) is GC:
+            if type(x) in symengine_types:
+                x = GC(x)
+            if type(x) is GC:
+                x.do_full_diff()
+                return GC(y.expr * y.expr, merge_gradients_add(x.gradients, y.gradients))
+            return GC(y.expr * x, y.gradients)
     return x * y
+
 
 def alg_not(x):
     """inverts the truth value of boolean approximation by subtracting it from 1."""

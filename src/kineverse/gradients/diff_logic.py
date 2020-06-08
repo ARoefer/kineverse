@@ -28,7 +28,7 @@ def create_symbol(symbol, stype):
     :return: Typed version of symbol
     :rtype: symengine.Smybol
     """
-    if type(symbol) is not str and type(symbol) is not Symbol:
+    if type(symbol) is not str and not cm.is_symbol(symbol):
         symbol = symbol.to_symbol()
 
     if stype not in TYPE_SUFFIXES_INV:

@@ -3,6 +3,8 @@ import matplotlib.colors as matcolors
 import pandas            as pd
 import numpy             as np
 
+import kineverse.gradients.common_math as cm
+
 from collections import namedtuple
 from math import ceil, sqrt
 
@@ -20,7 +22,7 @@ def hsv_to_rgb(h, s, v):
 def print_return(f):
     def wrap(*args):
         out = f(*args)
-        print(out)
+        # print(out)
         return out
     return wrap
 
@@ -251,6 +253,9 @@ class ValueRecorder(object):
             self.data_lim[a] = (min(d), max(d))
 
     def plot(self, ax):
+        if len(self.data_lim) == 0:
+            return
+
         no_xticks = self.x_labels is not None and len(self.x_labels) == 0
 
         if len(self.data) > 0:
@@ -311,7 +316,13 @@ class SymbolicRecorder(ValueRecorder):
     def __init__(self, title, **kwargs):
         super(SymbolicRecorder, self).__init__(title, *kwargs.keys())
         self.symbols = kwargs
+        self._labels, self._expressions = zip(*self.symbols.items()) if len(self.symbols) > 0 else ([], [])
+
+        temp_matrix = cm.Matrix(self._expressions)
+        self._expr_matrix = cm.speed_up(temp_matrix, cm.free_symbols(temp_matrix))
 
     def log_symbols(self, subs_table):
-        for k, s in self.symbols.items():
-            self.log_data(k, s.subs(subs_table))
+        np_matrix = self._expr_matrix(**{str(s): v for s, v in subs_table.items()})
+
+        for k, v in zip(self._labels, np_matrix.flatten()):
+            self.log_data(k, v)

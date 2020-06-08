@@ -2,7 +2,6 @@ import kineverse.gradients.common_math as cm
 
 from kineverse.gradients.diff_logic import DiffSymbol, IntSymbol, Symbol
 from kineverse.json_serializable    import JSONSerializable
-from kineverse.symengine_types      import symengine_matrix_types
 
 
 class DerivativeException(Exception):
@@ -153,7 +152,7 @@ class GradientContainer(JSONSerializable):
                 else:
                     gradients[s] = d * self.expr
             return GradientContainer(self.expr * other.expr, gradients)
-        elif type(other) in symengine_matrix_types:
+        elif type(other) in cm.matrix_types:
             return GradientMatrix(other) * self
         return GradientContainer(self.expr * other, {s: d * other for s, d in self.gradients.items()})
 
@@ -168,13 +167,13 @@ class GradientContainer(JSONSerializable):
             self.free_diff_symbols |= other.free_diff_symbols
         else:
             self.expr += other
-            if hasattr(other, 'free_symbols'):
-                for f in other.free_symbols:
-                    if DiffSymbol(f) in self.gradients:
-                        self.gradients[DiffSymbol(f)] += cm.diff(self.expr, f)
-                    else:
-                        self.free_diff_symbols.add(DiffSymbol(f))
-        self.free_symbols = cm.free_self.expr, symbols if hasattr(self.expr, 'free_symbols') else set()
+            fs = cm.free_symbols(other)
+            for f in fs:
+                if DiffSymbol(f) in self.gradients:
+                    self.gradients[DiffSymbol(f)] += cm.diff(self.expr, f)
+                else:
+                    self.free_diff_symbols.add(DiffSymbol(f))
+        self.free_symbols = cm.free_symbols(self.expr)
         return self
 
     def __isub__(self, other):
@@ -188,13 +187,13 @@ class GradientContainer(JSONSerializable):
             self.free_diff_symbols |= other.free_diff_symbols
         else:
             self.expr -= other
-            if hasattr(other, 'free_symbols'):
-                for f in other.free_symbols:
-                    if DiffSymbol(f) in self.gradients:
-                        self.gradients[DiffSymbol(f)] -= cm.diff(self.expr, f)
-                    else:
-                        self.free_diff_symbols.add(DiffSymbol(f))
-        self.free_symbols = cm.free_self.expr, symbols if hasattr(self.expr, 'free_symbols') else set()
+            fs = cm.free_symbols(other)
+            for f in fs:
+                if DiffSymbol(f) in self.gradients:
+                    self.gradients[DiffSymbol(f)] -= cm.diff(self.expr, f)
+                else:
+                    self.free_diff_symbols.add(DiffSymbol(f))
+        self.free_symbols = cm.free_symbols(self.expr)
         return self
 
     def __imul__(self, other):
@@ -211,7 +210,7 @@ class GradientContainer(JSONSerializable):
             self.expr      = temp.expr
             self.gradients = temp.gradients
             self.free_diff_symbols = temp.free_diff_symbols
-        self.free_symbols = cm.free_self.expr, symbols if hasattr(self.expr, 'free_symbols') else set()
+        self.free_symbols = cm.free_symbols(self.expr)
         return self
 
     def __div__(self, other):
@@ -279,10 +278,6 @@ class GradientContainer(JSONSerializable):
 GC = GradientContainer
 
 
-def is_scalar(expr):
-    """Checks whether the passed expression is/resolves to a scalar type"""
-    return type(expr) == int or type(expr) == float or expr.is_Add or expr.is_AlgebraicNumber or expr.is_Atom or expr.is_Derivative or expr.is_Float or expr.is_Function or expr.is_Integer or expr.is_Mul or expr.is_Number or expr.is_Pow or expr.is_Rational or expr.is_Symbol or expr.is_finite or expr.is_integer or expr.is_number or expr.is_symbol
-
 def copy_nested_list(l):
     """Helper for creating copies of nested lists."""
     return [copy_nested_list(r) if type(r) is list else r.__copy__() for r in l]
@@ -348,7 +343,7 @@ class GradientMatrix(JSONSerializable):
                 self.expr   = [[x if type(x) == GC else GC(x) for x in r] for r in expr]
                 self._nrows = len(expr)
                 self._ncols = len(expr[0]) if self._nrows > 0 else 0
-        elif type(expr) in symengine_matrix_types:
+        elif type(expr) in cm.matrix_types:
             self.expr      = [[GC(x) for x in r] for r in expr.tolist()]
             self._nrows    = expr.nrows()
             self._ncols    = expr.ncols()
@@ -413,20 +408,20 @@ class GradientMatrix(JSONSerializable):
     def __add__(self, other):
         if type(other) == GradientMatrix:
             return GradientMatrix([[a + b for a, b in zip(self.expr[x], other.expr[x])] for x in range(len(self.expr))])
-        elif type(other) in symengine_matrix_types:
+        elif type(other) in cm.matrix_types:
             return self + GradientMatrix(other)
         else:
             return GradientMatrix([[x + other for x in r] for r in self.expr])
 
     def __rsub__(self, other):
-        if type(other) in symengine_matrix_types:
+        if type(other) in cm.matrix_types:
             return GradientMatrix(other) - self
 
 
     def __sub__(self, other):
         if type(other) == GradientMatrix:
             return GradientMatrix([[a - b for a, b in zip(self.expr[x], other.expr[x])] for x in range(len(self.expr))])
-        elif type(other) in symengine_matrix_types:
+        elif type(other) in cm.matrix_types:
             return self - GradientMatrix(other)
         else:
             return GradientMatrix([[x - other for x in r] for r in self.expr])
@@ -439,13 +434,13 @@ class GradientMatrix(JSONSerializable):
                     for y in range(other._nrows):
                         expr[z][x] += self.expr[z][y] * other.expr[y][x]
             return GradientMatrix(expr)
-        elif type(other) in symengine_matrix_types:
+        elif type(other) in cm.matrix_types:
             return self * GradientMatrix(other)
         return GradientMatrix([[g * other for g in r] for r in self.expr])
             #raise Exception('Operation {} * {} is undefined.'.format(type(self), type(other)))
 
     def __rmul__(self, other):
-        if type(other) in symengine_matrix_types:
+        if type(other) in cm.matrix_types:
             return GradientMatrix(other) * self
         return self.__mul__(other)
 

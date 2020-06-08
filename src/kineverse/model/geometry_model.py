@@ -277,10 +277,11 @@ class GeometryModel(EventModel):
                                 self._symbol_co_map[s] = set()
                             self._symbol_co_map[s].add(str_k)
                         dynamic_poses[str_k] = cm.to_numpy(cm.subs(pose_expr, {s: 0 for s in cm.free_symbols(pose_expr)}))
+                        # print('Evaluation of {} yields:\n{}'.format(pose_expr, dynamic_poses[str_k]))
                     else:
-                        #print('{} is static, setting its pose to:\n{}'.format(k, pose_expr))
+                        # print('{} is static, setting its pose to:\n{}'.format(k, pose_expr))
                         static_objects.append(self._collision_objects[str_k])
-                        static_poses.append(np.array(pose_expr.tolist()))
+                        static_poses.append(cm.to_numpy(pose_expr))
                 else:
                     self._process_link_removal(k)
         if len(static_objects) > 0:
@@ -355,13 +356,16 @@ class CollisionSubworld(object):
         if self._needs_update:
             self.world.perform_discrete_collision_detection()
             self._contacts = self.world.get_contacts()
+            self._needs_update = False
         return self._contacts
 
     @profile
     def closest_distances(self, query_batch):
         if self._needs_update:
             self.world.update_aabbs()
-            self.world.perform_discrete_collision_detection()
+            # Not 100% sure that the collision detection step is not necessary. Seems like it isn't.
+            # self.world.perform_discrete_collision_detection()
+            # self._needs_update = False
         return self.world.get_closest_batch(query_batch)
 
     def __eq__(self, other):
@@ -395,7 +399,9 @@ def generate_contact_model(actuated_point, actuated_symbols, contact_point, cont
     """
     distance     = dot(contact_normal, actuated_point - contact_point)
     in_contact   = less_than(distance, dist_threshold)
-    actuated_jac = vector3(*[get_diff(x, actuated_symbols) for x in actuated_point[:3]])
+    actuated_jac = vector3(get_diff(actuated_point[0], actuated_symbols),
+                           get_diff(actuated_point[1], actuated_symbols),
+                           get_diff(actuated_point[2], actuated_symbols))
 
     actuated_n   = dot(actuated_point, contact_normal)
     actuated_t   = actuated_point - actuated_n * contact_normal 
@@ -405,14 +411,21 @@ def generate_contact_model(actuated_point, actuated_symbols, contact_point, cont
 
     tangent_dist = norm(contact_t - actuated_t)
 
+    # print('distance:\n{}'.format(distance))
+    # print('impenetrability lb:\n{}'.format(-distance - alg_not(in_contact) * default_bound))
+
+    imp_lb = -distance - alg_not(in_contact) * default_bound
+
     out = {'direction_limit': Constraint(-default_bound, 0, dot(contact_point, contact_normal)),
-           'impenetrability': Constraint(-distance - alg_not(in_contact) * default_bound, default_bound, distance),
+           'impenetrability': Constraint(imp_lb, default_bound, distance),
            #'motion_alignment_tangent': Constraint(-alg_not(in_contact), alg_not(in_contact), tangent_dist),
            #'motion_alignment_normal': Constraint(-alg_not(in_contact), alg_not(in_contact), actuated_n - contact_n)
            }
 
     for s in affected_dof:
-        contact_jac = vector3(*[x.diff(s) for x in contact_point[:3]]) * get_diff(s)
+        contact_jac = vector3(cm.diff(contact_point[0], s),
+                              cm.diff(contact_point[1], s),
+                              cm.diff(contact_point[2], s)) * get_diff(s)
         #  out['motion_alignment_{}'.format(s)] = Constraint(-in_contact * default_bound, 0, dot(contact_normal, contact_jac))
         if set_inanimate:
             out['inanimate_{}'.format(s)] = Constraint(-in_contact * default_bound, in_contact * default_bound, s)

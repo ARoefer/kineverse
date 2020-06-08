@@ -1,7 +1,9 @@
 import re
 
+import kineverse.gradients.common_math as cm
+
 from kineverse.model.articulation_model import ArticulationModel
-from kineverse.model.paths           import Path, PathDict, PathSet
+from kineverse.model.paths              import Path, PathDict, PathSet
     
 def _dispatch_model_events(pdict, data, key, call_tracker=set()):
     for cb in pdict.value:
@@ -63,7 +65,7 @@ class EventModel(ArticulationModel):
 
     def set_data(self, key, value):
         key = Path(key) if type(key) == str else key
-        if not self.has_data(key) or value != self.get_data(key):
+        if not self.has_data(key) or not cm.eq_expr(value, self.get_data(key)):
             self._callback_batch.add(key)
         super(EventModel, self).set_data(key, value)
 
@@ -78,15 +80,15 @@ class EventModel(ArticulationModel):
             self._constraint_callback_batch[key] = set()
         
         if key in self.constraints:
-            for s in self.constraints[key].expr.free_symbols:
-                if s in self.constraint_callbacks and s not in constraint.expr.free_symbols:
+            for s in cm.free_symbols(self.constraints[key].expr):
+                if s in self.constraint_callbacks and s not in cm.free_symbols(constraint.expr):
                     for cb in self.constraint_callbacks[s]:
                         if cb not in self._constraint_discard_batch:
                             self._constraint_discard_batch[cb] = set()
                         self._constraint_discard_batch[cb].add(key)
 
         super(EventModel, self).add_constraint(key, constraint)
-        for s in constraint.expr.free_symbols:
+        for s in cm.free_symbols(constraint.expr):
             if s in self.constraint_callbacks:
                 self._constraint_callback_batch[key].update(self.constraint_callbacks[s])        
 
@@ -95,7 +97,7 @@ class EventModel(ArticulationModel):
             if key not in self._constraint_callback_batch:
                 self._constraint_callback_batch[key] = set()
 
-            for s in self.constraints[key].expr.free_symbols:
+            for s in cm.free_symbols(self.constraints[key].expr):
                 if s in self.constraint_callbacks:
                     self._constraint_callback_batch[key].update(self.constraint_callbacks[s])
         super(EventModel, self).remove_constraint(key)
