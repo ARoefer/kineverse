@@ -19,7 +19,7 @@ default_bound  = 1e9
 
 HardConstraint = Constraint
 
-PANDA_LOGGING  = False
+PANDA_LOGGING  = True
 
 class SoftConstraint(Constraint):
     def __init__(self, lower, upper, weight, expr):

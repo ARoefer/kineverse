@@ -40,7 +40,10 @@ if SYM_MATH_ENGINE == 'CASADI':
                         except:
                             m[i, j] = data[i, j]
                 else:
-                    m[i] = data[i]
+                    if isinstance(data[i], list) or isinstance(data[i], tuple):
+                        m[i] = data[i][0]
+                    else:
+                        m[i] = data[i]
             return m
 
     ca.SX.__mul__ = ca.mtimes
@@ -114,7 +117,8 @@ if SYM_MATH_ENGINE == 'CASADI':
             return expr.subs(subs_dict)
         if SYM_MATH_ENGINE == 'CASADI' and type(expr) in math_types:
             if id(expr) not in _CASADI_SUBS_CACHE:
-                _CASADI_SUBS_CACHE[id(expr)] = speed_up(expr, free_symbols(expr))
+                fn = speed_up(expr, free_symbols(expr))
+                _CASADI_SUBS_CACHE[id(expr)] = fn
             return _CASADI_SUBS_CACHE[id(expr)](**{str(s): v for s, v in subs_dict.items()})
         return expr
 
@@ -123,7 +127,16 @@ if SYM_MATH_ENGINE == 'CASADI':
 
     def norm(v):
         """Computes the L2 norm (sqrt of sum of squares) of the input iterable."""
-        return ca.norm_2(v)
+        # return ca.norm_2(v)
+        r = 0
+        if type(v) in matrix_types:
+            for x in v.elements():
+                r += x ** 2
+        else:
+            for x in v:
+                r += x ** 2
+        return ca.sqrt(r)
+
 
     def diag(*args):
         return ca.diag(args)
@@ -202,7 +215,7 @@ if SYM_MATH_ENGINE == 'CASADI':
             self.buf.set_res(0, memoryview(self.out))
 
         def __call__(self, **kwargs):
-            filtered_args = [kwargs[k] for k in self.str_params]
+            filtered_args = [float(kwargs[k]) for k in self.str_params]
             return self.call2(filtered_args)
 
         def call2(self, filtered_args):
@@ -230,11 +243,11 @@ if SYM_MATH_ENGINE == 'CASADI':
 elif SYM_MATH_ENGINE == 'SYMENGINE':
     import symengine as se
 
-    matrix_types = set([se.DenseMatrix, 
-                        se.ImmutableMatrix, 
-                        se.ImmutableDenseMatrix, 
-                        se.MatrixBase, 
-                        se.MutableDenseMatrix])
+    matrix_types = {se.DenseMatrix,
+                    se.ImmutableMatrix,
+                    se.ImmutableDenseMatrix,
+                    se.MatrixBase,
+                    se.MutableDenseMatrix}
 
     math_types   = set([getattr(se.lib.symengine_wrapper, x) for x in dir(se.lib.symengine_wrapper) if type(getattr(se.lib.symengine_wrapper, x)) == type])
     symfloats = {se.RealDouble, se.RealNumber}
@@ -359,10 +372,11 @@ def rot_of(frame):
     :return: 4x4 Matrix; sets the translation part of a frame to 0
     :rtype: Matrix
     """
-    frame[0,3] = 0
-    frame[1,3] = 0
-    frame[2,3] = 0
-    return frame
+    out = frame[:, :]
+    out[0,3] = 0
+    out[1,3] = 0
+    out[2,3] = 0
+    return out
 
 
 def trace(matrix):

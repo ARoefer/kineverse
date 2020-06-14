@@ -1,3 +1,4 @@
+import math
 import traceback
 import betterpybullet as pb
 
@@ -115,6 +116,9 @@ def encode_rotation(data):
     out.x = quat[0]
     out.y = quat[1]
     out.z = quat[2]
+    norm  = math.sqrt(sum([x**2 for x in quat]))
+    if abs(norm - 1.0) > 1e3:
+        raise Exception('Non-normalized quaternion')
     return out
 
 def encode_pose(data):
@@ -146,6 +150,10 @@ def auto_encode(data):
             return auto_encode(gm.cm.Matrix(data))
         raise Exception('Can not encode list with inner type {}'.format(s_t))
     elif t == pb.Transform:
+        norm  = math.sqrt(sum([x**2 for x in data.rotation]))
+        if abs(norm - 1.0) > 1e3:
+            raise Exception('Non-normalized quaternion')
+
         out = PoseMsg()
         out.position.x = data.origin.x
         out.position.y = data.origin.y
@@ -156,6 +164,10 @@ def auto_encode(data):
         out.orientation.w = data.rotation.w
         return out
     elif t == pb.Quaternion:
+        norm  = math.sqrt(sum([x**2 for x in data]))
+        if abs(norm - 1.0) > 1e3:
+            raise Exception('Non-normalized quaternion')
+
         out = QuaternionMsg()
         out.x = data.x
         out.y = data.y

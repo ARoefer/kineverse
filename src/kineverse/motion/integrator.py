@@ -75,8 +75,8 @@ class CommandIntegrator(object):
             self.qp_builder.compute_queries(self.state)
 
         cmd_accu = np.zeros(self.qp_builder.n_cv)
-        # for x in range(max_iterations):
-        for x in tqdm(range(max_iterations), desc='Running "{}" for {} iterations'.format(self.recorder.title, max_iterations)):
+        for x in range(max_iterations):
+        # for x in tqdm(range(max_iterations), desc='Running "{}" for {} iterations'.format(self.recorder.title, max_iterations)):
             self.current_iteration = x
             if rospy.is_shutdown():
                 break
@@ -91,7 +91,7 @@ class CommandIntegrator(object):
             cmd = self.qp_builder.get_cmd(self.state, deltaT=dt)
             cmd_accu = cmd_accu * 0.5 + self.qp_builder._cmd_log[-1] * dt
             if self.qp_builder.equilibrium_reached(self.equilibrium, -self.equilibrium):
-                #print('Equilibrium point reached after {} iterations'.format(x))
+                # print('Equilibrium point reached after {} iterations'.format(x))
                 return
 
             if np.abs(cmd_accu).max() <= self.equilibrium:

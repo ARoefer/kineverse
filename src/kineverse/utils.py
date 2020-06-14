@@ -104,7 +104,7 @@ def real_quat_from_matrix(frame):
         qx = (frame[0,2] + frame[2,0]) / S
         qy = (frame[1,2] + frame[2,1]) / S
         qz = 0.25 * S
-    return (qx, qy, qz, qw)
+    return (float(qx), float(qy), float(qz), float(qw))
 
 
 def copy(obj):
