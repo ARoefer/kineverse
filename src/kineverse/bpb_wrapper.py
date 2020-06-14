@@ -13,7 +13,7 @@ _collision_shapes = set()
 def track_shape(f):
     def wrapper(*args, **kwargs):
         out = f(*args, **kwargs)
-        _collision_shapes.add(out)
+        # _collision_shapes.add(out)
         return out
     return wrapper
 
@@ -66,7 +66,7 @@ def create_object(shape, transform=pb.Transform.identity()):
             transform = transform.to_sym_matrix()
         transform = matrix_to_transform(transform)
     out = pb.CollisionObject()
-    out.set_collision_shape(shape)
+    out.collision_shape = shape
     out.collision_flags = pb.CollisionObject.KinematicObject
     out.transform = transform
     return out
