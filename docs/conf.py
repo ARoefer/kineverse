@@ -12,7 +12,7 @@
 #
 import os
 import sys
-sys.path.insert(0, os.path.abspath('../kineverse'))
+sys.path.insert(0, os.path.abspath('..'))
 sys.path.extend(os.environ['PYTHONPATH'].split(':'))
 print(sys.path)
 # import sphinx_rtd_theme
@@ -20,12 +20,14 @@ print(sys.path)
 
 # -- Project information -----------------------------------------------------
 
-project = 'Kineverse'
-copyright = '2019, Adrian Röfer'
-author = 'Adrian Röfer'
+project = u'Kineverse'
+copyright = u'2020, Adrian Röfer'
+author = u'Adrian Röfer'
 
 
 # -- General configuration ---------------------------------------------------
+
+master_doc = 'index'
 
 # Add any Sphinx extension module names here, as strings. They can be
 # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom

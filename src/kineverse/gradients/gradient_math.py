@@ -1,3 +1,10 @@
+"""
+The gradient_math module implements common mathematical functions which are compatible
+with augemented gradients.
+Additionally, it provides constructors for 3d transformations.
+"""
+
+
 import kineverse.gradients.common_math as cm
 
 from kineverse.gradients.diff_logic         import Position, \
@@ -7,14 +14,19 @@ from kineverse.gradients.diff_logic         import Position, \
                                                    Snap, \
                                                    Symbol, \
                                                    DiffSymbol
-from kineverse.gradients.gradient_container import GradientContainer as GC
-from kineverse.gradients.gradient_matrix    import GradientMatrix    as GM
+from kineverse.gradients.gradient_container import GradientContainer as GC, \
+                                                   GradientMatrix    as GM 
 from kineverse.symengine_types              import symengine_types, symengine_matrix_types
 
 contrast = 1e10
 
 
 if cm.SYM_MATH_ENGINE == 'CASADI':
+    """In this section, the infix operators for casadi are overridden
+    to provide compatibility with augmented gradients. Unlike symengine's
+    operators, casadi seems to default to __getitem__ when it is lhs in an
+    infix operation.
+    """
 
     def op_wrapper(cls, name_o_op):
         o_op = getattr(cls, '__{}__'.format(name_o_op))
@@ -45,15 +57,19 @@ if cm.SYM_MATH_ENGINE == 'CASADI':
 
 
 def is_symbolic(expr):
+    """Is the given expression symbolic?"""
     return (type(expr) == GC and len(expr.free_symbols) > 0) or cm.is_symbolic(expr)
 
 def is_matrix(expr):
+    """Is the given expression a matrix?"""
     return type(expr) == GM or cm.is_matrix(expr)
 
 def extract_expr(expr):
+    """Extract the expression, if given object is an augmented gradient."""
     return expr if type(expr) != GC else expr.expr
 
 def wrap_expr(expr):
+    """Wrap the expression in an augmented gradient, if it is not one already."""
     return expr if type(expr) == GC else GC(expr)
 
 def get_diff(term, symbols=None):
@@ -177,20 +193,20 @@ def is_gradient(m_list):
     return max([type(x) == GC if type(x) != list and type(x) != tuple else is_gradient(x) for x in m_list])
 
 def matrix_wrapper(m_list):
-    """Converts a nested input list to a GradientMatrix or smyengine.Matrix, depending on whether GradientContainers are in the input."""
+    """Converts a nested input list to a GradientMatrix or Matrix, depending on whether GradientContainers are in the input."""
     if is_gradient(m_list):
         return GM(m_list)
     return cm.Matrix(m_list)
 
 
 def point3(x, y, z):
-    """Creates a 3d point for homogenous transformations."""
+    """Creates a 3d point for homogeneous transformations."""
     a  = [x, y, z]
     mf = GM if max([type(v) == GC for v in a]) else cm.Matrix
     return mf([x, y, z, 1])
 
 def vector3(x, y, z):
-    """Creates a 3d vector for homogenous transformations."""
+    """Creates a 3d vector for homogeneous transformations."""
     a  = [x, y, z]
     mf = GM if max([type(v) == GC for v in a]) else cm.Matrix
     return mf([x, y, z, 0])
@@ -203,7 +219,7 @@ norm = cm.norm
 dot  = cm.dot
 
 def cross(u, v):
-    """Computes the cross product between two vecotrs."""
+    """Computes the cross product between two vectors."""
     return matrix_wrapper([u[1] * v[2] - u[2] * v[1],
                            u[2] * v[0] - u[0] * v[2],
                            u[0] * v[1] - u[1] * v[0], 0])
@@ -318,16 +334,9 @@ def inverse_frame(frame):
     inv[:3, 3] = -inv[:3, :3] * frame[:3, 3]
     return inv
 
-def wrap_matrix_mul(a, b):
-    if type(a) == GC or type(b) == GC:
-        if type(a) in symengine_matrix_types:
-            return GM(a) * b
-        elif type(b) in symengine_matrix_types:
-            return GM(b) * a
-    return a * b
-
-
 def merge_gradients_add(ga, gb):
+    """Helper function that merges two gradients by adding them,
+    without adding the main expressions."""
     out = ga.copy()
     for s, g in gb.items():
         if s in out:
@@ -369,7 +378,7 @@ def greater_than(x, y):
 
 
 def less_than(x, y):
-    """Creates a gradient approximating the :math:`x < y` expression. The gradient contains a fake derivative mapping the velocity of x to False and the velocity of y to Ture."""
+    """Creates a gradient approximating the :math:`x < y` expression. The gradient contains a fake derivative mapping the velocity of x to False and the velocity of y to True."""
     return greater_than(y, x)
 
 def alg_and(x, y):

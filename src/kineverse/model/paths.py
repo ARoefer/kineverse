@@ -1,3 +1,7 @@
+"""
+The paths module provides the implementation of paths that are used to identify model parts.
+"""
+
 import kineverse.gradients.common_math as cm
 
 from kineverse.json_wrapper            import JSONSerializable
@@ -81,6 +85,7 @@ class Path(tuple, JSONSerializable):
 stopping_set = atomic_types.union(matrix_types).union(symbolic_types)
 
 def collect_paths(obj, root, depth=10000):
+    """Collect all paths under a given object until a given depth."""
     t = type(obj)
     out = {root}
     if depth > 0 and t not in stopping_set:
@@ -97,6 +102,7 @@ def collect_paths(obj, root, depth=10000):
     return out
 
 def find_all(path, model, target_type):
+    """Returns all data of a given type stored under an model."""
     if isinstance(model, target_type):
         return {path: model}
 
@@ -116,6 +122,7 @@ def find_all(path, model, target_type):
     return out
 
 def find_common_root(paths):
+    """Finds the longest common prefix of a set of paths."""
     out = Path([])
     if len(paths) > 0:
         idx = 0 

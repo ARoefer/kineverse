@@ -7,7 +7,6 @@ from multiprocessing import RLock
 import kineverse.network.names as stdn 
 
 from kineverse.model.paths             import Path, PathDict, collect_paths
-from kineverse.model.tardis_wrapper    import TARDIS
 from kineverse.model.event_model       import EventModel
 from kineverse.model.articulation_model   import ApplyAt, ApplyBefore, ApplyAfter, RemoveOp
 from kineverse.model.history           import Timeline, StampedData
@@ -41,7 +40,7 @@ from kineverse.srv import LoadModelResponse       as LoadModelResponseMsg
 # Server without any ROS attachements for testing
 class ModelServer_NoROS(object):
     def __init__(self, model_type=None, *args):
-        self.km = model_type(*args) if model_type is not None else EventModel() #TARDIS(model_type, *args) if model_type is not None else TARDIS(EventModel, *args)
+        self.km = model_type(*args) if model_type is not None else EventModel()
 
         self._changed_set = {}
         self._changed_constraints = set()

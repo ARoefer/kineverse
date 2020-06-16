@@ -1,3 +1,12 @@
+"""
+The common_math module abstracts away from the specific symbolic engine used by Kineverse.
+Currently, Symengine and Casadi are supported. The engine can be selected using
+the SYM_MATH_ENGINE variable.
+
+The module also contains some functions related to homogeneous transformations,
+which should probably be moved.
+"""
+
 SYM_MATH_ENGINE = 'CASADI'
 # SYM_MATH_ENGINE = 'SYMENGINE'
 

@@ -1,3 +1,9 @@
+"""
+The gradient_container module implements the GradientContainer, a realization of
+Kineverse's augmented gradient concept. It also implements GradientMatrix to handle
+matrices storing augmented gradients.
+"""
+
 import kineverse.gradients.common_math as cm
 
 from kineverse.gradients.diff_logic import DiffSymbol, IntSymbol, Symbol
@@ -31,9 +37,15 @@ class GradientContainer(JSONSerializable):
 
     @property
     def diff_symbols(self):
+        """Returns the set of symbols for which a gradient can be provided."""
         return self.free_diff_symbols.union(set(self.gradients.keys()))
 
     def diff(self, x):
+        """Provides the differentiation of the main term w.r.t. the given Symbol.
+        :param x: Symbol w.r.t.w. to differentiate.
+        :type  x: Symbol.
+        :return: Derivative expression, or 0
+        """
         xdot = DiffSymbol(x)
         if xdot in self.diff_symbols:
             return self[xdot]
@@ -57,9 +69,10 @@ class GradientContainer(JSONSerializable):
         return GradientContainer(self.expr, {k: g for k, g in self.gradients.items()})
 
     def subs(self, subs):
-        """Substitutes variables for other expressions. 
+        """Substitutes variables for other expressions.
+        NOTE: THIS DOES NOT WORK WITH CASADI, unless the replacements are floats.
 
-        :param subs: Dictionary of substitutions. Mapping: symengine.Symbol -> Expression
+        :param subs: Dictionary of substitutions. Mapping: Symbol -> Expression
         :type  subs: dict
         :return: Gradient resulting from substitution
         :rtype: GradientContainer
@@ -72,7 +85,7 @@ class GradientContainer(JSONSerializable):
         """Checks whether a derivative expression can be derived for the given symbol.
 
         :param symbol: Symbol to compute derivative for
-        :type  symbol: symengine.Symbol
+        :type  symbol: Symbol
         :rtype: bool
         """
         return symbol in self.gradients or symbol in self.free_diff_symbols
@@ -81,7 +94,7 @@ class GradientContainer(JSONSerializable):
         """Computes the derivative for a given symbol.
 
         :param symbol: Symbol to compute derivative for
-        :type  symbol: symengine.Symbol
+        :type  symbol: Symbol
         :return: Derivative expression for symbol
         :rtype:  Expression
         :raises: DerivativeException
@@ -100,7 +113,7 @@ class GradientContainer(JSONSerializable):
         """Adds custom derivative for given symbol.
 
         :param symbol: Symbol to add derivative for
-        :type  symbol: symbol.Symbol
+        :type  symbol: Symbol
         :param   expr: Derivative expression for symbol
         :type    expr: Expression
         """
@@ -305,10 +318,10 @@ def collect_free_symbols(l):
     """Helper function sacking all 'free_symbols' sets from objects in a list, if they exist."""
     out = set()
     for x in l:
-        if hasattr(x, 'free_symbols'):
-            out |= x.free_symbols
-        elif type(x) == list:
+        if type(x) == list:
             out |= collect_free_symbols(x)
+        else:
+            out |= cm.free_symbols(x)
     return out
 
 def collect_diff_symbols(l):
@@ -353,6 +366,7 @@ class GradientMatrix(JSONSerializable):
 
     @property
     def diff_symbols(self):
+        """Returns the set of symbols for which a gradient can be provided."""
         return collect_diff_symbols(self.expr)
 
     def _json_data(self, json_dict):

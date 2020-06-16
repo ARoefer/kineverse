@@ -1,3 +1,10 @@
+"""
+The articulation_model module contains the basic implementation of articulation
+models in Kineverse.
+The basic model provides data storage and access, query functionality for constraints,
+and operational model building which includes merging of models.
+"""
+
 import traceback 
 import kineverse.gradients.common_math as cm
 import kineverse.json_wrapper          as json
@@ -12,6 +19,9 @@ from kineverse.json_serializable    import JSONSerializable
 Tag = str
 
 class ApplicationInstruction(JSONSerializable):
+    """General data type for serializing the application of
+    and operation to a model.
+    """
     @type_check(Operation, Tag)
     def __init__(self, op, tag):
         self.op  = op
@@ -23,10 +33,14 @@ class ApplicationInstruction(JSONSerializable):
 
 
 class ApplyAt(ApplicationInstruction):
+    """Operation applied at the end of the history, or at
+    the same tag.
+    """
     def __init__(self, op, tag):
         super(ApplyAt, self).__init__(op, tag)
 
 class ApplyBefore(ApplicationInstruction):
+    """Operation is applied immediately before a reference tag."""
     def __init__(self, op, tag, before):
         super(ApplyBefore, self).__init__(op, tag)
         self.ref_tag = before
@@ -37,6 +51,7 @@ class ApplyBefore(ApplicationInstruction):
 
 
 class ApplyAfter(ApplicationInstruction):
+    """Operation is applied immediately after a reference tag."""
     def __init__(self, op, tag, after):
         super(ApplyAfter, self).__init__(op, tag)
         self.ref_tag = after
@@ -47,6 +62,7 @@ class ApplyAfter(ApplicationInstruction):
 
 
 class RemoveOp(ApplicationInstruction):
+    """Operation with given tag is removed."""
     def __init__(self, tag):
         super(RemoveOp, self).__init__(None, tag)
 
@@ -74,9 +90,12 @@ class TaggedIOOperation(StampedData):
 
 
 class OperationException(Exception):
+    """Exception thrown when something goes wrong with an operation."""
     pass
 
 class Constraint(object):
+    """Kineverse constraint consisting of a lower bound, an upper bound,
+    and a constrained expression."""
     def __init__(self, lower, upper, expr):
         self.lower = lower
         self.upper = upper
@@ -84,14 +103,8 @@ class Constraint(object):
 
     @property
     def free_symbols(self):
-        out = set()
-        if hasattr(self.lower, 'free_symbols'):
-            out.update(cm.free_symbols(self.lower))
-        if hasattr(self.upper, 'free_symbols'):
-            out.update(cm.free_symbols(self.upper)) 
-        if hasattr(self.expr, 'free_symbols'):
-            out.update(cm.free_symbols(self.expr))
-        return out
+        """Returns the union of free symbols of all three constraint components."""
+        return cm.free_symbols(self.lower) | cm.free_symbols(self.upper) | cm.free_symbols(self.expr)
 
     def __str__(self):
         s_low  = str(self.lower) if not hasattr(self.lower, 'latex') else self.lower.latex()
@@ -100,12 +113,16 @@ class Constraint(object):
         return '{}\n  >= {}\n  <= {}'.format(s_expr, s_low, s_upp)
 
     def __eq__(self, other):
+        """Checks equivalence to other constraint. This is an iffy test with casadi."""
         if isinstance(other, Constraint):
-            return self.lower == other.lower and self.upper == other.upper and self.expr == other.expr
+            return cm.eq_expr(self.lower, other.lower) and \
+                   cm.eq_expr(self.upper, other.upper) and \
+                   cm.eq_expr(self.expr, other.expr)
         return False
 
 
 class ArticulationModel(object):
+    """Base articulation model implementation."""
     def __init__(self):
         self.data_tree         = DataTree()
         self.operation_history = History()
@@ -118,6 +135,12 @@ class ArticulationModel(object):
 
     @profile
     def save_to_file(self, f, subpath=Path('')):
+        """Saves the current model to a JSON file, by serializing
+        the history of operations.
+
+        :param f: File object
+        :param subpath: Path of the model to serialize. By default the entire model is saved.
+        """
         self.clean_structure()
         if len(subpath) != 0:
             json.dump([{'op' : top.op, 'tag' : top.tag} for top in self.get_history_of(subpath)], f)
@@ -127,6 +150,10 @@ class ArticulationModel(object):
 
     @profile
     def load_from_file(self, f): #, clear_model=False):
+        """Loads a model form a given file by decoding and applying
+        the stored operations. 
+        This will merge models, if operations have the same tags.
+        """
         self.clean_structure()
         instructions = json.load(f)
         for x, d in enumerate(instructions):
@@ -148,6 +175,14 @@ class ArticulationModel(object):
     @profile
     @type_check(Tag, Operation)
     def apply_operation(self, tag, op):
+        """Apply a single operation to the model. Operation is added at 
+        the end, or replaces an operation with the same tag.
+
+        :param tag: Tag to apply the operation with. If tag is already taken, the existing operation is replaced.
+        :type  tag: Tag
+        :param  op: Operation to apply.
+        :type   op: Operation
+        """
         time = self.timeline_tags[tag] if tag in self.timeline_tags else self.operation_history.get_time_stamp()
         self.clean_structure(time)
 
@@ -173,6 +208,16 @@ class ArticulationModel(object):
     @profile
     @type_check(Tag, Tag, Operation)
     def apply_operation_before(self, tag, before_tag, op):
+        """Apply a single operation to the model. Operation is added immediately
+        before the reference tag. An exception is thrown if the given tag already exists.
+
+        :param tag: Tag to apply the operation with. Exception is thrown if the tag already exists.
+        :type  tag: Tag
+        :param before_tag: Tag before which the operation is applied. Exception is thrown if this tag does not exist.
+        :type  before_tag: Tag
+        :param  op: Operation to apply.
+        :type   op: Operation
+        """
         if before_tag not in self.timeline_tags:
             raise Exception('History does not contain a timestamp for tag "{}"'.format(before_tag))
         if tag in self.timeline_tags:
@@ -191,6 +236,16 @@ class ArticulationModel(object):
     @profile
     @type_check(Tag, Tag, Operation)
     def apply_operation_after(self, tag, after_tag, op):
+        """Apply a single operation to the model. Operation is added immediately
+        after the reference tag. An exception is thrown if the given tag already exists.
+
+        :param tag: Tag to apply the operation with. Exception is thrown if the tag already exists.
+        :type  tag: Tag
+        :param after_tag: Tag after which the operation is applied. Exception is thrown if this tag does not exist.
+        :type  after_tag: Tag
+        :param  op: Operation to apply.
+        :type   op: Operation
+        """
         if after_tag not in self.timeline_tags:
             raise Exception('History does not contain a timestamp for tag "{}"'.format(after_tag))
         if tag in self.timeline_tags:    
@@ -209,6 +264,9 @@ class ArticulationModel(object):
     @profile
     @type_check(Tag)
     def remove_operation(self, tag):
+        """Removes the operation with the given tag.
+        An exception is raise, if the tag is not defined, or removing the operation would break the structure of the history.
+        """
         if tag not in self.timeline_tags:
             raise Exception('Tag "{}" not found in time line.'.format(tag))
         chunk = self.operation_history.get_chunk(self.timeline_tags[tag])
@@ -222,12 +280,20 @@ class ArticulationModel(object):
     @profile
     @type_check(Tag)
     def get_operation(self, tag):
+        """Returns the operation for a given tag. Raises an exception if the operation
+        does not exist.
+        """
         if tag not in self.timeline_tags:
             raise Exception('Tag "{}" not found in time line.'.format(tag))
         return self.operation_history.get_chunk(self.timeline_tags[tag]).operation
 
     @profile
     def clean_structure(self, until=2e9):
+        """Executes all 'dirty' operations until a given time stamp.
+        This rebuilds the model after modifications to the history.
+        NOTE: The model should be cleaned fully, BEFORE new modifications are made, 
+        DO NOT mix modifications and model cleaning.
+        """
         while len(self.operation_history.dirty_chunks) > 0 and self.operation_history.dirty_chunks[0].stamp <= until:
             chunk = self.operation_history.dirty_chunks[0]
             if self._touched_stamp > chunk.stamp:
@@ -240,30 +306,59 @@ class ArticulationModel(object):
 
     @profile
     def has_data(self, key):
+        """Is the given path contained in the model?
+        
+        :param key: Path to check for.
+        :type  key: str, Path
+        """
         if type(key) == str:
             key = Path(key)
         return key in self.data_tree
 
     @profile
     def get_data(self, key):
+        """Returns the data identified by the given path.
+        
+        :param key: Path to check for.
+        :type  key: str, Path
+        """
         if type(key) == str:
             key = Path(key)
         return self.data_tree[key]
 
     @profile
     def set_data(self, key, value):
+        """Stores data under the given path.
+        Note: Except for the last bit, the entire path must already exist.
+        
+        :param key: Path to insert at.
+        :type  key: str, Path
+        :param value: Data to insert.
+        """
         if type(key) == str:
             key = Path(key)
         self.data_tree[key] = value
 
     @profile
     def remove_data(self, key):
+        """Removes the data stored under the given path.
+        
+        :param key: Path to remove.
+        :type  key: str, Path
+        """
         if type(key) == str:
             key = Path(key)
         self.data_tree.remove_data(key)
 
     @profile
     def add_constraint(self, key, constraint):
+        """Adds a constraint or replaces one with the same identifier.
+
+        :param key: Identifier of the constraint.
+        :type  key: str
+        :param constraint: Constraint to add.
+        :type  constraint: Constraint
+        """
         if key in self.constraints:
             c = self.constraints[key]
             for s in cm.free_symbols(c.expr):
@@ -275,15 +370,19 @@ class ArticulationModel(object):
             self.constraint_symbol_map[s].add(key)
 
     def has_constraint(self, key):
+        """Does a constraint with the given identifier exist?"""
         return key in self.constraints
 
     def get_constraint(self, key):
+        """Return a constraint with a given identifier."""
         return self.constraints[key]
 
     def list_constraints(self):
+        """Return a list of all known constraint identifiers."""
         return sorted(self.constraints.keys())
 
     def remove_constraint(self, key):
+        """Remove a constraint by its identifier."""
         c = self.constraints[key]
         for s in cm.free_symbols(c.expr):
             self.constraint_symbol_map[s].remove(key)
@@ -291,6 +390,12 @@ class ArticulationModel(object):
 
     @profile
     def get_constraints_by_symbols(self, symbol_set):
+        """Return a dictionary of constraints that affect the symbols from a given set.
+
+        :param symbol_set: Set of symbols out of which a constraint needs to affect at least one.
+        :type  symbol_set: {Symbol}
+        :return: Dictionary str -> Constraint
+        """
         out = {}
         for s in symbol_set:
             if s in self.constraint_symbol_map:
@@ -298,31 +403,37 @@ class ArticulationModel(object):
         return out
 
     def get_constant_constraints(self, symbol):
+        """Return a dictionary of constraints with constant bounds that affect the given symbol.
+
+        :param symbol_set: Set of symbols out of which a constraint needs to affect at least one.
+        :type  symbol_set: {Symbol}
+        :return: Dictionary str -> Constraint
+        """
         out = {}
         if symbol in self.constraint_symbol_map:
             for k in self.constraint_symbol_map[symbol]:
                 c = self.constraints[k]
-                if not is_symbolic(c.lower) and not is_symbolic(c.upper) and c.expr == symbol:
+                if not is_symbolic(c.lower) and not is_symbolic(c.upper) and cm.eq_expr(c.expr, symbol):
                     out[k] = c
         return out
 
     def has_tag(self, tag):
+        """Is the given tag defined in the timeline."""
         return tag in self.timeline_tags
 
     def get_tag_stamp(self, tag):
+        """Returns stamp associated with a given tag. Exception raised if tag does not exist."""
         if tag not in self.timeline_tags:
             raise Exception('Tag "{}" is unknown.'.format(tag))
         return self.timeline_tags[tag]
 
-    def get_tagged_operation(self, tag):
-        stamp = self.get_tag_stamp(tag)
-        return self.operation_history.get_chunk(tag).operation
-
     def get_history_of(self, *paths):
+        """Returns the history of a given number of a given set of paths."""
         inv_tags = {s: t for t, s in self.timeline_tags.items()}
         return [TaggedOperation(c.stamp, inv_tags[c.stamp], c.operation) for c in self.operation_history.get_history_of(*paths)]
 
     def get_data_chain(self):
+        """Returns a list of all operations with their full model dependencies and modifications."""
         inv_tags = {s: t for t, s in self.timeline_tags.items()}
         return [TaggedIOOperation(c.stamp, inv_tags[c.stamp], c.operation) for c in self.operation_history]
 
@@ -358,6 +469,9 @@ class ArticulationModel(object):
 
     @profile
     def apply_instructions(self, instructions):
+        """Applies a list of instructions to the model. 
+        Is used to replay actions on a remote model.
+        """
         mods     = Timeline()
         nodes    = {}
         new_ops  = []

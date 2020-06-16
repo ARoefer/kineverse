@@ -1,3 +1,7 @@
+"""
+The history module provides the implementation of the operation history and dependency determination.
+"""
+
 from sortedcontainers import SortedList, SortedSet
 
 from kineverse.model.paths import Path

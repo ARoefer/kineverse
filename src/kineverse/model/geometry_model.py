@@ -1,4 +1,7 @@
-import re
+"""
+The geometry_model module provides a third articulation model that is derived from the EventModel.
+This model recognizes the insertion of rigid bodies and builds up a collision scene in the background.
+"""
 import numpy as np
 
 import kineverse.gradients.common_math  as cm
@@ -23,6 +26,9 @@ from kineverse.utils                    import rot3_to_rpy
 
 
 class KinematicJoint(JSONSerializable):
+    """A representation of a joint. Used to identify the connectedness
+    of two objects.
+    """
     def __init__(self, jtype, parent, child):
         self.type     = jtype
         self.parent   = parent
@@ -45,6 +51,7 @@ class KinematicJoint(JSONSerializable):
 
 
 class Geometry(Frame):
+    """Representation of all geometry."""
     def __init__(self, parent_path, pose, geom_type, scale=None, mesh=None):
         super(Geometry, self).__init__(parent_path, pose)
         self.type  = geom_type
@@ -73,6 +80,7 @@ class Geometry(Frame):
 
 
 class InertialData(Frame):
+    """Unused."""
     def __init__(self, parent_path, pose, mass=1, inertia_matrix=cm.eye(3)):
         super(InertialData, self).__init__(parent_path, pose)
         if mass < 0:
@@ -94,6 +102,8 @@ class InertialData(Frame):
 
 
 class RigidBody(Frame):
+    """Representation of a rigid body in the URDF-sense. Consists of visual and collision geometry.
+    """
     def __init__(self, parent_path, pose, to_parent=None, geometry=None, collision=None, inertial=None):
         super(RigidBody, self).__init__(parent_path, pose, to_parent)
         self.geometry  = geometry
@@ -118,6 +128,7 @@ class RigidBody(Frame):
 
 
 class ArticulatedObject(JSONSerializable):
+    """An articulated object is a collection of rigid bodies and joints."""
     def __init__(self, name):
         self.name   = name
         self.links  = {}
@@ -153,6 +164,7 @@ obj_to_obj_infix  = 'UND'
 obj_to_world_prefix = 'distance_obj_to_world'
 
 def create_distance_symbol(obj_path, other_path=None):
+    """Helper to create symbols that identify geometry queries."""
     return '{}{}{}{}'.format(obj_to_obj_prefix, str(obj_path), obj_to_obj_infix, str(other_path)) if other_path is not None else '{}{}'.format(obj_to_world_prefix, str(obj_path))
 
 
@@ -171,6 +183,7 @@ class GeometryModel(EventModel):
         self._static_objects = []
 
     def _process_body_insertion(self, key, link):
+        """Creates a rigid body for the given link, if it has collision geometry."""
         if link.collision is not None and str(key) not in self._collision_objects:
             shape = create_compound_shape()
             for c in link.collision.values():
@@ -198,6 +211,7 @@ class GeometryModel(EventModel):
 
 
     def _process_joint_insertion(self, key, joint):
+        """Sets the joint's child and parent object to ignore each other in collision."""
         if joint.parent in self._collision_objects and joint.child in self._collision_objects:
             parent = self._collision_objects[joint.parent]
             child  = self._collision_objects[joint.parent]
@@ -209,6 +223,7 @@ class GeometryModel(EventModel):
                     self._process_joint_removal(joint)
 
     def _process_link_removal(self, key):
+        """Removes a collision object from the collision world."""
         body = self._collision_objects[str(key)]
         self.kw.remove_collision_object(body)
         for s in self._co_symbol_map[str(key)]:
@@ -217,6 +232,7 @@ class GeometryModel(EventModel):
         del self._collision_objects[str(key)]
 
     def _process_joint_removal(self, joint):
+        """Removes the collision ignore-flag of a joint's child and parent."""
         if joint.parent in self._collision_objects and joint.child in self._collision_objects:
             parent = self._collision_objects[joint.parent]
             child  = self._collision_objects[joint.parent]
@@ -253,6 +269,7 @@ class GeometryModel(EventModel):
         super(GeometryModel, self).remove_data(key)
 
     def dispatch_events(self):
+        """Extension of dispatch_events. Collects the FK expressions of all collision objects."""
         static_objects = []
         static_poses   = []
         dynamic_poses  = {}
@@ -302,9 +319,18 @@ class GeometryModel(EventModel):
         return out
 
     def get_active_geometry_raw(self, symbols):
+        """Returns the collision objects whose FK-expressions are affected by the given symbol set."""
         return {k: self._collision_objects[k] for k in set(sum([list(self._symbol_co_map[s]) for s in symbols if s in self._symbol_co_map], []))}
 
     def get_active_geometry(self, symbols, static_state=None, include_static=True):
+        """Creates a so-called CollisionSubworld, which is a wrapped collision world which is focused on
+        the objects affected by the given symbol set, and static objects.
+
+        :param symbols: Symbols that affect the FK-expressions of the world.
+        :param static_state: Substitution map to apply to the FK-expressions. (Does not work in casadi)
+        :param include_static: Should static geometry be included?
+        :return: CollisionSubworld
+        """
         coll_obj_keys = set()
         for s in symbols:
             if s in self._symbol_co_map:
@@ -331,6 +357,7 @@ class GeometryModel(EventModel):
 
 
 class CollisionSubworld(object):
+    """A wrapper around the bpb collision world which is focused on a subset of objects."""
     def __init__(self, world, names, collision_objects, free_symbols, pose_generator):
         self.world = world
         self.names = names
@@ -345,6 +372,7 @@ class CollisionSubworld(object):
 
     @profile
     def update_world(self, state):
+        """Update the objects' poses with a Substitution map."""
         self._state.update({str(s): v for s, v in state.items() if s in self.free_symbols})
         # print('Subworld state: \n {}'.format('\n '.join(['{:>20}: {}'.format(s, v) for s, v in self._state.items()])))
         if self.pose_generator != None:
@@ -353,6 +381,7 @@ class CollisionSubworld(object):
 
     @property
     def contacts(self):
+        """Return a list of all current contacts."""
         if self._needs_update:
             pb.perform_discrete_collision_detection()
             self._contacts = self.world.get_contacts()
@@ -361,6 +390,11 @@ class CollisionSubworld(object):
 
     @profile
     def closest_distances(self, query_batch):
+        """Return all closest distances, given a query.
+
+        :param query_batch: Dictionary {Object: Max distance}
+        :return: {Object: [ClosestPair]}
+        """
         if self._needs_update:
             self.world.update_aabbs()
             # Not 100% sure that the collision detection step is not necessary. Seems like it isn't.
@@ -375,6 +409,9 @@ class CollisionSubworld(object):
 
 
 def contact_geometry(pose_a, pose_b, path_a, path_b):
+    """Generates a standard contact model, given two object pose expressions
+    and object paths.
+    """
     cont = ContactSymbolContainer(path_a, path_b)
     normal = vector3(cont.normal_x, cont.normal_y, cont.normal_z)
     point_a = pose_a * point3(cont.on_a_x, cont.on_a_y, cont.on_a_z)
@@ -382,14 +419,21 @@ def contact_geometry(pose_a, pose_b, path_a, path_b):
     return point_a, point_b, normal
 
 def closest_distance(pose_a, pose_b, path_a, path_b):
+    """Generates a closest distance expression, given two object pose expressions
+    and object paths.
+    """
     point_a, point_b, _ = contact_geometry(pose_a, pose_b, path_a, path_b)
     return norm(point_a - point_b)
 
 def closest_distance_constraint(obj_a_pose, obj_b_pose, obj_a_path, obj_b_path, margin=0):
+    """Generates an impenetrability constraint, given two object poses, paths, and a margin.
+    """
     dist = closest_distance(obj_a_pose, obj_b_pose, obj_a_path, obj_b_path)
     return Constraint(margin - dist, 1000, dist)
 
 def contact_constraint(obj_a_pose, obj_b_pose, obj_a_path, obj_b_path):
+    """Generates a contact constraint, given two object poses, paths.
+    """
     dist = closest_distance(obj_a_pose, obj_b_pose, obj_a_path, obj_b_path)
     return Constraint(-dist, -dist, dist)
 
@@ -434,6 +478,9 @@ def generate_contact_model(actuated_point, actuated_symbols, contact_point, cont
 
 
 class ContactSymbolContainer(object):
+    """Generates a symbolic contact model consisting of a point on object A,
+    one on B, and a normal from B to A.
+    """
     def __init__(self, path_obj, path_other=0):
         contact_name = ('contact',) + path_obj + (obj_to_obj_infix,) + path_other
         self.on_a_x = Position((contact_name + ('onA', 'x')).to_symbol())
@@ -448,7 +495,9 @@ class ContactSymbolContainer(object):
 
     def __eq__(self, other):
         if isinstance(other, ContactSymbolContainer):
-            return self.on_a_x == other.on_a_x and self.on_a_y == other.on_a_y and self.on_a_z == other.on_a_z and self.on_b_x == other.on_b_x and self.on_b_y == other.on_b_y and self.on_b_z == other.on_b_z and self.normal_x == other.normal_x and self.normal_y == other.normal_y and self.normal_z == other.normal_z
+            return cm.eq_expr(self.on_a_x, other.on_a_x) and cm.eq_expr(self.on_a_y, other.on_a_y) and cm.eq_expr(self.on_a_z, other.on_a_z) and \
+                   cm.eq_expr(self.on_b_x, other.on_b_x) and cm.eq_expr(self.on_b_y, other.on_b_y) and cm.eq_expr(self.on_b_z, other.on_b_z) and \
+                   cm.eq_expr(self.normal_x, other.normal_x) and cm.eq_expr(self.normal_y, other.normal_y) and cm.eq_expr(self.normal_z, other.normal_z)
         return False
 
 
@@ -457,6 +506,9 @@ pb_far_away_vector = pb.Vector3(1e8,1e8,-1e8)
 pb_default_normal  = pb.Vector3(0,0,1)
 
 class ContactHandler(object):
+    """Helper to process the results from a contact query.
+    Can differentiate between named and anonymous contacts.
+    """
     def __init__(self, object_path):
         self.obj_path = object_path
         self.state    = {}

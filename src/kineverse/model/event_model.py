@@ -1,3 +1,7 @@
+"""
+The event_model module implements an extension of the ArticulationModel class.
+This extended model can raise events when it is modified.
+"""
 import re
 
 import kineverse.gradients.common_math as cm
@@ -6,6 +10,7 @@ from kineverse.model.articulation_model import ArticulationModel
 from kineverse.model.paths              import Path, PathDict, PathSet
     
 def _dispatch_model_events(pdict, data, key, call_tracker=set()):
+    """Helper function to distribute event throughout the model."""
     for cb in pdict.value:
         if cb not in call_tracker:
             cb(data)
@@ -108,6 +113,13 @@ class EventModel(ArticulationModel):
 
 
     def register_on_operation_changed(self, pattern, callback):
+        """Register a listener to be called when an operation is applied.
+
+        :param pattern: Regex patter the op-tag is checked against.
+        :type  pattern: re
+        :param callback: Function to call.
+        :type  callback: f(Tag, Operation) -> None
+        """
         if self.__in_dispatch_mode:
             self.__callback_additions.append((pattern, callback))
         else:
@@ -122,6 +134,7 @@ class EventModel(ArticulationModel):
 
 
     def deregister_on_operation_changed(self, callback):
+        """Remove an operation listener callback."""
         if self.__in_dispatch_mode:
             self.__callback_removals.append(('o', callback))
         else:
@@ -132,6 +145,13 @@ class EventModel(ArticulationModel):
 
 
     def register_on_model_changed(self, path, callback):
+        """Register a listener that is activated when the data prefixed by the given path changes.
+
+        :param path: Path prefix to listen to.
+        :type  path: str, Path
+        :param callback: Function to call on change.
+        :type  callback: f(data) -> None
+        """
         if type(path) is str:
             path = Path(path)
 
@@ -148,6 +168,7 @@ class EventModel(ArticulationModel):
 
 
     def deregister_on_model_changed(self, callback):
+        """Remove model change listener."""
         if self.__in_dispatch_mode:
             self.__callback_removals.append(('m', callback))
         else:
@@ -158,6 +179,14 @@ class EventModel(ArticulationModel):
 
 
     def register_on_constraints_changed(self, symbols, callback):
+        """Register a callback that is called when a constraint affecting a symbol-set
+        is added, changed, or removed.
+
+        :param symbols: Symbol set the constraint needs to affect
+        :type  symbols: {Symbol}
+        :param callback: Function to call on change.
+        :tyoe  callback: f(constraint_identifier, constraint)
+        """
         if self.__in_dispatch_mode:
             self.__callback_additions.append((symbols, callback))
         else:
@@ -172,6 +201,7 @@ class EventModel(ArticulationModel):
 
 
     def deregister_on_constraints_changed(self, callback):
+        """Remove a constraint listener."""
         if self.__in_dispatch_mode:
             self.__callback_removals.append(('c', callback))
         else:
@@ -182,6 +212,9 @@ class EventModel(ArticulationModel):
 
 
     def dispatch_events(self):
+        """Dispatches all events that were collected since the last dispatch.
+        Should be called after clean_structure().
+        """
         self.__in_dispatch_mode = True
 
         # Model Updates

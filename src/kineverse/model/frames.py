@@ -1,9 +1,16 @@
+"""
+The frames module provides a basic implementation of the concept of 3d frames and transformations.
+"""
+
 import kineverse.gradients.common_math as cm
 
 from kineverse.model.paths             import Path
 from kineverse.json_wrapper            import JSONSerializable
 
 class Frame(JSONSerializable):
+    """Frame that stores the path to its parent, its world transform and its local transform.
+    NOTE: The path is stored as str, this is a requirement from the way operations work.
+    """
     def __init__(self, parent_path, pose=None, to_parent=None):
         self.parent    = parent_path
         self.pose      = pose if pose is not None else cm.eye(4)
@@ -29,6 +36,7 @@ class Frame(JSONSerializable):
 
 
 class Transform(JSONSerializable):
+    """A relative transform between two frames."""
     def __init__(self, from_frame, to_frame, pose):
         self.from_frame = from_frame
         self.to_frame   = to_frame
@@ -54,6 +62,7 @@ class Transform(JSONSerializable):
 
 
 def get_root_frames(frame_dict):
+    """Given a dictionary of frames, identifies the roots of the kinematic chains."""
     if len(frame_dict) > 0:
         if type(frame_dict.keys()[0]) == str:
             return {k: f for k, f in frame_dict.items() if f.parent not in frame_dict}

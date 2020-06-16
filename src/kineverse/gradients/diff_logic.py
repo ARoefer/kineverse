@@ -1,3 +1,7 @@
+"""
+The diff_logic module implements Kineverse's typed symbol system.
+"""
+
 import kineverse.gradients.common_math as cm
 
 TYPE_UNKNOWN  = 0
@@ -22,7 +26,7 @@ def create_symbol(symbol, stype):
     """Adds proper type suffix to the given symbol.
 
     :param symbol: Symbol to be typed
-    :type  symbol: str, symengine.Symbol
+    :type  symbol: str, Symbol
     :param  stype: Enum type to assign to symbol
     :type   stype: int
     :return: Typed version of symbol
@@ -39,9 +43,9 @@ def Position(symbol):
     """Shorthand for creating a position symbol.
 
     :param symbol: Symbol to be typed
-    :type  symbol: str, symengine.Symbol
+    :type  symbol: str, Symbol
     :return: Symbol typed as position
-    :rtype: symengine.Symbol
+    :rtype: Symbol
     """
     return create_symbol(symbol, TYPE_POSITION)
 
@@ -49,9 +53,9 @@ def Velocity(symbol):
     """Shorthand for creating a velocity symbol.
 
     :param symbol: Symbol to be typed
-    :type  symbol: str, symengine.Symbol
+    :type  symbol: str, Symbol
     :return: Symbol typed as velocity
-    :rtype: symengine.Symbol
+    :rtype: Symbol
     """
     return create_symbol(symbol, TYPE_VELOCITY)
 
@@ -59,9 +63,9 @@ def Acceleration(symbol):
     """Shorthand for creating an acceleration symbol.
 
     :param symbol: Symbol to be typed
-    :type  symbol: str, symengine.Symbol
+    :type  symbol: str, Symbol
     :return: Symbol typed as acceleration
-    :rtype: symengine.Symbol
+    :rtype: Symbol
     """
     return create_symbol(symbol, TYPE_ACCEL)
 
@@ -69,9 +73,9 @@ def Jerk(symbol):
     """Shorthand for creating a jerk symbol.
 
     :param symbol: Symbol to be typed
-    :type  symbol: str, symengine.Symbol
+    :type  symbol: str, Symbol
     :return: Symbol typed as jerk
-    :rtype: symengine.Symbol
+    :rtype: Symbol
     """
     return create_symbol(symbol, TYPE_JERK)
 
@@ -79,9 +83,9 @@ def Snap(symbol):
     """Shorthand for creating a snap symbol.
 
     :param symbol: Symbol to be typed
-    :type  symbol: str, symengine.Symbol
+    :type  symbol: str, Symbol
     :return: Symbol typed as snap
-    :rtype: symengine.Symbol
+    :rtype: Symbol
     """
     return create_symbol(symbol, TYPE_SNAP)
 
@@ -89,9 +93,9 @@ def erase_type(symbol):
     """Removes type suffix from symbol if one is present.
 
     :param symbol: Symbol to untype
-    :type  symbol: str, symengine.Symbol
+    :type  symbol: str, Symbol
     :return: Typeless symbol
-    :rtype: symengine.Symbol
+    :rtype: Symbol
     """
     st = get_symbol_type(symbol)
     if st != TYPE_UNKNOWN:
@@ -102,7 +106,7 @@ def get_symbol_type(symbol):
     """Returns the enum value of a symbol's type.
 
     :param symbol: Symbol to inspect
-    :type  symbol: str, symengine.Symbol
+    :type  symbol: str, Symbol
     :return: Enum value of symbol's type
     :rtype: int
     """
@@ -112,9 +116,9 @@ def DiffSymbol(symbol):
     """Returns the derivative symbol of the given symbol.
 
     :param symbol: Symbol to convert
-    :type  symbol: str, symengine.Symbol
+    :type  symbol: str, Symbol
     :return: Derivative of given symbol
-    :rtype: symengine.Symbol
+    :rtype: Symbol
     :raises: CastException if symbol is of unknown type or a snap
     """
     s_type = get_symbol_type(symbol)
@@ -126,9 +130,9 @@ def IntSymbol(symbol):
     """Returns the integral symbol of the given symbol.
 
     :param symbol: Symbol to convert
-    :type  symbol: str, symengine.Symbol
+    :type  symbol: str, Symbol
     :return: Inetgral of given symbol
-    :rtype: symengine.Symbol
+    :rtype: Symbol
     :raises: CastException if symbol is of unknown type or a position
     """
     s_type = get_symbol_type(symbol)
