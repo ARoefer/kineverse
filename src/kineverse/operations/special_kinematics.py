@@ -1,6 +1,6 @@
 from kineverse.gradients.diff_logic       import create_symbol, TYPE_POSITION, TYPE_VELOCITY
 from kineverse.gradients.gradient_math    import *
-from kineverse.model.articulation_model      import Constraint
+from kineverse.model.articulation_model   import Constraint
 from kineverse.operations.operation       import Operation, op_construction_wrapper
 from kineverse.operations.urdf_operations import KinematicJoint
 
@@ -70,7 +70,7 @@ class SetDiffDriveJoint(Operation):
         child_parent_tf = frame3_axis_angle(vector3(0,0,1), rot_pos, pos_pos)
         return {'child_parent': self.joint_obj.parent,
                 'child_parent_tf': child_parent_tf,
-                'child_pose': parent_pose * child_parent_tf,
+                'child_pose': dot(parent_pose, child_parent_tf),
                 'connection': self.joint_obj}, \
                {'{}'.format(r_wheel_vel): Constraint(-wheel_vel_limit, 
                                                       wheel_vel_limit, r_wheel_vel),
@@ -129,10 +129,10 @@ class SetOmnibaseJoint(Operation):
                                 ang_vel_limit=a_vel_limit)
 
     def _apply(self, ks, parent_pose, child_pose, child_parent_tf, rot_axis, x_pos, y_pos, a_pos, lin_vel_limit, ang_vel_limit):
-        child_parent_tf = translation3(x_pos, y_pos, 0) * rotation3_axis_angle(rot_axis, a_pos)
+        child_parent_tf = dot(translation3(x_pos, y_pos, 0), rotation3_axis_angle(rot_axis, a_pos))
         return {'child_parent': self.joint_obj.parent,
                 'child_parent_tf': child_parent_tf,
-                'child_pose': parent_pose * child_parent_tf,
+                'child_pose': dot(parent_pose, child_parent_tf),
                 'connection': self.joint_obj}, \
                {'{}_lin_vel'.format(self.conn_path): Constraint(-lin_vel_limit, lin_vel_limit, get_diff(norm(vector3(x_pos, y_pos, 0)))),
                 '{}_ang_vel'.format(self.conn_path): Constraint(-ang_vel_limit, ang_vel_limit, get_diff(a_pos))}
@@ -182,12 +182,12 @@ class SetBallJoint(Operation):
         normed_axis = rot_axis / (norm(rot_axis) + 1e-4)
         rot_matrix = rotation3_axis_angle(normed_axis, norm(rot_axis))
 
-        pos_measure = dot(vector3(0,0,1), normed_axis)
+        pos_measure = dot_product(vector3(0,0,1), normed_axis)
         limit_dot_space = cos(pos_limit)
 
         return {'child_parent': self.joint_obj.parent,
-                'child_parent_tf': connection_tf * child_parent_tf,
-                'child_pose': parent_pose * connection_tf * rot_matrix * child_pose,
+                'child_parent_tf': dot(connection_tf, child_parent_tf),
+                'child_pose': dot(parent_pose, connection_tf, rot_matrix, child_pose),
                 'connection': self.joint_obj}, \
                {'{}_position'.format(self.conn_path): Constraint(limit_dot_space - pos_measure, 1, get_diff(pos_measure)),
                 '{}_velocity'.format(self.conn_path): Constraint(-vel_limit, vel_limit, get_diff(norm(rot_axis)))}

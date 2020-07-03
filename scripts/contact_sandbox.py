@@ -72,7 +72,7 @@ if __name__ == '__main__':
 
     cvs, constraints = generate_controlled_values(constraints, {get_diff(x) for x in eef_frame.free_symbols.union(cube_frame.free_symbols)})
 
-    surface_dist     = dot(contact_normal, eef_point - contact)
+    surface_dist     = dot_product(contact_normal, eef_point - contact)
     soft_constraints = {'make_contact': PIDC(surface_dist, surface_dist, 1, k_i=0.1),
                         'move_cube':    SC(-cube_err, -cube_err, 1, cube_err)
                         }# k_i=0)}

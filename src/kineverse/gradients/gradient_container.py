@@ -165,7 +165,7 @@ class GradientContainer(JSONSerializable):
                 else:
                     gradients[s] = d * self.expr
             return GradientContainer(self.expr * other.expr, gradients)
-        elif type(other) in cm.matrix_types:
+        elif type(other) in cm.matrix_types and cm.is_matrix(other):
             return GradientMatrix(other) * self
         return GradientContainer(self.expr * other, {s: d * other for s, d in self.gradients.items()})
 
@@ -357,9 +357,9 @@ class GradientMatrix(JSONSerializable):
                 self._nrows = len(expr)
                 self._ncols = len(expr[0]) if self._nrows > 0 else 0
         elif type(expr) in cm.matrix_types:
-            self.expr      = [[GC(x) for x in r] for r in expr.tolist()]
-            self._nrows    = expr.nrows()
-            self._ncols    = expr.ncols()
+            self.expr      = [[GC(x) for x in r] for r in cm.to_list(expr)]
+            self._nrows    = expr.shape[0]
+            self._ncols    = expr.shape[1]
         
         self.free_symbols = collect_free_symbols(self.expr)
         #self.free_diff_symbols = {DiffSymbol(s) for s in self.free_symbols if DiffSymbol(s) not in self.gradients}
@@ -410,11 +410,18 @@ class GradientMatrix(JSONSerializable):
         return self._ncols
 
     @property
+    def shape(self):
+        return (self._nrows, self._ncols)
+
+    @property
     def T(self):
         """Transpose of the matrix."""
         return GradientMatrix([[self.expr[y][x].__copy__() 
                                 for y in range(self._nrows)] 
                                 for x in range(self._ncols)])
+
+    def __neg__(self):
+        return GradientMatrix([[-e for e in row] for row in self.expr])
 
     def __radd__(self, other):
         return self.__add__(other)
@@ -440,7 +447,19 @@ class GradientMatrix(JSONSerializable):
         else:
             return GradientMatrix([[x - other for x in r] for r in self.expr])
 
+    # Component-wise multiplication
     def __mul__(self, other):
+        if cm.is_matrix(other) or type(other) == GradientMatrix:
+            if self.shape == other.shape:
+                return GradientMatrix([[self[y, x] * other[y, x] for x in range(self.shape[1])] 
+                                                                 for y in range(self.shape[0])])
+            raise Exception('Matrices for component-wise multiplication need to be of equal shape. '
+                            'Shapes are: {}, {}'.format(self.shape, other.shape))
+        else:
+            return GradientMatrix([[g * other for g in r] for r in self.expr])
+
+    # Matrix multiplication
+    def dot(self, other):
         if type(other) == GradientMatrix:
             expr = [[GC(0) for y in range(other._ncols)] for x in range(self._nrows)]
             for x in range(other._ncols):
@@ -448,10 +467,15 @@ class GradientMatrix(JSONSerializable):
                     for y in range(other._nrows):
                         expr[z][x] += self.expr[z][y] * other.expr[y][x]
             return GradientMatrix(expr)
-        elif type(other) in cm.matrix_types:
-            return self * GradientMatrix(other)
-        return GradientMatrix([[g * other for g in r] for r in self.expr])
-            #raise Exception('Operation {} * {} is undefined.'.format(type(self), type(other)))
+        else:
+            return self.dot(GradientMatrix(other))
+
+    # Rule introducing a preceding conversion step, similar to rmul etc
+    def rdot(self, other):
+        if type(other) != GradientMatrix:
+            return GradientMatrix(other).dot(self)
+        return other.dot(self) # This should actually never be the case
+
 
     def __rmul__(self, other):
         if type(other) in cm.matrix_types:

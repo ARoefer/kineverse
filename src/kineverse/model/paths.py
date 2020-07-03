@@ -14,16 +14,17 @@ class PathException(Exception):
         self.obj  = obj
 
 
+symbol_path_separator = '__'
+
+
 class Path(tuple, JSONSerializable):
     def __new__(cls, path):
-        if type(path) == str:
-            parts = path.split('/')
-            if parts[0] == '':
-                return super(Path, cls).__new__(Path, parts[1:])
+        if type(path) == str or type(path) == unicode:
+            parts = [p for p in str(path).split('/') if p != '']
             return super(Path, cls).__new__(Path, parts)
         elif cm.is_symbol(path):
-            return super(Path, cls).__new__(Path, str(path).split('__'))
-        return super(Path, cls).__new__(Path, path)
+            return super(Path, cls).__new__(Path, str(path).split(symbol_path_separator))
+        return super(Path, cls).__new__(Path, [str(p) for p in path])
 
     def __add__(self, other):
         return Path(super(Path, self).__add__(other))
@@ -48,7 +49,7 @@ class Path(tuple, JSONSerializable):
         return not self.__eq__(other)
 
     def to_symbol(self):
-        return cm.Symbol('__'.join(self))
+        return cm.Symbol(symbol_path_separator.join(self))
 
     def __str__(self):
         return '/'.join(self)

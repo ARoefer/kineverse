@@ -13,7 +13,8 @@ from kineverse.gradients.diff_logic         import Position, \
                                                    Jerk, \
                                                    Snap, \
                                                    Symbol, \
-                                                   DiffSymbol
+                                                   DiffSymbol, \
+                                                   IntSymbol
 from kineverse.gradients.gradient_container import GradientContainer as GC, \
                                                    GradientMatrix    as GM 
 from kineverse.symengine_types              import symengine_types, symengine_matrix_types
@@ -55,6 +56,7 @@ if cm.SYM_MATH_ENGINE == 'CASADI':
     cm.ca.MX.__div__ = op_wrapper(cm.ca.MX, 'div')
     cm.ca.DM.__div__ = op_wrapper(cm.ca.DM, 'div')
 
+is_symbol = cm.is_symbol
 
 def is_symbolic(expr):
     """Is the given expression symbolic?"""
@@ -215,8 +217,17 @@ unitX = vector3(1, 0, 0)
 unitY = vector3(0, 1, 0)
 unitZ = vector3(0, 0, 1)
 
-norm = cm.norm
+def norm(v):
+    if type(v) in cm.matrix_types:
+        return cm.norm(v)
+    
+    out = 0
+    for x in v:
+        out += x ** 2
+    return sqrt(out)
+
 dot  = cm.dot
+dot_product = cm.dot_product
 
 def cross(u, v):
     """Computes the cross product between two vectors."""
@@ -273,7 +284,7 @@ def rotation3_rpy(roll, pitch, yaw):
              [sin(yaw), cos(yaw), 0, 0],
              [0, 0, 1, 0],
              [0, 0, 0, 1]])
-    return (rz * ry * rx)
+    return dot(rz, ry, rx)
 
 
 def rotation3_axis_angle(axis, angle):
@@ -316,22 +327,22 @@ def rotation3_quaternion(x, y, z, w):
 
 
 def frame3_axis_angle(axis, angle, loc):
-    return translation3(loc[0], loc[1], loc[2]) * rotation3_axis_angle(axis, angle)
+    return dot(translation3(loc[0], loc[1], loc[2]), rotation3_axis_angle(axis, angle))
 
 
 def frame3_rpy(r, p, y, loc):
-    return translation3(loc[0], loc[1], loc[2]) * rotation3_rpy(r, p, y)
+    return dot(translation3(loc[0], loc[1], loc[2]), rotation3_rpy(r, p, y))
 
 
 def frame3_quaternion(x, y, z, qx, qy, qz, qw):
-    return translation3(x, y, z) * rotation3_quaternion(qx, qy, qz, qw)
+    return dot(translation3(x, y, z), rotation3_quaternion(qx, qy, qz, qw))
 
 
 def inverse_frame(frame):
     mf = GM if type(frame) == GM else cm.Matrix
     inv = mf(cm.eye(4))
     inv[:3, :3] = frame[:3, :3].T
-    inv[:3, 3] = -inv[:3, :3] * frame[:3, 3]
+    inv[:3, 3] = dot(-inv[:3, :3], frame[:3, 3])
     return inv
 
 def merge_gradients_add(ga, gb):

@@ -55,12 +55,16 @@ if SYM_MATH_ENGINE == 'CASADI':
                         m[i] = data[i]
             return m
 
-    ca.SX.__mul__ = ca.mtimes
-    ca.MX.__mul__ = ca.mtimes
-    ca.DM.__mul__ = ca.mtimes
+    def tracer(a, b):
+        if type(a) in matrix_types and type(b) in matrix_types and is_matrix(a) and is_matrix(b):
+            raise Exception('Tracer exception')
+        return ca.mtimes(a, b)
+
+    ca.SX.__mul__ = tracer
+    ca.MX.__mul__ = tracer
+    ca.DM.__mul__ = tracer
 
     zeros  = ca.SX.zeros
-    dot    = ca.dot
 
     acos   = ca.acos
     acosh  = ca.acosh
@@ -113,9 +117,29 @@ if SYM_MATH_ENGINE == 'CASADI':
 
     _CASADI_SUBS_CACHE = {}
 
+    def dot_product(a, b):
+        if type(a) in matrix_types and type(b) in matrix_types:
+            return ca.dot(a, b)
+        else:
+            a = a.elements() if type(a) in matrix_types else a
+            b = b.elements() if type(b) in matrix_types else b
+
+            return sum([x * y for x, y in zip(a, b)])
+
+    def norm(v):
+        """Computes the L2 norm (sqrt of sum of squares) of the input iterable."""
+        # return ca.norm_2(v)
+        r = 0
+        if type(v) in matrix_types:
+            for x in v.elements():
+                r += x ** 2
+            return ca.sqrt(r)
+        raise Exception('This function is only meant to compute norms of casadi matrices. This is of type {}'.format(type(v)))
 
     def free_symbols(expression):
         if type(expression) in math_types:
+            if type(expression) is ca.DM:
+                print(expression.shape, expression)
             return {Symbol(str(x)) for x in ca.symvar(expression)}
         if hasattr(expression, 'free_symbols'):
             return expression.free_symbols
@@ -134,18 +158,16 @@ if SYM_MATH_ENGINE == 'CASADI':
     def cross(a, b):
         return ca.cross(a, b)
 
-    def norm(v):
-        """Computes the L2 norm (sqrt of sum of squares) of the input iterable."""
-        # return ca.norm_2(v)
-        r = 0
-        if type(v) in matrix_types:
-            for x in v.elements():
-                r += x ** 2
-        else:
-            for x in v:
-                r += x ** 2
-        return ca.sqrt(r)
-
+    def dot(*args):
+        out = args[0]
+        for a in args[1:]:
+            if type(out) in matrix_types and type(a) in matrix_types:
+                out = ca.mtimes(out, a)
+            elif type(out) in matrix_types and type(a) not in matrix_types:
+                out = a.rdot(out)
+            else:
+                out = out.dot(a)
+        return out
 
     def diag(*args):
         return ca.diag(args)
@@ -153,9 +175,14 @@ if SYM_MATH_ENGINE == 'CASADI':
     def eye(n):
         return ca.SX.eye(n)
 
+    def to_list(matrix):
+        if type(matrix) in matrix_types:
+            return np.array(matrix.elements()).reshape((matrix.shape[1], matrix.shape[0])).T.tolist()
+        return matrix.tolist()
+
     def to_numpy(matrix):
         if type(matrix) != np.ndarray:
-            return np.array(matrix.elements()).astype(float).reshape(matrix.shape).T
+            return np.array(matrix.elements()).astype(float).reshape((matrix.shape[1], matrix.shape[0])).T
         return matrix
 
     def diff(expression, symbol):
@@ -306,7 +333,13 @@ elif SYM_MATH_ENGINE == 'SYMENGINE':
             r += x ** 2
         return se.sqrt(r)
 
-    def dot(a, b):
+    def dot(*args):
+        out = args[0]
+        for a in args:
+            out *= a
+        return out
+
+    def dot_product(a, b):
         return (a.T * b)[0]
 
     def to_numpy(matrix):

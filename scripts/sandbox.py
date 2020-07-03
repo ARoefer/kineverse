@@ -91,7 +91,7 @@ if __name__ == '__main__':
     cam_forward = x_of(cam_pose)
     cam_to_eef  = eef_pos - cam_pos
 
-    look_goal = 1 - (dot(cam_to_eef, cam_forward) / norm(cam_to_eef))
+    look_goal = 1 - (dot_product(cam_to_eef, cam_forward) / norm(cam_to_eef))
 
     goal = point3(0.4, 0.4, 1.2)
     dist = norm(goal - eef_pos)

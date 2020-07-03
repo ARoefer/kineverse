@@ -190,7 +190,7 @@ if __name__ == '__main__':
 
         # CONTACT GEOMETRY
         robot_cp, object_cp, contact_normal = contact_geometry(eef_pose, obj_pose, eef_path[:-1], kitchen_path[:-1])
-        geom_distance = dot(contact_normal, robot_cp - object_cp)
+        geom_distance = dot_product(contact_normal, robot_cp - object_cp)
         coll_world  = km.get_active_geometry(geom_distance.free_symbols)
         
         start_state = {s: 0.0 for s in coll_world.free_symbols}
@@ -199,7 +199,7 @@ if __name__ == '__main__':
         # GEOMETRY NAVIGATION LOGIC
         contact_grad  = sum([sign(-start_state[s]) * vector3(*[x.diff(s) for x in object_cp[:3]]) for s in obj_pose.free_symbols], vector3(0,0,0))
         robot_grad    = sum([vector3(*[x.diff(s) * DiffSymbol(s) for x in robot_cp[:3]]) for s in robot_cp.free_symbols], vector3(0,0,0))
-        ortho_vel_vec = cross(contact_grad, contact_normal) # -(contact_grad - dot(contact_grad, contact_normal) * contact_normal)
+        ortho_vel_vec = cross(contact_grad, contact_normal) # -(contact_grad - dot_product(contact_grad, contact_normal) * contact_normal)
         contact_tangent = cross(ortho_vel_vec, contact_normal)
         dist_scaling    = 2 ** (-0.5*((geom_distance - 0.2) / (0.2 * 0.2))**2)
   
@@ -221,7 +221,7 @@ if __name__ == '__main__':
 
         # CAMERA STUFF
         cam_to_obj = pos_of(obj_pose) - cam_pos
-        look_goal  = 1 - (dot(cam_to_obj, cam_forward) / norm(cam_to_obj))
+        look_goal  = 1 - (dot_product(cam_to_obj, cam_forward) / norm(cam_to_obj))
 
         # GOAL CONSTAINT GENERATION
         goal_constraints = {'reach_point': PIDC(geom_distance, geom_distance, 1, k_i=0.01),
@@ -237,7 +237,7 @@ if __name__ == '__main__':
           vis.draw_vector('debug_vecs', s_object_cp, subs(contact_grad, state), r=0, b=0)
           vis.draw_vector('debug_vecs', s_object_cp, subs(contact_tangent, state), r=0, b=1)
           vis.draw_vector('debug_vecs', s_object_cp, s_ortho_vel_vec, r=1, b=0)
-          # print(dot(s_ortho_vel_vec, subs(contact_normal, state)))
+          # print(dot_product(s_ortho_vel_vec, subs(contact_normal, state)))
           vis.render('debug_vecs')
         
         if robot == 'pr2':

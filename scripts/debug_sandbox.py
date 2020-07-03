@@ -148,10 +148,10 @@ if __name__ == '__main__':
         dist = norm(goal - eef_pos)
         obj_pose = km.get_data(kitchen_path)
         robot_cp, object_cp, contact_normal = contact_geometry(eef_pose, obj_pose, eef_path[:-1], kitchen_path[:-1])
-        geom_distance = dot(contact_normal, robot_cp - object_cp)
+        geom_distance = dot_product(contact_normal, robot_cp - object_cp)
 
         cam_to_obj = pos_of(obj_pose) - cam_pos
-        look_goal  = 1 - (dot(cam_to_obj, cam_forward) / norm(cam_to_obj))
+        look_goal  = 1 - (dot_product(cam_to_obj, cam_forward) / norm(cam_to_obj))
         #exit()
 
         #print('Symbols for subworld:\n  {}'.format('\n  '.join([str(x) for x in geom_distance.free_symbols])))

@@ -8,7 +8,8 @@ from kineverse.gradients.gradient_math     import frame3_rpy,           \
                                                   rotation3_rpy,        \
                                                   rotation3_axis_angle, \
                                                   translation3,         \
-                                                  vector3
+                                                  vector3,              \
+                                                  dot
 from kineverse.gradients.diff_logic        import Position
 from kineverse.operations.basic_operations import Operation,           \
                                                   CreateComplexObject, \
@@ -29,7 +30,7 @@ def urdf_origin_to_transform(origin):
     if origin is not None:
         xyz = origin.xyz if origin.xyz is not None else [0.0,0.0,0.0]
         rpy = origin.rpy if origin.rpy is not None else [0.0,0.0,0.0]
-        return translation3(*xyz) * rotation3_rpy(*rpy)
+        return dot(translation3(*xyz), rotation3_rpy(*rpy))
     return cm.eye(4)
 
 def urdf_axis_to_vector(axis):
@@ -147,8 +148,8 @@ class SetConnection(Operation):
 
     def _apply(self, ks, parent_pose, child_pose, child_parent_tf, connection_tf):
         return {'child_parent': self.joint_obj.parent,
-                'child_parent_tf': connection_tf * child_parent_tf,
-                'child_pose': parent_pose * connection_tf * child_pose,
+                'child_parent_tf': dot(connection_tf, child_parent_tf),
+                'child_pose': dot(parent_pose, connection_tf, child_pose),
                 'connection': self.joint_obj}, {}
 
 class SetFixedJoint(SetConnection):
@@ -183,8 +184,13 @@ class SetPrismaticJoint(Operation):
         vel = get_diff(position)
         pos_expr = axis * position
         return {'child_parent': self.joint_obj.parent,
-                'child_parent_tf': connection_tf * translation3(pos_expr[0], pos_expr[1], pos_expr[2]) * child_parent_tf,
-                'child_pose': parent_pose * connection_tf * translation3(pos_expr[0], pos_expr[1], pos_expr[2]) * child_pose,
+                'child_parent_tf': dot(connection_tf, 
+                                       translation3(pos_expr[0], pos_expr[1], pos_expr[2]), 
+                                       child_parent_tf),
+                'child_pose': dot(parent_pose, 
+                                  connection_tf, 
+                                  translation3(pos_expr[0], pos_expr[1], pos_expr[2]), 
+                                  child_pose),
                 'connection': self.joint_obj}, \
                {'{}_position'.format(self.conn_path): Constraint(lower_limit - position, upper_limit - position, position),
                 '{}_velocity'.format(self.conn_path): Constraint(-vel_limit, vel_limit, vel)}
@@ -214,8 +220,13 @@ class SetRevoluteJoint(Operation):
         position = position if mimic_m is None or mimic_o is None else position * mimic_m + mimic_o
         vel = get_diff(position)
         return {'child_parent': self.joint_obj.parent,
-                'child_parent_tf': connection_tf * rotation3_axis_angle(axis, position) * child_parent_tf,
-                'child_pose': parent_pose * connection_tf * rotation3_axis_angle(axis, position) * child_pose,
+                'child_parent_tf': dot(connection_tf, 
+                                       rotation3_axis_angle(axis, position), 
+                                       child_parent_tf),
+                'child_pose': dot(parent_pose, 
+                                  connection_tf, 
+                                  rotation3_axis_angle(axis, position),
+                                  child_pose),
                 'connection': self.joint_obj}, \
                {'{}_position'.format(self.conn_path): Constraint(lower_limit - position, upper_limit - position, position),
                '{}_velocity'.format(self.conn_path): Constraint(-vel_limit, vel_limit, vel)}
@@ -242,8 +253,13 @@ class SetContinuousJoint(Operation):
     def _apply(self, ks, parent_pose, child_pose, child_parent_tf, connection_tf, axis, position, vel_limit, mimic_m, mimic_o):
         position = position if mimic_m is None or mimic_o is None else position * mimic_m + mimic_o
         return {'child_parent': self.joint_obj.parent,
-                'child_parent_tf': connection_tf * rotation3_axis_angle(axis, position) * child_parent_tf,
-                'child_pose': parent_pose * connection_tf * rotation3_axis_angle(axis, position) * child_pose,
+                'child_parent_tf': dot(connection_tf, 
+                                       rotation3_axis_angle(axis, position), 
+                                       child_parent_tf),
+                'child_pose': dot(parent_pose, 
+                                  connection_tf, 
+                                  rotation3_axis_angle(axis, position), 
+                                  child_pose),
                 'connection': self.joint_obj}, \
                {'{}_velocity'.format(self.conn_path): Constraint(-vel_limit, vel_limit, get_diff(position))}
 
@@ -270,11 +286,25 @@ def urdf_to_geometry(urdf_geom, to_modify):
         raise Exception('Can not convert geometry of type "{}"'.format(to_modify.type))
         
 
-def load_urdf(ks, prefix, urdf, reference_frame='world'):
+def load_urdf(ks, 
+              prefix, 
+              urdf, 
+              reference_frame='world', 
+              joint_prefix=None, 
+              robot_class=ArticulatedObject):
+    if not issubclass(robot_class, ArticulatedObject):
+        raise Exception('Robot class needs to be a subclass of {} but is given class {} is not'.format(ArticulatedObject, robot_class))
+
     if type(prefix) == str:
         prefix = Path(prefix)
-        
-    ks.apply_operation('create {}'.format(str(prefix)), CreateComplexObject(prefix, URDFRobot(urdf.name)))
+    
+    if joint_prefix is None:
+        joint_prefix = prefix
+
+    if type(joint_prefix) == str:
+        joint_prefix = Path(joint_prefix)
+
+    ks.apply_operation('create {}'.format(str(prefix)), CreateComplexObject(prefix, robot_class(urdf.name)))
 
     for u_link in urdf.links:
         link_path = prefix + Path(['links', u_link.name])
@@ -330,7 +360,7 @@ def load_urdf(ks, prefix, urdf, reference_frame='world'):
                 offset     = u_joint.mimic.offset
                 position   = prefix + ('joints', u_joint.mimic.joint, 'position')
             else:
-                position   = Position((prefix + (u_joint.name, )).to_symbol())
+                position   = Position((joint_prefix + (u_joint.name, )).to_symbol())
                 multiplier = None
                 offset     = None
 

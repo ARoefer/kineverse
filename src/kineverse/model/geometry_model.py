@@ -412,10 +412,10 @@ def contact_geometry(pose_a, pose_b, path_a, path_b):
     """Generates a standard contact model, given two object pose expressions
     and object paths.
     """
-    cont = ContactSymbolContainer(path_a, path_b)
-    normal = vector3(cont.normal_x, cont.normal_y, cont.normal_z)
-    point_a = pose_a * point3(cont.on_a_x, cont.on_a_y, cont.on_a_z)
-    point_b = pose_b * point3(cont.on_b_x, cont.on_b_y, cont.on_b_z)
+    cont    = ContactSymbolContainer(path_a, path_b)
+    normal  = vector3(cont.normal_x, cont.normal_y, cont.normal_z)
+    point_a = dot(pose_a, point3(cont.on_a_x, cont.on_a_y, cont.on_a_z))
+    point_b = dot(pose_b, point3(cont.on_b_x, cont.on_b_y, cont.on_b_z))
     return point_a, point_b, normal
 
 def closest_distance(pose_a, pose_b, path_a, path_b):
@@ -441,16 +441,16 @@ def generate_contact_model(actuated_point, actuated_symbols, contact_point, cont
     """Normal is assumed to point towards the actuator.
     This is a very bad and limited model. Should suffice for 1-Dof pushes though.
     """
-    distance     = dot(contact_normal, actuated_point - contact_point)
+    distance     = dot_product(contact_normal, actuated_point - contact_point)
     in_contact   = less_than(distance, dist_threshold)
     actuated_jac = vector3(get_diff(actuated_point[0], actuated_symbols),
                            get_diff(actuated_point[1], actuated_symbols),
                            get_diff(actuated_point[2], actuated_symbols))
 
-    actuated_n   = dot(actuated_point, contact_normal)
-    actuated_t   = actuated_point - actuated_n * contact_normal 
+    actuated_n   = dot_product(actuated_point, contact_normal)
+    actuated_t   = actuated_point - actuated_n * contact_normal
 
-    contact_n    = dot(contact_point,  contact_normal)
+    contact_n    = dot_product(contact_point,  contact_normal)
     contact_t    = contact_point - contact_n * contact_normal
 
     tangent_dist = norm(contact_t - actuated_t)
@@ -460,7 +460,7 @@ def generate_contact_model(actuated_point, actuated_symbols, contact_point, cont
 
     imp_lb = -distance - alg_not(in_contact) * default_bound
 
-    out = {'direction_limit': Constraint(-default_bound, 0, dot(contact_point, contact_normal)),
+    out = {'direction_limit': Constraint(-default_bound, 0, dot_product(contact_point, contact_normal)),
            'impenetrability': Constraint(imp_lb, default_bound, distance),
            #'motion_alignment_tangent': Constraint(-alg_not(in_contact), alg_not(in_contact), tangent_dist),
            #'motion_alignment_normal': Constraint(-alg_not(in_contact), alg_not(in_contact), actuated_n - contact_n)
@@ -470,7 +470,7 @@ def generate_contact_model(actuated_point, actuated_symbols, contact_point, cont
         contact_jac = vector3(cm.diff(contact_point[0], s),
                               cm.diff(contact_point[1], s),
                               cm.diff(contact_point[2], s)) * get_diff(s)
-        #  out['motion_alignment_{}'.format(s)] = Constraint(-in_contact * default_bound, 0, dot(contact_normal, contact_jac))
+        #  out['motion_alignment_{}'.format(s)] = Constraint(-in_contact * default_bound, 0, dot_product(contact_normal, contact_jac))
         if set_inanimate:
             out['inanimate_{}'.format(s)] = Constraint(-in_contact * default_bound, in_contact * default_bound, s)
 
