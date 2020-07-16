@@ -254,3 +254,14 @@ The figure below displays the paths of the full data structure.
 
    The path structure of an articulated object loaded from a URDF.
 
+
+Next Steps
+----------
+
+Now we have reached the end of this introduction. There are two ways you can go from here:
+
+ 1. :ref:`chapter-operations` are the key mechanism by which Kineverse builds articulation models. If you ever want to do more than just load a couple URDFs, you should probably know about these.
+ 2. :ref:`chapter-models` -- yes, plural! In the previous text we learned about the :py:class:`kineverse.model.articulation_model.ArticulationModel` class. There are actually three articulation model classes in Kineverse and it is worthwhile knowing about these.
+
+
+
