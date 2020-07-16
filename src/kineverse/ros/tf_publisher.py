@@ -19,7 +19,7 @@ from multiprocessing import RLock
 
 from tf import TransformBroadcaster
 
-from kineverse.msg   import ValueMap   as ValueMapMsg
+from kineverse_msgs.msg   import ValueMap   as ValueMapMsg
 from sensor_msgs.msg import JointState as JointStateMsg
 
 env = Environment(
