@@ -11,12 +11,12 @@ from kineverse.model.paths            import Path, PathSet
 from kineverse.network.ros_conversion import decode_op_msg, encode_operation_instruction
 from kineverse.time_wrapper           import Time
 
-from kineverse.msg import Operation as OperationMsg
-from kineverse.msg import OperationCall as OperationCallMsg
-from kineverse.msg import OperationsUpdate as OperationsUpdateMsg
+from kineverse_msgs.msg import Operation as OperationMsg
+from kineverse_msgs.msg import OperationCall as OperationCallMsg
+from kineverse_msgs.msg import OperationsUpdate as OperationsUpdateMsg
 
-from kineverse.srv import GetHistory      as GetHistorySrv
-from kineverse.srv import ApplyOperations as ApplyOperationsSrv
+from kineverse_msgs.srv import GetHistory      as GetHistorySrv
+from kineverse_msgs.srv import ApplyOperations as ApplyOperationsSrv
 
 
 class OperationsClient_NoROS(object):
