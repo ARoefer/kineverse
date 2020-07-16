@@ -281,13 +281,13 @@ class GeometryModel(EventModel):
                 else:
                     self._process_link_removal(k)
         if len(static_objects) > 0:
-            self.kw.batch_set_transforms(static_objects, np.vstack(static_poses))
+            pb.batch_set_transforms(static_objects, np.vstack(static_poses))
             self._static_objects = static_objects
             # print('\n  '.join(['{}: {}'.format(n, c.transform) for n, c in self._collision_objects.items()]))
 
         if len(dynamic_poses) > 0:
             objs, matrices = zip(*[(self._collision_objects[k], m) for k, m in dynamic_poses.items()])
-            self.kw.batch_set_transforms(objs, np.vstack(matrices))
+            pb.batch_set_transforms(objs, np.vstack(matrices))
 
         super(GeometryModel, self).dispatch_events()
 
@@ -346,7 +346,7 @@ class CollisionSubworld(object):
         self._state.update({str(s): v for s, v in state.items() if s in self.free_symbols})
         #print('Subworld state: \n {}'.format('\n '.join(['{:>20}: {}'.format(s, v) for s, v in self._state.items()])))
         if self.pose_generator != None:
-            self.world.batch_set_transforms(self.collision_objects, self.pose_generator(**self._state))
+            pb.batch_set_transforms(self.collision_objects, self.pose_generator(**self._state))
             self._needs_update = True
 
     @property

@@ -2,7 +2,7 @@
 import rospy
 
 from kineverse.ros.tf_publisher import NetworkedTFBroadcaster
-from kineverse.msg              import ValueMap   as ValueMapMsg
+from kineverse_msgs.msg         import ValueMap   as ValueMapMsg
 
 from math import sin
 from time import time

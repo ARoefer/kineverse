@@ -17,26 +17,26 @@ from kineverse.network.ros_conversion  import json, encode_constraint, decode_op
 from kineverse.time_wrapper            import Time
 from kineverse.visualization.graph_generator import generate_modifications_graph, generate_dependency_graph, plot_graph
 
-from kineverse.msg import ModelUpdate      as ModelUpdateMsg 
-from kineverse.msg import OperationCall    as OperationCallMsg 
-from kineverse.msg import OperationsUpdate as OperationsUpdateMsg 
+from kineverse_msgs.msg import ModelUpdate      as ModelUpdateMsg 
+from kineverse_msgs.msg import OperationCall    as OperationCallMsg 
+from kineverse_msgs.msg import OperationsUpdate as OperationsUpdateMsg 
 
-from kineverse.srv import ApplyOperations         as ApplyOperationsSrv
-from kineverse.srv import ApplyOperationsResponse as ApplyOperationsResponseMsg 
-from kineverse.srv import DebugInfo               as DebugInfoSrv
-from kineverse.srv import DebugInfoResponse       as DebugInfoResponseMsg
-from kineverse.srv import GetModel                as GetModelSrv
-from kineverse.srv import GetModelResponse        as GetModelResponseMsg 
-from kineverse.srv import GetHistory              as GetHistorySrv
-from kineverse.srv import GetHistoryResponse      as GetHistoryResponseMsg 
-from kineverse.srv import GetConstraints          as GetConstraintsSrv
-from kineverse.srv import GetConstraintsResponse  as GetConstraintsResponseMsg 
-from kineverse.srv import ListPaths               as ListPathsSrv
-from kineverse.srv import ListPathsResponse       as ListPathsResponseMsg 
-from kineverse.srv import SaveModel               as SaveModelSrv
-from kineverse.srv import SaveModelResponse       as SaveModelResponseMsg
-from kineverse.srv import LoadModel               as LoadModelSrv
-from kineverse.srv import LoadModelResponse       as LoadModelResponseMsg 
+from kineverse_msgs.srv import ApplyOperations         as ApplyOperationsSrv
+from kineverse_msgs.srv import ApplyOperationsResponse as ApplyOperationsResponseMsg 
+from kineverse_msgs.srv import DebugInfo               as DebugInfoSrv
+from kineverse_msgs.srv import DebugInfoResponse       as DebugInfoResponseMsg
+from kineverse_msgs.srv import GetModel                as GetModelSrv
+from kineverse_msgs.srv import GetModelResponse        as GetModelResponseMsg 
+from kineverse_msgs.srv import GetHistory              as GetHistorySrv
+from kineverse_msgs.srv import GetHistoryResponse      as GetHistoryResponseMsg 
+from kineverse_msgs.srv import GetConstraints          as GetConstraintsSrv
+from kineverse_msgs.srv import GetConstraintsResponse  as GetConstraintsResponseMsg 
+from kineverse_msgs.srv import ListPaths               as ListPathsSrv
+from kineverse_msgs.srv import ListPathsResponse       as ListPathsResponseMsg 
+from kineverse_msgs.srv import SaveModel               as SaveModelSrv
+from kineverse_msgs.srv import SaveModelResponse       as SaveModelResponseMsg
+from kineverse_msgs.srv import LoadModel               as LoadModelSrv
+from kineverse_msgs.srv import LoadModelResponse       as LoadModelResponseMsg 
 
 
 # Server without any ROS attachements for testing

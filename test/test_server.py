@@ -11,10 +11,10 @@ from kineverse.network.ros_conversion     import encode_operation_instruction
 from kineverse.network.server             import ModelServer_NoROS
 from kineverse.utils                      import res_pkg_path, bb
 
-from kineverse.msg import Model       as ModelMsg
-from kineverse.msg import ModelUpdate as ModelUpdateMsg
+from kineverse_msgs.msg import Model       as ModelMsg
+from kineverse_msgs.msg import ModelUpdate as ModelUpdateMsg
 
-from kineverse.srv import ApplyOperationsRequest as ApplyOperationsRequestMsg
+from kineverse_msgs.srv import ApplyOperationsRequest as ApplyOperationsRequestMsg
 
 from urdf_parser_py.urdf import URDF
 
