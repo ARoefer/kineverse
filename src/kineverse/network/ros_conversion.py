@@ -8,10 +8,10 @@ import kineverse.json_wrapper as json
 from kineverse.model.articulation_model import ApplyAt, ApplyBefore, ApplyAfter, RemoveOp, Constraint
 from kineverse.utils                    import import_class, real_quat_from_matrix
 
-from kineverse.msg import OperationCall    as OperationCallMsg
-from kineverse.msg import Operation        as OperationMsg
-from kineverse.msg import Constraint       as ConstraintMsg
-from kineverse.msg import OperationsUpdate as OperationsUpdateMsg
+from kineverse_msgs.msg import OperationCall    as OperationCallMsg
+from kineverse_msgs.msg import Operation        as OperationMsg
+from kineverse_msgs.msg import Constraint       as ConstraintMsg
+from kineverse_msgs.msg import OperationsUpdate as OperationsUpdateMsg
 
 from std_msgs.msg      import Header, String, Float64, Bool, Int32
 from geometry_msgs.msg import Pose        as PoseMsg

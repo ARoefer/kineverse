@@ -8,10 +8,10 @@ from kineverse.model.paths            import Path, PathSet
 from kineverse.network.ros_conversion import json, decode_constraint_filtered
 from kineverse.time_wrapper           import Time
 
-from kineverse.msg import ModelUpdate as ModelUpdateMsg
+from kineverse_msgs.msg import ModelUpdate as ModelUpdateMsg
 
-from kineverse.srv import GetModel       as GetModelSrv
-from kineverse.srv import GetConstraints as GetConstraintsSrv
+from kineverse_msgs.srv import GetModel       as GetModelSrv
+from kineverse_msgs.srv import GetConstraints as GetConstraintsSrv
 
 
 
