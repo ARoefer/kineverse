@@ -16,6 +16,7 @@ Go to a ROS workspace and clone Kineverse.
 cd ros_ws/src  # Go to a ROS workspace
 
 git clone https://github.com/ARoefer/kineverse.git
+git clone https://github.com/ARoefer/kineverse_msgs.git
 ```
 
 ### Installing Symengine

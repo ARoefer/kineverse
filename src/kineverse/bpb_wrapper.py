@@ -5,6 +5,7 @@ import kineverse.gradients.common_math as cm
 from kineverse.utils import res_pkg_path, real_quat_from_matrix
 from kineverse.gradients.gradient_math import GM
 
+
 def matrix_to_transform(matrix):
     quat = real_quat_from_matrix(matrix)
     pos  = matrix[:3,3]
