@@ -258,10 +258,10 @@ def lock_explorer(km, state, goals, generated_constraints):
                     u_const_name = 'unlock {} upper bound'.format(n)
                     l_const_name = 'unlock {} lower bound'.format(n)
                     if diff_sign[s] > 0 and type(c.upper) in symbolic_types and u_const_name not in generated_constraints:
-                        new_goals[u_const_name] = SoftConstraint(less_than(c.upper, 0), 1000, goal.weight, c.upper)
+                        new_goals[u_const_name] = SoftConstraint(less_than(c.upper, 0), 1000, goal.weight_id, c.upper)
                         generated_constraints.add(u_const_name)
                     elif diff_sign[s] < 0 and type(c.lower) in symbolic_types and l_const_name not in generated_constraints:
-                        new_goals[l_const_name] = SoftConstraint(-1000, -greater_than(c.lower, 0), goal.weight, c.lower)
+                        new_goals[l_const_name] = SoftConstraint(-1000, -greater_than(c.lower, 0), goal.weight_id, c.lower)
                         generated_constraints.add(l_const_name)
         
         final_goals.update(lock_explorer(km, state, new_goals, generated_constraints))

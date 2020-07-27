@@ -58,11 +58,11 @@ class ControlledValue(object):
 class MinimalQPBuilder(object):
     def __init__(self, hard_constraints, soft_constraints, controlled_values):
         hc = [(k, Constraint(extract_expr(c.lower), extract_expr(c.upper), wrap_expr(c.expr))) for k, c in hard_constraints.items()]
-        sc = [(k, SoftConstraint(extract_expr(c.lower), extract_expr(c.upper), c.weight, wrap_expr(c.expr))) for k, c in soft_constraints.items()]
-        cv = [(k, ControlledValue(extract_expr(c.lower), extract_expr(c.upper), c.symbol, extract_expr(c.weight))) for k, c in controlled_values.items()]
+        sc = [(k, SoftConstraint(extract_expr(c.lower), extract_expr(c.upper), c.weight_id, wrap_expr(c.expr))) for k, c in soft_constraints.items()]
+        cv = [(k, ControlledValue(extract_expr(c.lower), extract_expr(c.upper), c.symbol, extract_expr(c.weight_id))) for k, c in controlled_values.items()]
 
         self.np_g = np.zeros(len(cv + sc))
-        self.H    = cm.diag(*[extract_expr(c.weight) for _, c in cv + sc])
+        self.H    = cm.diag(*[extract_expr(c.weight_id) for _, c in cv + sc])
         self.lb   = cm.Matrix([c.lower if c.lower is not None else -default_bound for _, c in cv] + [-default_bound] * len(sc))
         self.ub   = cm.Matrix([c.upper if c.upper is not None else  default_bound for _, c in cv] + [default_bound] * len(sc))
         self.lbA  = cm.Matrix([c.lower if c.lower is not None else -default_bound for _, c in hc + sc])
@@ -395,7 +395,7 @@ def generate_controlled_values(constraints, symbols, weights={}, bounds={}, defa
 
 def depth_weight_controlled_values(gm, controlled_values, default_weight=0.01, exp_factor=1.0):
     for cv in controlled_values.values():
-        cv.weight = default_weight * max(1, len(gm.get_active_geometry_raw({cv.symbol}))) ** exp_factor
+        cv.weight_id = default_weight * max(1, len(gm.get_active_geometry_raw({cv.symbol}))) ** exp_factor
     return controlled_values
 
 def find_constant_bounds(constraints):

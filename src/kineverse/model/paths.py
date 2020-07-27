@@ -5,7 +5,8 @@ The paths module provides the implementation of paths that are used to identify 
 import kineverse.gradients.common_math as cm
 
 from kineverse.json_wrapper            import JSONSerializable
-from kineverse.type_sets               import atomic_types, matrix_types, symbolic_types
+from kineverse.type_sets import atomic_types, matrix_types, symbolic_types, numpy_types
+
 
 class PathException(Exception):
     def __init__(self, path, obj):
@@ -83,7 +84,7 @@ class Path(tuple, JSONSerializable):
             return None
 
 
-stopping_set = atomic_types.union(matrix_types).union(symbolic_types)
+stopping_set = atomic_types.union(matrix_types).union(symbolic_types).union(numpy_types)
 
 def collect_paths(obj, root, depth=10000):
     """Collect all paths under a given object until a given depth."""
