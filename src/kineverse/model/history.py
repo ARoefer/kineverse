@@ -237,7 +237,17 @@ class History(object):
 
         return Timeline(out)
 
+    def get_ceil_modifying_chunk(self, path, stamp):
+        if path not in self.modification_history:
+            raise Exception('Path "{}" is not contained in history.'.format(path))
 
+        _, chunk = self.modification_history[path].get_ceil(stamp)
+        return chunk
+
+    def get_earliest_stamp(self, path):
+        if path in self.modification_history:
+            return self.modification_history[path][0].stamp
+        return None
 
     def str_history_of(self, p):
         if p not in self.modification_history:
