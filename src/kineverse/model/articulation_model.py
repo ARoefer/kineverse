@@ -343,7 +343,7 @@ class ArticulationModel(object):
         :param key: Path to check for.
         :type  key: str, Path
         """
-        if type(key) == str:
+        if type(key) == str or type(key) == unicode:
             key = Path(key)
         if time_stamp is None:
             return self.data_tree[key]

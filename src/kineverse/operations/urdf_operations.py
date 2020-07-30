@@ -387,9 +387,6 @@ def load_urdf(ks,
                                                KinematicLink(reference_frame, urdf_origin_to_transform(u_link.origin),
                                                              None, geometry, collision, inertial)))
 
-    links_left = [urdf.get_root()]
-    joint_set = set()
-
     limit_map = {}
 
     if urdf.get_root() in urdf.child_map:

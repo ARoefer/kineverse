@@ -20,10 +20,17 @@ if SYM_MATH_ENGINE == 'CASADI':
 
     __SYMBOL_CACHE = {}
 
+    __osxsym = ca.SX.sym
+
+    def symbol_trace(self, data):
+        return __osxsym(data)
+
+    ca.SX.sym = symbol_trace
+
     def Symbol(data):
         if isinstance(data, str) or isinstance(data, unicode):
             if data not in __SYMBOL_CACHE:
-                __SYMBOL_CACHE[data] = ca.SX.sym(data)
+                __SYMBOL_CACHE[data] = ca.SX.sym(ca.SX(), data)
             return __SYMBOL_CACHE[data]
         raise Exception('Symbols can only be created from strings or unicode. Got: {}'.format(data))
 

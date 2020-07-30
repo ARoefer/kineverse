@@ -273,6 +273,7 @@ class GeometryModel(EventModel):
         static_objects = []
         static_poses   = []
         dynamic_poses  = {}
+        removed_object = []
         for str_k in self._collision_objects:
             k = Path(str_k)
             if k in self._callback_batch:
@@ -300,7 +301,9 @@ class GeometryModel(EventModel):
                         static_objects.append(self._collision_objects[str_k])
                         static_poses.append(cm.to_numpy(pose_expr))
                 else:
-                    self._process_link_removal(k)
+                    removed_object.append(k)
+        for k in removed_object:
+            self._process_link_removal(k)
         if len(static_objects) > 0:
             pb.batch_set_transforms(static_objects, np.vstack(static_poses))
             self._static_objects = static_objects
