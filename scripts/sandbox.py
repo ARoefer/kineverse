@@ -4,10 +4,11 @@ import subprocess
 import os
 import tf
 
-import kineverse.json_wrapper as json
+import kineverse.gradients.common_math as cm
+import kineverse.json_wrapper          as json
 
 from kineverse.gradients.gradient_math       import *
-from kineverse.model.kinematic_model         import KinematicModel, Path
+from kineverse.model.articulation_model      import ArticulationModel, Path
 from kineverse.model.frames                  import Frame
 from kineverse.motion.integrator             import CommandIntegrator, DT_SYM
 from kineverse.motion.min_qp_builder         import TypedQPBuilder as TQPB
@@ -55,19 +56,19 @@ if __name__ == '__main__':
     #                         'joint_states:=/joint_states'])
 
     # KINEMATIC MODEL
-    km = KinematicModel()
+    km = ArticulationModel()
     load_urdf(km, Path('fetch'), urdf_model)
 
     km.clean_structure()
-    km.apply_operation_before('create map', 'create fetch', CreateComplexObject(Path('map'), Frame('')))
+    km.apply_operation_before('create world', 'create fetch', CreateComplexObject(Path('world'), Frame('')))
 
-    roomba_op = create_roomba_joint_with_symbols(Path('map/pose'), 
+    roomba_op = create_roomba_joint_with_symbols(Path('world/pose'), 
                                                  Path('fetch/links/base_link/pose'),
-                                                 Path('fetch/joints/to_map'),
+                                                 Path('fetch/joints/to_world'),
                                                  vector3(0,0,1),
                                                  vector3(1,0,0),
                                                  1.0, 0.6, Path('fetch'))
-    km.apply_operation_after('connect map base_link', 'create fetch/base_link', roomba_op)
+    km.apply_operation_after('connect world base_link', 'create fetch/base_link', roomba_op)
     km.clean_structure()
 
     with open(res_pkg_path('package://kineverse/test/fetch.json'), 'w') as fetch_json:
@@ -90,14 +91,14 @@ if __name__ == '__main__':
     cam_forward = x_of(cam_pose)
     cam_to_eef  = eef_pos - cam_pos
 
-    look_goal = 1 - (dot(cam_to_eef, cam_forward) / norm(cam_to_eef))
+    look_goal = 1 - (dot_product(cam_to_eef, cam_forward) / norm(cam_to_eef))
 
     goal = point3(0.4, 0.4, 1.2)
     dist = norm(goal - eef_pos)
 
     # QP CONFIGURTION
-    roomba_joint  = km.get_data('fetch/joints/to_map')
-    joint_symbols = [j.position for j in km.get_data('fetch/joints').values() if hasattr(j, 'position') and type(j.position) is spw.Symbol]
+    roomba_joint  = km.get_data('fetch/joints/to_world')
+    joint_symbols = [j.position for j in km.get_data('fetch/joints').values() if hasattr(j, 'position') and cm.is_symbol(j.position)]
     controlled_symbols = {get_diff_symbol(j) for j in joint_symbols}.union({roomba_joint.lin_vel, roomba_joint.ang_vel})
 
     constraints = km.get_constraints_by_symbols(dist.free_symbols.union(controlled_symbols))
@@ -105,7 +106,7 @@ if __name__ == '__main__':
     controlled_values = {}
     to_remove = set()
     for k, c in constraints.items():
-        if type(c.expr) is spw.Symbol and c.expr in controlled_symbols:
+        if cm.is_symbol(c.expr) and c.expr in controlled_symbols:
             weight = 0.01 if c.expr != roomba_joint.lin_vel and c.expr != roomba_joint.ang_vel else 0.2
             controlled_values[str(c.expr)] = ControlledValue(c.lower, c.upper, c.expr, weight)
             to_remove.add(k)
@@ -142,7 +143,7 @@ if __name__ == '__main__':
     draw_recorders([integrator.recorder] + split_recorders([integrator.sym_recorder]), 4.0/9.0, 8, 4).savefig('{}/fetch_sandbox_plots.png'.format(plot_dir))
 
     trajectory = {Path(j)[-1][:-2]: [0.0] * len(integrator.recorder.data.values()[0]) for j in joint_symbols}
-    trajectory.update({Path(spw.Symbol(j))[-1][:-2]: d for j, d in integrator.recorder.data.items()})
+    trajectory.update({Path(cm.Symbol(j))[-1][:-2]: d for j, d in integrator.recorder.data.items()})
     base_trajectory = list(zip(integrator.sym_recorder.data['location_x'],
                                integrator.sym_recorder.data['location_y'],
                                integrator.sym_recorder.data['location_z'],
@@ -159,7 +160,7 @@ if __name__ == '__main__':
                 js_pub.publish(jsmsg)
                 # tf_broadcaster.sendTransform(base_trajectory[x][:3], 
                 #                              tf.transformations.quaternion_from_euler(0,0, base_trajectory[x][3]), 
-                #                              now, 'fetch/base_link', 'map')
+                #                              now, 'fetch/base_link', 'world')
                 x += 1 
     else:
         trajmsg = JointTrajectoryMsg()

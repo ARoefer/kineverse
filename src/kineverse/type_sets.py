@@ -1,10 +1,12 @@
-from kineverse.symengine_types           import symengine_matrix_types, symengine_types
+import kineverse.gradients.common_math as cm
+
 from kineverse.gradients.gradient_math   import GC, GM
+import numpy as np
 
 atomic_types = set([int, float, bool, str, GC])
 
-matrix_types = {GM}.union(symengine_matrix_types)
-symbolic_types = {GC, GM}.union(symengine_types)
+matrix_types = {GM}.union(cm.matrix_types)
+symbolic_types = {GC, GM}.union(cm.math_types)
+numpy_types = {getattr(np, a) for a in dir(np) if type(getattr(np, a)) == type}
 
-def is_symbolic(x):
-    return type(x) in symbolic_types and len(x.free_symbols) > 0
+is_symbolic = cm.is_symbolic

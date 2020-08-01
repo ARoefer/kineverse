@@ -1,34 +1,29 @@
 import rospy
 
+from multiprocessing import RLock
+
 from kineverse.model.event_model      import EventModel
-from kineverse.model.kinematic_model  import Constraint
+from kineverse.model.articulation_model  import Constraint
 from kineverse.model.paths            import Path, PathSet
 from kineverse.network.ros_conversion import json, decode_constraint_filtered
 from kineverse.time_wrapper           import Time
 
-from kineverse.msg import ModelUpdate as ModelUpdateMsg
+from kineverse_msgs.msg import ModelUpdate as ModelUpdateMsg
 
-from kineverse.srv import GetModel       as GetModelSrv
-from kineverse.srv import GetConstraints as GetConstraintsSrv
-
-
+from kineverse_msgs.srv import GetModel       as GetModelSrv
+from kineverse_msgs.srv import GetConstraints as GetConstraintsSrv
 
 
-class ModelClient(object):
+
+class ModelClient_NoROS(object):
     """Client for mirroring a complete or partial kinematic model."""
     def __init__(self, model_type, *args):
         if model_type is not None and not issubclass(model_type, EventModel):
             raise Exception('Model type must be a subclass of EventModel. Type "{}" is not.'.format(model_type))
 
-        self.km = model_type(*args) if model_type is not None else EventModel()
-
-        rospy.wait_for_service('get_model')
-        self.srv_get_model = rospy.ServiceProxy('get_model', GetModelSrv)
-
-        rospy.wait_for_service('get_constraints')
-        self.srv_get_constraints = rospy.ServiceProxy('get_constraints', GetConstraintsSrv)
-
-        self.sub_model = rospy.Subscriber('/km', ModelUpdateMsg, self.cb_model_update, queue_size=1)
+        self.lock = RLock()
+        self.km   = model_type(*args) if model_type is not None else EventModel()
+        
         self._last_update    = Time(0)
         self.tracked_paths   = PathSet()
         self.tracked_symbols = set()
@@ -77,22 +72,23 @@ class ModelClient(object):
 
 
     def cb_model_update(self, msg):
-        if msg.stamp < self._last_update:
-            return
+        with self.lock:
+            if msg.stamp < self._last_update:
+                return
 
-        self._last_update = msg.stamp
+            self._last_update = msg.stamp
 
-        self._update_model(msg.update)
+            self._update_model(msg.update)
 
-        for p in msg.deleted_paths:
-            self.km.remove_data(p)
+            for p in msg.deleted_paths:
+                self.km.remove_data(p)
 
 
-        for k in msg.deleted_constraints:
-            self.km.remove_constraint(k)
+            for k in msg.deleted_constraints:
+                self.km.remove_constraint(k)
 
-        self.km.clean_structure()
-        self.km.dispatch_events()
+            self.km.clean_structure()
+            self.km.dispatch_events()
 
 
     def get_constraints_by_symbols(self, symbol_set):
@@ -106,15 +102,16 @@ class ModelClient(object):
 
 
     def _start_tracking(self, path):
-        print('Started tracking {}'.format(path))
-        self.tracked_paths.add(path)
-        for x in range(len(path)):
-            if not self.km.has_data(path[:x]):
-                self.km.set_data(path[:x], {})
+        with self.lock:
+            print('Started tracking {}'.format(path))
+            self.tracked_paths.add(path)
+            for x in range(len(path)):
+                if not self.km.has_data(path[:x]):
+                    self.km.set_data(path[:x], {})
 
-        self._update_model(self.srv_get_model([str(path)],[]).model)
-        self.km.clean_structure()
-        self.km.dispatch_events()
+            self._update_model(self.srv_get_model([str(path)],[]).model)
+            self.km.clean_structure()
+            self.km.dispatch_events()
 
 
     def register_on_model_changed(self, path, callback):
@@ -134,3 +131,16 @@ class ModelClient(object):
 
     def deregister_on_constraints_changed(self, callback):
         self.km.deregister_on_constraints_changed(callback)
+
+
+class ModelClient(ModelClient_NoROS):
+    def __init__(self, model_type, *args):
+        rospy.wait_for_service('get_model')
+        self.srv_get_model = rospy.ServiceProxy('get_model', GetModelSrv)
+
+        rospy.wait_for_service('get_constraints')
+        self.srv_get_constraints = rospy.ServiceProxy('get_constraints', GetConstraintsSrv)
+
+        super(ModelClient, self).__init__(model_type, *args)
+        
+        self.sub_model = rospy.Subscriber('/km', ModelUpdateMsg, self.cb_model_update, queue_size=1)

@@ -3,12 +3,36 @@ import unittest as ut
 from kineverse.utils import bb
 from kineverse.operations.basic_operations import *
 from kineverse.gradients.gradient_math     import *
-from kineverse.model.kinematic_model       import KinematicModel
+from kineverse.model.articulation_model    import ArticulationModel
 
 
 class TestOperations(ut.TestCase):
+    def test_memo_correctness(self):
+        def add(a, b):
+            return a + b
+
+        def mul(a, b):
+            return a * b
+
+        km = ArticulationModel()
+        p  = Path('my_var')
+        op_a = CreateSingleValue(p, 5)
+        op_b = CallFunctionOperator('my_var', mul, p, 2)
+        op_c = CallFunctionOperator('my_var', add, p, 3)
+
+        km.apply_operation('create my_var', op_a)
+        km.apply_operation('my_var*=2', op_b)
+        km.clean_structure()
+
+        self.assertEquals(km.get_data(p), 10)
+
+        km.apply_operation_before('my_var+=3', 'my_var*=2', op_c)
+        km.clean_structure()
+
+        self.assertEquals(km.get_data(p), 16)
+
     def test_add_single(self):
-        ks = KinematicModel()
+        ks = ArticulationModel()
         p  = Path('my_var')
         op = CreateSingleValue(p, 5)
         ks.apply_operation('create my_var', op)
@@ -19,7 +43,7 @@ class TestOperations(ut.TestCase):
 
 
     def test_add_object(self):
-        ks  = KinematicModel()
+        ks  = ArticulationModel()
         obj = bb(some_str='lol', some_scalar=7.5, some_subobj=bb(x=4, y=5, z=10))
         op  = CreateComplexObject(Path('my_obj'), obj)
         self.assertIn('path/some_str', op.mod_paths)
@@ -51,12 +75,11 @@ class TestOperations(ut.TestCase):
         self.assertFalse(ks.has_data('my_obj/some_subobj/y'))
         self.assertFalse(ks.has_data('my_obj/some_subobj/z'))
 
-
     def test_add_fn_call(self):
-        ks  = KinematicModel()
+        ks  = ArticulationModel()
         ks.apply_operation('create my_var', CreateSingleValue('my_var', 5))
-        ks.apply_operation('create vec_a',  CreateSingleValue('vec_a', spw.vector3(1,0,0)))
-        ks.apply_operation('create vec_b',  CreateSingleValue('vec_b', spw.vector3(0,1,0)))
+        ks.apply_operation('create vec_a',  CreateSingleValue('vec_a', vector3(1,0,0)))
+        ks.apply_operation('create vec_b',  CreateSingleValue('vec_b', vector3(0,1,0)))
 
         with self.assertRaises(Exception):
             op = CallFunctionOperator('sin_of_my_var', sin)
@@ -80,7 +103,7 @@ class TestOperations(ut.TestCase):
         self.assertEquals(op.args_paths['v'], 'vec_b')
         ks.apply_operation('compute cross of vectors', op)
         self.assertTrue(ks.has_data('cross_of_a_b'))
-        self.assertEquals(ks.get_data('cross_of_a_b'), spw.vector3(0,0,1))
+        self.assertTrue(eq_expr(ks.get_data('cross_of_a_b'), vector3(0,0,1)))
         ks.remove_operation('compute cross of vectors')
         self.assertFalse(ks.has_data('cross_of_a_b'))
 

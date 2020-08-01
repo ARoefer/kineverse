@@ -235,4 +235,3 @@ class ROSVisualizer(object):
 		#print('Rendered {} trajectory points. Original count: {}'.format(points, len(trajectory)))
 
 	#def draw_plot_point(self, name, value):
-

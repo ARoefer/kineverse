@@ -1,9 +1,16 @@
+"""
+The event_model module implements an extension of the ArticulationModel class.
+This extended model can raise events when it is modified.
+"""
 import re
 
-from kineverse.model.kinematic_model import KinematicModel
-from kineverse.model.paths           import Path, PathDict, PathSet
+import kineverse.gradients.common_math as cm
+
+from kineverse.model.articulation_model import ArticulationModel
+from kineverse.model.paths              import Path, PathDict, PathSet
     
 def _dispatch_model_events(pdict, data, key, call_tracker=set()):
+    """Helper function to distribute event throughout the model."""
     for cb in pdict.value:
         if cb not in call_tracker:
             cb(data)
@@ -15,7 +22,7 @@ def _dispatch_model_events(pdict, data, key, call_tracker=set()):
         _dispatch_model_events(pdict.get_sub_dict(key[:1]), key[:1].get_data_no_throw(data), key[1:], call_tracker)
 
 
-class EventModel(KinematicModel):
+class EventModel(ArticulationModel):
     def __init__(self):
         super(EventModel, self).__init__()
         self.model_change_callbacks    = PathDict(set(), default_factory=set)
@@ -63,7 +70,7 @@ class EventModel(KinematicModel):
 
     def set_data(self, key, value):
         key = Path(key) if type(key) == str else key
-        if not self.has_data(key) or value != self.get_data(key):
+        if not self.has_data(key) or not cm.eq_expr(value, self.get_data(key)):
             self._callback_batch.add(key)
         super(EventModel, self).set_data(key, value)
 
@@ -78,15 +85,15 @@ class EventModel(KinematicModel):
             self._constraint_callback_batch[key] = set()
         
         if key in self.constraints:
-            for s in self.constraints[key].expr.free_symbols:
-                if s in self.constraint_callbacks and s not in constraint.expr.free_symbols:
+            for s in cm.free_symbols(self.constraints[key].expr):
+                if s in self.constraint_callbacks and s not in cm.free_symbols(constraint.expr):
                     for cb in self.constraint_callbacks[s]:
                         if cb not in self._constraint_discard_batch:
                             self._constraint_discard_batch[cb] = set()
                         self._constraint_discard_batch[cb].add(key)
 
         super(EventModel, self).add_constraint(key, constraint)
-        for s in constraint.expr.free_symbols:
+        for s in cm.free_symbols(constraint.expr):
             if s in self.constraint_callbacks:
                 self._constraint_callback_batch[key].update(self.constraint_callbacks[s])        
 
@@ -95,7 +102,7 @@ class EventModel(KinematicModel):
             if key not in self._constraint_callback_batch:
                 self._constraint_callback_batch[key] = set()
 
-            for s in self.constraints[key].expr.free_symbols:
+            for s in cm.free_symbols(self.constraints[key].expr):
                 if s in self.constraint_callbacks:
                     self._constraint_callback_batch[key].update(self.constraint_callbacks[s])
         super(EventModel, self).remove_constraint(key)
@@ -106,6 +113,13 @@ class EventModel(KinematicModel):
 
 
     def register_on_operation_changed(self, pattern, callback):
+        """Register a listener to be called when an operation is applied.
+
+        :param pattern: Regex patter the op-tag is checked against.
+        :type  pattern: re
+        :param callback: Function to call.
+        :type  callback: f(Tag, Operation) -> None
+        """
         if self.__in_dispatch_mode:
             self.__callback_additions.append((pattern, callback))
         else:
@@ -120,6 +134,7 @@ class EventModel(KinematicModel):
 
 
     def deregister_on_operation_changed(self, callback):
+        """Remove an operation listener callback."""
         if self.__in_dispatch_mode:
             self.__callback_removals.append(('o', callback))
         else:
@@ -130,6 +145,13 @@ class EventModel(KinematicModel):
 
 
     def register_on_model_changed(self, path, callback):
+        """Register a listener that is activated when the data prefixed by the given path changes.
+
+        :param path: Path prefix to listen to.
+        :type  path: str, Path
+        :param callback: Function to call on change.
+        :type  callback: f(data) -> None
+        """
         if type(path) is str:
             path = Path(path)
 
@@ -146,6 +168,7 @@ class EventModel(KinematicModel):
 
 
     def deregister_on_model_changed(self, callback):
+        """Remove model change listener."""
         if self.__in_dispatch_mode:
             self.__callback_removals.append(('m', callback))
         else:
@@ -156,6 +179,14 @@ class EventModel(KinematicModel):
 
 
     def register_on_constraints_changed(self, symbols, callback):
+        """Register a callback that is called when a constraint affecting a symbol-set
+        is added, changed, or removed.
+
+        :param symbols: Symbol set the constraint needs to affect
+        :type  symbols: {Symbol}
+        :param callback: Function to call on change.
+        :tyoe  callback: f(constraint_identifier, constraint)
+        """
         if self.__in_dispatch_mode:
             self.__callback_additions.append((symbols, callback))
         else:
@@ -170,6 +201,7 @@ class EventModel(KinematicModel):
 
 
     def deregister_on_constraints_changed(self, callback):
+        """Remove a constraint listener."""
         if self.__in_dispatch_mode:
             self.__callback_removals.append(('c', callback))
         else:
@@ -180,6 +212,9 @@ class EventModel(KinematicModel):
 
 
     def dispatch_events(self):
+        """Dispatches all events that were collected since the last dispatch.
+        Should be called after clean_structure().
+        """
         self.__in_dispatch_mode = True
 
         # Model Updates

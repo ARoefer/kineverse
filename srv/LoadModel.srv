@@ -1,4 +1,0 @@
-string filepath # path to a JSON file. package:// is allowed
----
-bool success
-string error_msg

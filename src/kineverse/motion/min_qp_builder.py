@@ -1,22 +1,25 @@
 import numpy  as np
 import pandas as pd
 
-from giskardpy import BACKEND
-from giskardpy.exceptions import QPSolverException
-from giskardpy.qp_solver  import QPSolver
+import kineverse.gradients.common_math  as cm
+import kineverse.gradients.llvm_wrapper as llvm
 
-from kineverse.gradients.diff_logic         import get_symbol_type, get_int_symbol, Symbol
+from kineverse.motion.qp_solver             import QPSolver, QPSolverException
+
+from kineverse.gradients.diff_logic         import get_symbol_type, IntSymbol, Symbol
 from kineverse.gradients.gradient_container import GradientContainer as GC
-from kineverse.gradients.gradient_math      import spw, extract_expr, wrap_expr
-from kineverse.model.kinematic_model        import Constraint, Path
+from kineverse.gradients.gradient_math      import extract_expr, wrap_expr
+from kineverse.model.articulation_model     import Constraint, Path
 from kineverse.model.geometry_model         import CollisionSubworld, ContactHandler, obj_to_obj_infix
 from kineverse.visualization.bpb_visualizer import ROSBPBVisualizer
 from kineverse.bpb_wrapper                  import transform_to_matrix as tf2mx
 from kineverse.type_sets                    import is_symbolic
 
-default_bound = 1e9    
+default_bound  = 1e9    
 
 HardConstraint = Constraint
+
+PANDA_LOGGING  = False
 
 class SoftConstraint(Constraint):
     def __init__(self, lower, upper, weight, expr):
@@ -30,6 +33,12 @@ class SoftConstraint(Constraint):
     def __str__(self):
         return '{} @ {}'.format(super(SoftConstraint, self).__str__(), self.weight)
 
+    def __eq__(self, other):
+        if isinstance(other, SoftConstraint):
+            return self.lower == other.lower and self.upper == other.upper and self.expr == other.expr and self.weight == other.weight
+        return False
+
+
 class ControlledValue(object):
     def __init__(self, lower, upper, symbol, weight=1):
         self.lower  = lower
@@ -40,21 +49,28 @@ class ControlledValue(object):
     def __str__(self):
         return '{} <= {} <= {} @ {}'.format(self.lower, self.symbol, self.upper, self.weight)
 
+    def __eq__(self, other):
+        if isinstance(other, ControlledValue):
+            return self.lower == other.lower and self.upper == other.upper and self.symbol == other.symbol and self.weight == other.weight
+        return False
+
+
 class MinimalQPBuilder(object):
     def __init__(self, hard_constraints, soft_constraints, controlled_values):
         hc = [(k, Constraint(extract_expr(c.lower), extract_expr(c.upper), wrap_expr(c.expr))) for k, c in hard_constraints.items()]
-        sc = [(k, SoftConstraint(extract_expr(c.lower), extract_expr(c.upper), c.weight, wrap_expr(c.expr))) for k, c in soft_constraints.items()]
-        cv = [(k, ControlledValue(extract_expr(c.lower), extract_expr(c.upper), c.symbol, extract_expr(c.weight))) for k, c in controlled_values.items()]
+        sc = [(k, SoftConstraint(extract_expr(c.lower), extract_expr(c.upper), c.weight_id, wrap_expr(c.expr))) for k, c in soft_constraints.items()]
+        cv = [(k, ControlledValue(extract_expr(c.lower), extract_expr(c.upper), c.symbol, extract_expr(c.weight_id))) for k, c in controlled_values.items()]
 
         self.np_g = np.zeros(len(cv + sc))
-        self.H    = spw.diag(*[c.weight for _, c in cv + sc])
-        self.lb   = spw.Matrix([c.lower if c.lower is not None else -default_bound for _, c in cv] + [-default_bound] * len(sc))
-        self.ub   = spw.Matrix([c.upper if c.upper is not None else  default_bound for _, c in cv] + [default_bound] * len(sc))
-        self.lbA  = spw.Matrix([c.lower if c.lower is not None else -default_bound for _, c in hc + sc])
-        self.ubA  = spw.Matrix([c.upper if c.upper is not None else  default_bound for _, c in hc + sc])
+        self.H    = cm.diag(*[extract_expr(c.weight_id) for _, c in cv + sc])
+        self.lb   = cm.Matrix([c.lower if c.lower is not None else -default_bound for _, c in cv] + [-default_bound] * len(sc))
+        self.ub   = cm.Matrix([c.upper if c.upper is not None else  default_bound for _, c in cv] + [default_bound] * len(sc))
+        self.lbA  = cm.Matrix([c.lower if c.lower is not None else -default_bound for _, c in hc + sc])
+        self.ubA  = cm.Matrix([c.upper if c.upper is not None else  default_bound for _, c in hc + sc])
 
         M_cv      = [c.symbol for _, c in cv]
-        self.A    = spw.Matrix([[c.expr[s] if s in c.expr else 0 for s in M_cv] for _, c in hc + sc]).row_join(spw.zeros(len(hc), len(sc)).col_join(spw.eye(len(sc))))
+        self.A    = cm.hstack(cm.Matrix([[c.expr[s] if s in c.expr else 0 for s in M_cv] for _, c in hc + sc]), 
+                              cm.vstack(cm.zeros(len(hc), len(sc)), cm.eye(len(sc))))
 
         self.cv        = [c.symbol for _, c in cv]
         self.n_cv      = len(cv)
@@ -68,98 +84,12 @@ class MinimalQPBuilder(object):
         
         self._build_M()
 
-
-    # Add new constraints as you go
-    def add_constraints(self, hard_constraints, soft_constraints):
-        if len(hard_constraints) > 0 or len(soft_constraints) > 0:
-            hc = [(k, Constraint(extract_expr(c.lower), extract_expr(c.upper), wrap_expr(c.expr))) for k, c in hard_constraints.items()]
-            sc = [(k, SoftConstraint(extract_expr(c.lower), extract_expr(c.upper), c.weight, wrap_expr(c.expr))) for k, c in soft_constraints.items()]
-
-            A_addition   = spw.zeros(1, self.A.shape[1])
-            lbA_addition = spw.zeros(1)
-            ubA_addition = spw.zeros(1)
-            new_weights  = []
-
-            for k, c in hc + sc:
-                try:
-                    idx = self.row_names.index(k)
-                    is_hc = max(self.A[idx, len(self.cv):]) == 0
-                    if type(c) is SoftConstraint and is_hc:
-                        raise Exception('key "{}" refers to hard constraint but is being overriden with a soft constraint.')
-                    elif idx >= self.n_hc:
-                        raise Exception('key "{}" refers to soft constraint but is being overriden with a hard constraint.')
-
-                    self.lbA[idx] = c.lower
-                    self.ubA[idx] = c.upper
-                    for x, s in enumerate(self.cv):
-                            self.A[idx, x] = c.expr[s] if s in c.expr else 0
-                    if type(c) is SoftConstraint:
-                        d_idx = self.n_cv + idx - self.n_hc
-                        self.H[d_idx, d_idx] = c.weight
-                except ValueError:
-                    lbA_addition = lbA_addition.col_join(spw.Matrix([c.lower]))
-                    ubA_addition = ubA_addition.col_join(spw.Matrix([c.upper]))
-                    if type(c) is SoftConstraint:
-                        A_addition = A_addition.row_join(spw.zeros(A_addition.shape[0], 1).col_join(spw.Matrix([1])))
-                        new_weights.append(c.weight)
-                        self.col_names.append(k)
-
-                    self.row_names.append(k)
-                    A_addition = A_addition.col_join(spw.Matrix([c.expr[s] if s in c.expr else 0 for s in self.cv] + [0] * (A_addition.shape[1] - self.n_cv)))
-
-            if A_addition.shape[1] > 1: # New constraints have been added
-                self.lbA = self.lbA.col_join(lbA_addition[1:,:])
-                self.ubA = self.ubA.col_join(ubA_addition[1:,:])
-                if A_addition.shape[1] > self.A.shape[1]:
-                    self.A = self.A.row_join(spw.zeros(self.A.shape[0], A_addition.shape[1] - self.A.shape[1]))
-                self.A   = self.A.col_join(A_addition[1:,:])
-
-            if len(new_weights) > 0:
-                self.H = self.H.row_join(spw.zeros(self.H.shape[0], len(new_weights))).col_join(spw.zeros(len(new_weights), self.H.shape[1]).row_join(spw.diag(*new_weights)))
-
-            self.n_hc += len(lbA_addition) - 1 - len(new_weights)
-            self.n_sc += len(new_weights)
-
-            self._build_M()
-
-
-    def remove_constraints(self, constraints):
-        indices = {n: x for x, n in enumerate(self.row_names)}
-
-        to_remove = {indices[k] for k in constraints if k in indices}
-        if len(to_remove) > 0:
-            new_A_rows   = []
-            new_lbA      = []
-            new_ubA      = []
-            new_weights  = [self.H[x, x] for x in range(self.H.shape[0] - self.n_sc)]
-            sc_idx = 0 
-            for x in range(self.A.shape[0]):
-                if x not in to_remove:
-                    new_lbA.append(self.lbA[x,:])
-                    new_ubA.append(self.lbA[x,:])
-                    if max(self.A[indices[k], len(self.cv):] != 0): # this is a soft constraint
-                        new_weights.append(self.H[len(self.cv) + sc_idx, len(self.cv) + sc_idx])
-                        new_A_rows.append(self.A[x, :].row_join(spw.Matrix(([0] * sc_idx) + [1])))
-                        sc_idx += 1
-                    else:
-                        new_A_rows.append(self.A[x, :])
-                else:
-                    del self.row_names[x]
-
-            self.n_sc = sc_idx
-            self.n_hc = len(new_A_rows) - self.n_sc
-
-            self.A   = spw.Matrix([row.row_join(spw.Matrix([0] * (sc_idx + len(self.cv) - row.shape[1]))) for row in new_A_rows])
-            self.H   = spw.diag(*new_weights)
-            self.lbA = spw.Matrix(new_lbA)
-            self.ubA = spw.Matrix(new_ubA)
-
-
     def _build_M(self):
-        self.big_ass_M = self.A.row_join(self.lbA).row_join(self.ubA).col_join(self.H.row_join(self.lb).row_join(self.ub))
+        self.big_ass_M = cm.vstack(cm.hstack(self.A, self.lbA, self.ubA), 
+                                   cm.hstack(self.H, self.lb,  self.ub))
 
-        self.free_symbols     = self.big_ass_M.free_symbols
-        self.cython_big_ass_M = spw.speed_up(self.big_ass_M, self.free_symbols, backend=BACKEND)
+        self.free_symbols     = cm.free_symbols(self.big_ass_M)
+        self.cython_big_ass_M = cm.speed_up(self.big_ass_M, self.free_symbols)
 
         self.shape1    = self.A.shape[0]
         self.shape2    = self.A.shape[1]
@@ -172,30 +102,39 @@ class MinimalQPBuilder(object):
     @profile
     def get_cmd(self, substitutions, nWSR=None, deltaT=None):
         substitutions = {str(s): v for s, v in substitutions.items()}
-        np_big_ass_M = self.cython_big_ass_M(**substitutions)
-        self.np_H   = np.array(np_big_ass_M[self.shape1:, :-2])
-        self.np_A   = np.array(np_big_ass_M[:self.shape1, :self.shape2])
-        self.np_lb  = np.array(np_big_ass_M[self.shape1:, -2])
-        self.np_ub  = np.array(np_big_ass_M[self.shape1:, -1])
-        self.np_lbA = np.array(np_big_ass_M[:self.shape1, -2])
-        self.np_ubA = np.array(np_big_ass_M[:self.shape1, -1])
+        np_big_ass_M = np.nan_to_num(self.cython_big_ass_M(**substitutions), copy=False)
+        self.np_H   = np_big_ass_M[self.shape1:, :-2].copy()
+        self.np_A   = np_big_ass_M[:self.shape1, :self.shape2].copy()
+        self.np_lb  = np_big_ass_M[self.shape1:, -2].copy()
+        self.np_ub  = np_big_ass_M[self.shape1:, -1].copy()
+        self.np_lbA = np_big_ass_M[:self.shape1, -2].copy()
+        self.np_ubA = np_big_ass_M[:self.shape1, -1].copy()
 
         self._post_process_matrices(deltaT)
 
-        dfH = pd.DataFrame(np.vstack((self.np_lb, self.np_ub, self.np_H.diagonal())), index=['lb', 'ub', 'weight'], columns=self.col_names)
-        dfA = pd.DataFrame(np.hstack((self.np_lbA.reshape((self.shape1, 1)), 
-                                      self.np_ubA.reshape((self.shape1, 1)), 
-                                      self.np_A[:, :-self.n_sc])), 
-                                      index=self.row_names, columns=['lbA', 'ubA'] + self.col_names[:self.n_cv])
+        if PANDA_LOGGING:
+            dfH = pd.DataFrame(np.vstack((self.np_lb, self.np_ub, self.np_H.diagonal())), index=['lb', 'ub', 'weight'], columns=self.col_names)
+            dfA = pd.DataFrame(np.hstack((self.np_lbA.reshape((self.shape1, 1)), 
+                                          self.np_ubA.reshape((self.shape1, 1)), 
+                                          self.np_A)),
+                                          index=self.row_names, columns=['lbA', 'ubA'] + self.col_names) # [:self.n_cv]
 
         try:
             xdot_full = self.qp_solver.solve(self.np_H, self.np_g, self.np_A, self.np_lb,  self.np_ub, 
                                                                     self.np_lbA, self.np_ubA, nWSR)
-            self.A_dfs.append(dfA)
-            self.H_dfs.append(dfH)
+            if PANDA_LOGGING:
+                self.A_dfs.append(dfA)
+                self.H_dfs.append(dfH)
             self._cmd_log.append(xdot_full[:self.n_cv])
         except QPSolverException as e:
-            print('INFEASIBLE CONFIGURATION!\nH:{}\nA:\n{}\nFull data written to "solver_crash_H.csv" and "solver_crash_A.csv"'.format(dfH, dfA))
+            if not PANDA_LOGGING:
+                dfH = pd.DataFrame(np.vstack((self.np_lb, self.np_ub, self.np_H.diagonal())), index=['lb', 'ub', 'weight'], columns=self.col_names)
+                dfA = pd.DataFrame(np.hstack((self.np_lbA.reshape((self.shape1, 1)), 
+                                          self.np_ubA.reshape((self.shape1, 1)), 
+                                          self.np_A[:, :-self.n_sc])), 
+                                          index=self.row_names, columns=['lbA', 'ubA'] + self.col_names[:self.n_cv])
+
+            print('INFEASIBLE CONFIGURATION!\nH:{}\nA:\n{}\nFull data written to "solver_crash_H.csv" and "solver_crash_A.csv"'.format(dfH.T, dfA))
             dfH.to_csv('solver_crash_H.csv')
             dfA.to_csv('solver_crash_A.csv')
             b_comp  = np.greater(self.np_lb,  self.np_ub)
@@ -206,9 +145,9 @@ class MinimalQPBuilder(object):
             else:
                 unsat_rows = [(n, lb, ub) for n, lb, ub, d in zip(self.row_names, self.np_lbA, self.np_ubA, self.np_A) if (lb > 0 or ub < 0) and (d == 0).min()]
                 if len(unsat_rows) > 0:
-                    print('Direct unsatisfiability:\n{}'.format('\n'.join(['{} needs change but the Jacobian is 0. lbA: {}, ubA: {}'.format(n, lb, ub) for n, lb, ub in unsat_rows])))
+                    print('Direct insatisfiability:\n{}'.format('\n'.join(['{} needs change but the Jacobian is 0. lbA: {}, ubA: {}'.format(n, lb, ub) for n, lb, ub in unsat_rows])))
                 else:
-                    print('Boundaries are not overlapping and direct unsatisfiability could not be found. Error must be more complex.')
+                    print('Boundaries are not overlapping and direct insatisfiability could not be found. Error must be more complex.')
 
             raise e
         if xdot_full is None:
@@ -242,7 +181,7 @@ class TypedQPBuilder(MinimalQPBuilder):
         return dict(zip(self.cv, self.cv_type))
 
 
-class PID_Constraint():
+class PID_Constraint(object):
     def __init__(self, error_term, control_value, weight=1, k_p=1, k_i=0, k_d=0):
         self.error_term    = error_term
         self.control_value = control_value
@@ -268,6 +207,14 @@ class PID_Constraint():
 
     def to_constraint(self):
         return self.to_hard_constraint() if self.weight is None else self.to_soft_constraint()
+
+    def __eq__(self, other):
+        if isinstance(other, PID_Constraint):
+            return self.error_term == other.error_term and self.control_value == other.control_value and self.weight == other.weight and self.k_p == other.k_p and self.k_i == other.k_i and self.k_d == other.k_d
+        return False
+
+    def __str__(self):
+        return 'Error term: {}\nControl term: {}\nWeight: {}\nP: {} I: {} D: {}'.format(str(self.error_term), str(self.control_value), str(self.weight), self.k_p, self.k_i, self.k_d)
 
 
 class PIDQPBuilder(TypedQPBuilder):
@@ -317,7 +264,7 @@ class PIDQPBuilder(TypedQPBuilder):
 
 class GeomQPBuilder(PIDQPBuilder): #(TypedQPBuilder):
     @profile
-    def __init__(self, collision_world, hard_constraints, soft_constraints, controlled_values, default_query_distance=1.0, visualizer=None):
+    def __init__(self, collision_world, hard_constraints, soft_constraints, controlled_values, default_query_distance=10.0, visualizer=None):
 
         if visualizer is not None and not isinstance(visualizer, ROSBPBVisualizer):
             raise Exception('Visualizer needs to be an instance of ROSBPBVisualizer. Given argument is of type {}'.format(type(visualizer)))
@@ -333,6 +280,8 @@ class GeomQPBuilder(PIDQPBuilder): #(TypedQPBuilder):
 
         #print('\n'.join(collision_world.names))
 
+        missing_objects = set()
+
         for s in symbols:
             s_str = str(s)
             if s_str[:9] == 'contact__':
@@ -342,6 +291,7 @@ class GeomQPBuilder(PIDQPBuilder): #(TypedQPBuilder):
                 obj_a_str = str(obj_a)
                 if obj_a_str not in collision_world.named_objects:
                     print('Object "{}" was referenced in symbol "{}" but is not part of the collision world. Skipping it.'.format(obj_a_str, s_str))
+                    missing_objects.add(obj_a_str)
                     continue
 
                 coll_a = collision_world.named_objects[obj_a_str]
@@ -363,6 +313,7 @@ class GeomQPBuilder(PIDQPBuilder): #(TypedQPBuilder):
                 else: 
                     if obj_b_str not in collision_world.named_objects:
                         print('Object "{}" was referenced in symbol "{}" but is not part of the collision world. Skipping it.'.format(obj_b_str, s_str))
+                        missing_objects.add(obj_b_str)
                         continue
 
                     coll_b = collision_world.named_objects[obj_b_str]
@@ -379,7 +330,11 @@ class GeomQPBuilder(PIDQPBuilder): #(TypedQPBuilder):
                         if not handler.has_handle_for(obj_a):
                             handler.add_active_handle(obj_a)
 
+        if len(missing_objects) > 0:
+            raise Exception('Missing objects to compute queries:\n  {}\nObjects in world:\n  {}'.format('\n  '.join(sorted(missing_objects)), '\n  '.join(sorted(collision_world.names))))
+
         self.closest_query_batch = {collision_object: default_query_distance for collision_object in self.collision_handlers.keys()}
+        self._cb_draw = None
 
         self.collision_world = collision_world
         super(GeomQPBuilder, self).__init__(hard_constraints, soft_constraints, controlled_values)
@@ -412,7 +367,10 @@ class GeomQPBuilder(PIDQPBuilder): #(TypedQPBuilder):
     def get_cmd(self, substitutions, nWSR=None, deltaT=None):
         self.compute_queries(substitutions)
 
-        return super(GeomQPBuilder, self).get_cmd(substitutions, nWSR, deltaT)
+        cmd = super(GeomQPBuilder, self).get_cmd(substitutions, nWSR, deltaT)
+        if self.visualizer is not None and self._cb_draw is not None:
+            self._cb_draw(self.visualizer, substitutions, cmd)
+        return cmd
 
 
 @profile
@@ -421,7 +379,7 @@ def generate_controlled_values(constraints, symbols, weights={}, bounds={}, defa
     to_remove  = set()
 
     for k, c in constraints.items():
-        if type(c.expr) is Symbol and c.expr in symbols and str(c.expr) not in controlled_values:
+        if cm.is_symbol(c.expr) and c.expr in symbols and str(c.expr) not in controlled_values:
             weight = default_weight if c.expr not in weights else weights[c.expr] 
             controlled_values[str(c.expr)] = ControlledValue(c.lower, c.upper, c.expr, weight)
             to_remove.add(k)
@@ -437,7 +395,7 @@ def generate_controlled_values(constraints, symbols, weights={}, bounds={}, defa
 
 def depth_weight_controlled_values(gm, controlled_values, default_weight=0.01, exp_factor=1.0):
     for cv in controlled_values.values():
-        cv.weight = default_weight * max(1, len(gm.get_active_geometry_raw({cv.symbol}))) ** exp_factor
+        cv.weight_id = default_weight * max(1, len(gm.get_active_geometry_raw({cv.symbol}))) ** exp_factor
     return controlled_values
 
 def find_constant_bounds(constraints):
@@ -445,7 +403,7 @@ def find_constant_bounds(constraints):
     maxes = {}
 
     for c in constraints.values():
-        if type(c.expr) is Symbol:
+        if cm.is_symbol(c.expr):
             if not is_symbolic(c.lower):
                 mins[c.expr] = c.lower if c.expr not in mins  else max(mins[c.expr], c.lower)
 
@@ -453,7 +411,3 @@ def find_constant_bounds(constraints):
                 mins[c.expr] = c.upper if c.expr not in maxes else max(mins[c.expr], c.upper)
 
     return {s: (mins[s] if s in mins else None, maxes[s] if s in maxes else None) for s in set(mins.keys()).union(set(maxes.keys()))}
-
-
-
-

@@ -8,5 +8,7 @@ if __name__ == '__main__':
 
     server = ModelServer()
 
+    print('Server is ready.')
+
     while not rospy.is_shutdown():
         rospy.sleep(1000)

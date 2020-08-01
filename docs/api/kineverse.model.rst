@@ -47,7 +47,7 @@ kineverse.model.history module
 kineverse.model.kinematic\_model module
 ---------------------------------------
 
-.. automodule:: kineverse.model.kinematic_model
+.. automodule:: kineverse.model.articulation_model
     :members:
     :undoc-members:
     :show-inheritance:

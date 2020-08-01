@@ -11,6 +11,8 @@ Welcome to Kineverse's documentation!
    :caption: Contents:
 
    getting_started/welcome.rst
+   getting_started/operations.rst
+   getting_started/models.rst
 
    api/kineverse.rst
 

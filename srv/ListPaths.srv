@@ -1,4 +1,0 @@
-string root
-uint16 depth
----
-string[] paths

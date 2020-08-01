@@ -9,7 +9,7 @@ from kineverse.motion.min_qp_builder   import Constraint, SoftConstraint, Contro
 from kineverse.motion.min_qp_builder   import TypedQPBuilder as TQPB
 from kineverse.gradients.diff_logic    import *
 from kineverse.gradients.gradient_math import *
-from kineverse.model.kinematic_model   import KinematicModel
+from kineverse.model.articulation_model   import ArticulationModel
 from kineverse.visualization.plotting  import split_recorders, draw_recorders
 
 def subs_if_sym(var, subs_dict):
@@ -24,7 +24,7 @@ def sign(x):
 class Scenario(object):
     def __init__(self, name):
         self.name = name
-        self.km   = KinematicModel()
+        self.km   = ArticulationModel()
         self.qp_type           = TQPB
         self.int_rules         = {}
         self.recorded_terms    = {}
@@ -135,7 +135,7 @@ class Lockbox(Scenario):
         self.lock_e_v = get_diff_symbol(self.lock_e_p)
         self.lock_f_v = get_diff_symbol(self.lock_f_p)
 
-        self.km = KinematicModel()
+        self.km = ArticulationModel()
 
         bc_open_threshold = 0.1
         d_open_threshold  = 0.5
@@ -216,7 +216,7 @@ def lock_explorer(km, state, goals, generated_constraints):
         symbols = goal.expr.free_symbols
         goal_sign = sign(subs_if_sym(goal.lower, state)) + sign(subs_if_sym(goal.upper, state))
         if goal_sign == 0:
-            return goals
+            continue
 
         goal_expr = goal.expr
         if type(goal_expr) != GC:
@@ -252,16 +252,16 @@ def lock_explorer(km, state, goals, generated_constraints):
 
         new_goals = {}
         # If all symbols are blocked from going in the desired direction
-        if min([len(cd) for cd in blocking_constraints.values()]):
+        if min([len(cd) for cd in blocking_constraints.values()]) > 0:
             for s, cd in blocking_constraints.items():
                 for n, c in cd.items():
                     u_const_name = 'unlock {} upper bound'.format(n)
                     l_const_name = 'unlock {} lower bound'.format(n)
                     if diff_sign[s] > 0 and type(c.upper) in symbolic_types and u_const_name not in generated_constraints:
-                        new_goals[u_const_name] = SoftConstraint(less_than(c.upper, 0), 1000, goal.weight, c.upper)
+                        new_goals[u_const_name] = SoftConstraint(less_than(c.upper, 0), 1000, goal.weight_id, c.upper)
                         generated_constraints.add(u_const_name)
                     elif diff_sign[s] < 0 and type(c.lower) in symbolic_types and l_const_name not in generated_constraints:
-                        new_goals[l_const_name] = SoftConstraint(-1000, -greater_than(c.lower, 0), goal.weight, c.lower)
+                        new_goals[l_const_name] = SoftConstraint(-1000, -greater_than(c.lower, 0), goal.weight_id, c.lower)
                         generated_constraints.add(l_const_name)
         
         final_goals.update(lock_explorer(km, state, new_goals, generated_constraints))
@@ -280,4 +280,3 @@ if __name__ == '__main__':
 
     draw_recorders(list(sum([(s.value_recorder, s.symbol_recorder) for s in scenarios], tuple())), 4.0/9.0, 8, 4).savefig('tricky_kinematics.png')
     #draw_recorders(split_recorders(list(sum([(s.value_recorder, s.symbol_recorder) for s in scenarios], tuple()))), 4.0/9.0, 8, 4).savefig('tricky_kinematics.png')
-    

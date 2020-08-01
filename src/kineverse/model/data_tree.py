@@ -1,21 +1,24 @@
-from kineverse.json_serializable import JSONSerializable
-from kineverse.gradients.gradient_math import spw
-from kineverse.model.paths       import PathException
+"""
+The data_tree module implements the DataTree data structure that can query
+can be queried for data using path identifiers.
+"""
 
-from yaml import load, dump
+import kineverse.gradients.common_math as cm
 
 from multiprocessing import RLock
+from kineverse.json_serializable       import JSONSerializable
+from kineverse.model.paths             import PathException
+
 
 
 class DataTree(JSONSerializable):
     def __init__(self, parent=None):
         super(DataTree, self).__init__()
 
-        self.parent = parent
-        self.data_tree = {}
+        self.lock        = RLock()
+        self.parent      = parent
+        self.data_tree   = {}
         self.value_table = {}
-        # Mapping of {DLConcept: set}
-        self.lock = RLock()
 
     def _json_data(self, json_dict):
         json_dict.update({'parent': self.parent,
@@ -26,7 +29,7 @@ class DataTree(JSONSerializable):
     def json_factory(cls, parent, tree, values):
         out = DataTree(parent)
         out.data_tree = tree
-        out.value_table = {spw.Symbol(k.encode('utf-8')): v for k, v in values.items()}
+        out.value_table = {cm.Symbol(k.encode('utf-8')): v for k, v in values.items()}
         return out
 
     def __str__(self):
@@ -54,23 +57,6 @@ class DataTree(JSONSerializable):
 
     def __getitem__(self, key):
         return self.find_data(key)
-
-    def dump_to_file(self, filepath):
-        stream = file(filepath, 'w')
-        dump(self.id_map, stream)
-        stream.close()
-
-    def safe_find_data(self, key):
-        with self.lock:
-            return self.find_data(key)
-
-    def safe_insert_data(self, key, data):
-        with self.lock: 
-            self.insert_data(key, data)
-
-    def safe_remove_data(self, key):
-        with self.lock:
-            self.remove_data(key)
 
     def find_data(self, key):   
         return key.get_data(self.data_tree)
@@ -115,3 +101,8 @@ class DataTree(JSONSerializable):
 
     def get_data_map(self):
         return self.data_tree.copy()
+
+    def __eq__(self, other):
+        if isinstance(other, DataTree):
+            return self.parent == other.parent and self.data_tree == other.data_tree and self.value_table == other.value_table
+        return False

@@ -1,8 +1,9 @@
 import unittest as ut
 
-from kineverse.gradients.gradient_math     import *
+import kineverse.gradients.common_math as cm
+
 from kineverse.model.frames                import Frame, Transform
-from kineverse.model.kinematic_model       import KinematicModel, Path
+from kineverse.model.articulation_model    import ArticulationModel, Path
 from kineverse.operations.frame_operations import collect_chain,           \
                                                   fk_a_in_b,               \
                                                   CreateRelativeTransform, \
@@ -13,9 +14,9 @@ from kineverse.operations.basic_operations import CreateComplexObject
 class TestFrames(ut.TestCase):
 
     def test_collect_chain(self):
-        km = KinematicModel()
+        km = ArticulationModel()
 
-        f_a = Frame('map', None)
+        f_a = Frame('world', None)
         f_b = Frame(  'a', None)
         f_c = Frame(  'b', None)
         f_d = Frame(  'c', None)
@@ -32,7 +33,7 @@ class TestFrames(ut.TestCase):
 
 
     def test_fk_a_in_b(self):
-        km = KinematicModel()
+        km = ArticulationModel()
         
         p1 = translation3(1,-3, 5)
         axis1  = vector3(1, -2, 5)
@@ -45,13 +46,13 @@ class TestFrames(ut.TestCase):
         p5 = translation3(0, 0, 4)
         p6 = frame3_rpy(1.2, -0.3, 0.67, [1,2,3])
 
-        f_a = Frame('map', p1, p1)
+        f_a = Frame('world', p1, p1)
         f_b = Frame(  'a', f_a.pose * p2, p2)
         f_c = Frame(  'b', f_b.pose * p3, p3)
         f_d = Frame(  'c', f_c.pose * p4, p4)
         f_e = Frame(  'b', f_b.pose * p5, p5)        
-        f_f = Frame('map', p6, p6)
-        f_g = Frame('lol', spw.eye(4))
+        f_f = Frame('world', p6, p6)
+        f_g = Frame('lol', cm.eye(4))
 
         km.set_data('a', f_a)
         km.set_data('b', f_b)
@@ -76,7 +77,7 @@ class TestFrames(ut.TestCase):
 
 
     def test_create_relative_frame_and_transform(self):
-        km = KinematicModel()
+        km = ArticulationModel()
         
         p1 = translation3(1,-3, 5)
         axis1  = vector3(1, -2, 5)
@@ -89,23 +90,23 @@ class TestFrames(ut.TestCase):
         p5 = translation3(0, 0, 4)
         p6 = frame3_rpy(1.2, -0.3, 0.67, [1,2,3])
 
-        f_a  = Frame('map', p1, p1)
+        f_a  = Frame('world', p1, p1)
         f_b  = Frame(  'a', f_a.pose * p2, p2)
         f_c  = Frame(  'b', f_b.pose * p3, p3)
         f_c2 = Frame(  'b', f_b.pose * p6, p6)
         f_d  = Frame(  'c', f_c.pose * p4, p4)
         f_e  = Frame(  'b', f_b.pose * p5, p5)        
-        f_f  = Frame('map', p6, p6)
-        f_g  = Frame('lol', spw.eye(4))
+        f_f  = Frame('world', p6, p6)
+        f_g  = Frame('lol', cm.eye(4))
 
 
-        km.apply_operation(CreateComplexObject(Path('a'), f_a), 'create a')
-        km.apply_operation(CreateRelativeFrame(Path('b'), f_b), 'create b')
-        km.apply_operation(CreateRelativeFrame(Path('c'), f_c), 'create c')
-        km.apply_operation(CreateRelativeFrame(Path('d'), f_d), 'create d')
-        km.apply_operation(CreateRelativeFrame(Path('e'), f_e), 'create e')
-        km.apply_operation(CreateComplexObject(Path('f'), f_f), 'create f')
-        km.apply_operation(CreateComplexObject(Path('g'), f_g), 'create g')
+        km.apply_operation('create a', CreateComplexObject(Path('a'), f_a))
+        km.apply_operation('create b', CreateRelativeFrame(Path('b'), f_b))
+        km.apply_operation('create c', CreateRelativeFrame(Path('c'), f_c))
+        km.apply_operation('create d', CreateRelativeFrame(Path('d'), f_d))
+        km.apply_operation('create e', CreateRelativeFrame(Path('e'), f_e))
+        km.apply_operation('create f', CreateComplexObject(Path('f'), f_f))
+        km.apply_operation('create g', CreateComplexObject(Path('g'), f_g))
 
         d_in_b = fk_a_in_b(km, f_d, f_b)
         b_in_d = fk_a_in_b(km, f_b, f_d)

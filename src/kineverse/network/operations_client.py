@@ -6,17 +6,17 @@ from multiprocessing import RLock
 
 from kineverse.model.history          import Timeline
 from kineverse.model.event_model      import EventModel
-from kineverse.model.kinematic_model  import TaggedOperation, ApplyAt, ApplyBefore, ApplyAfter, RemoveOp
+from kineverse.model.articulation_model  import TaggedOperation, ApplyAt, ApplyBefore, ApplyAfter, RemoveOp
 from kineverse.model.paths            import Path, PathSet
 from kineverse.network.ros_conversion import decode_op_msg, encode_operation_instruction
 from kineverse.time_wrapper           import Time
 
-from kineverse.msg import Operation as OperationMsg
-from kineverse.msg import OperationCall as OperationCallMsg
-from kineverse.msg import OperationsUpdate as OperationsUpdateMsg
+from kineverse_msgs.msg import Operation as OperationMsg
+from kineverse_msgs.msg import OperationCall as OperationCallMsg
+from kineverse_msgs.msg import OperationsUpdate as OperationsUpdateMsg
 
-from kineverse.srv import GetHistory      as GetHistorySrv
-from kineverse.srv import ApplyOperations as ApplyOperationsSrv
+from kineverse_msgs.srv import GetHistory      as GetHistorySrv
+from kineverse_msgs.srv import ApplyOperations as ApplyOperationsSrv
 
 
 class OperationsClient_NoROS(object):
@@ -50,7 +50,7 @@ class OperationsClient_NoROS(object):
             return self.km.has_data(path)
 
 
-    def get_data(self, data):
+    def get_data(self, path):
         if type(path) == str:
             path = Path(path)
 

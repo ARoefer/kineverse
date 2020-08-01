@@ -1,7 +1,8 @@
+import kineverse.gradients.common_math as cm
 import unittest as ut
 import betterpybullet as pb
 
-from kineverse.gradients.diff_logic       import create_pos
+from kineverse.gradients.diff_logic       import Position
 from kineverse.gradients.gradient_math    import *
 from kineverse.model.paths                import Path
 from kineverse.model.geometry_model       import GeometryModel, CollisionSubworld
@@ -12,15 +13,15 @@ class TestGeometryModel(ut.TestCase):
     def test_link_insertion(self):
         gm = GeometryModel()
 
-        sym_a = create_pos('a')
-        sym_b = create_pos('b')
-        sym_c = create_pos('c')
+        sym_a = Position('a')
+        sym_b = Position('b')
+        sym_c = Position('c')
 
-        box_shape  = Geometry('my_box', spw.eye(4), 'box')
-        mesh_shape = Geometry('my_mesh', spw.eye(4), 'mesh', mesh='package://kineverse/meshes/suzanne.obj')
+        box_shape  = Geometry('my_box',  cm.eye(4), 'box')
+        mesh_shape = Geometry('my_mesh', cm.eye(4), 'mesh', mesh='package://kineverse/meshes/suzanne.obj')
 
-        box_link  = KinematicLink('map', translation3(sym_a, 1, 0), {'0' : box_shape}, {'0' : box_shape})
-        mesh_link = KinematicLink('map', translation3(1, sym_b, 0), {'0' : mesh_shape}, {'0' : mesh_shape}) 
+        box_link  = KinematicLink('world', translation3(sym_a, 1, 0), geometry={'0' : box_shape}, collision={'0' : box_shape})
+        mesh_link = KinematicLink('world', translation3(1, sym_b, 0), geometry={'0' : mesh_shape}, collision={'0' : mesh_shape}) 
 
         gm.set_data('my_box', box_link)
         gm.set_data('my_mesh', mesh_link)
@@ -46,15 +47,15 @@ class TestGeometryModel(ut.TestCase):
     def test_urdf_insertion(self):
         gm = GeometryModel()
 
-        sym_a = create_pos('a')
-        sym_b = create_pos('b')
-        sym_c = create_pos('c')
+        sym_a = Position('a')
+        sym_b = Position('b')
+        sym_c = Position('c')
 
-        box_shape  = Geometry('my_box', spw.eye(4), 'box')
-        mesh_shape = Geometry('my_mesh', spw.eye(4), 'mesh', mesh='package://kineverse/meshes/suzanne.obj')
+        box_shape  = Geometry('my_box',  cm.eye(4), 'box')
+        mesh_shape = Geometry('my_mesh', cm.eye(4), 'mesh', mesh='package://kineverse/meshes/suzanne.obj')
 
-        box_link  = KinematicLink('map', translation3(sym_a, 1, 0), {'0' : box_shape}, {'0' : box_shape})
-        mesh_link = KinematicLink('map', translation3(1, sym_b, 0), {'0' : mesh_shape}, {'0' : mesh_shape}) 
+        box_link  = KinematicLink('world', translation3(sym_a, 1, 0), geometry={'0' : box_shape}, collision={'0' : box_shape})
+        mesh_link = KinematicLink('world', translation3(1, sym_b, 0), geometry={'0' : mesh_shape}, collision={'0' : mesh_shape}) 
 
         robot = URDFRobot('my_bot')
         robot.links['my_box']  = box_link

@@ -1,3 +1,7 @@
+"""
+The history module provides the implementation of the operation history and dependency determination.
+"""
+
 from sortedcontainers import SortedList, SortedSet
 
 from kineverse.model.paths import Path
@@ -85,9 +89,14 @@ class History(object):
                     # Fetch all dependents from predecessor which are going to depend on the new chunk
                     # Save them as dependents and mark them as dirty
                     if d.stamp > chunk.stamp:
-                        chunk.dependents.add(d)
-                        self.dirty_chunks.add(d)
-                        to_remove.add(d)
+                        dep_overlap_diff = d.dependencies.difference(chunk.modifications)
+                        # Is there at least one element overlap
+                        if len(dep_overlap_diff) < len(d.dependencies):  
+                            chunk.dependents.add(d)
+                            self.dirty_chunks.add(d)
+                            # If there is no remaining overlap with pred anymore, remove d
+                            if len(dep_overlap_diff.difference(pred.modifications)) == len(dep_overlap_diff):
+                                to_remove.add(d)
                 pred.dependents -= to_remove
             self.modification_history[path].add(chunk)
 
@@ -106,6 +115,7 @@ class History(object):
 
         self.chunk_history.add(chunk)
 
+    @profile
     def remove_chunk(self, chunk):
         for p in chunk.modifications:
             if self.modification_history[p][0] == chunk and len(chunk.dependents) > 0 and max([p in c.dependencies for c in chunk.dependents]):
@@ -132,6 +142,7 @@ class History(object):
         self.chunk_history.remove(chunk)
         self.dirty_chunks.update(chunk.dependents)
 
+    @profile
     def replace_chunk(self, c_old, c_new):
         if c_old.stamp != c_new.stamp:
             raise Exception('Can only replace chunk if stamps match. Stamps:\n Old: {:>8.3f}\n New: {:>8.3f}'.format(c_old.stamp, c_new.stamp))
@@ -226,7 +237,17 @@ class History(object):
 
         return Timeline(out)
 
+    def get_ceil_modifying_chunk(self, path, stamp):
+        if path not in self.modification_history:
+            raise Exception('Path "{}" is not contained in history.'.format(path))
 
+        _, chunk = self.modification_history[path].get_ceil(stamp)
+        return chunk
+
+    def get_earliest_stamp(self, path):
+        if path in self.modification_history:
+            return self.modification_history[path][0].stamp
+        return None
 
     def str_history_of(self, p):
         if p not in self.modification_history:
@@ -235,6 +256,11 @@ class History(object):
 
     def str_history(self):
         return '\n'.join(['{:>8.3f} : {}'.format(chunk.stamp, str(chunk.op)) for chunk in self.chunk_history])
+
+    def __eq__(self, other):
+        if isinstance(other, History):
+            return self.chunk_history == other.chunk_history
+        return False
 
 
 class StampedData(object):
@@ -261,6 +287,11 @@ class StampedData(object):
     def __str__(self):
         return 'Stamped Data {}'.format(self.stamp)
 
+    def __eq__(self, other):
+        if isinstance(other, StampedData):
+            return self.stamp == other.stamp
+        return False
+
 
 class Chunk(StampedData):
     def __init__(self, stamp, op):
@@ -272,3 +303,12 @@ class Chunk(StampedData):
 
     def __str__(self):
         return 'Stamp: {}\n Arguments: {}\n Modifications: {}\n Dependents: {}\n'.format(self.stamp, ', '.join(self.dependencies), ', '.join(self.modifications), ', '.join([str(d.stamp) for d in self.dependents]))
+
+    def __eq__(self, other):
+        if type(other) == int:
+            return self.stamp == other
+        elif type(other) == float:
+            return self.stamp == other
+        elif isinstance(other, Chunk):
+            return super(Chunk, self).__eq__(other) and self.operation == other.operation and self.dependencies == other.dependencies and self.modifications == other.modifications
+        return False

@@ -13,7 +13,7 @@ COLORS = [(1,1,1,1), (1,0,0,1), (0,1,0,1), (0,0,1,1), (1,1,0,1), (1,0,1,1), (0,1
 
 def create_object(shape, transform=pb.Transform.identity()):
     out = pb.CollisionObject()
-    out.set_collision_shape(shape)
+    out.collision_shape = shape
     out.collision_flags = pb.CollisionObject.KinematicObject
     out.transform = transform
     return out
@@ -21,7 +21,7 @@ def create_object(shape, transform=pb.Transform.identity()):
 if __name__ == '__main__':
     rospy.init_node('kineverse_bullet_test')
 
-    vis = ROSBPBVisualizer('bullet_test', 'map')
+    vis = ROSBPBVisualizer('bullet_test', 'world')
 
     kw = pb.KineverseWorld()
     kw.force_update_all_aabbs = True
@@ -32,19 +32,19 @@ if __name__ == '__main__':
     cube_shape = pb.BoxShape(pb.Vector3(0.5,0.5,0.5))
     cube_body  = create_object(cube_shape, pb.Transform(1, 0, 0))
     cube2_body = create_object(cube_shape, pb.Transform(-1, 0, 0))
-    #obj_body   = create_object(suzanne_obj, pb.Transform(0, 1, 0)) 
-    #stl_body   = create_object(suzanne_stl, pb.Transform(0,-1, 0))
+    obj_body   = create_object(suzanne_obj, pb.Transform(0, 1, 0)) 
+    stl_body   = create_object(suzanne_stl, pb.Transform(0,-1, 0))
 
 
     kw.add_collision_object(cube_body)
     kw.add_collision_object(cube2_body)
-    #kw.add_collision_object(obj_body)
-    #kw.add_collision_object(stl_body)
+    kw.add_collision_object(obj_body)
+    kw.add_collision_object(stl_body)
     
     cube_body.activate(True)
     cube2_body.activate(True)
-    #obj_body.activate(True)
-    #stl_body.activate(True)
+    obj_body.activate(True)
+    stl_body.activate(True)
     
     #print(cube_body.isActive, cube2_body.isActive, obj_body.isActive, stl_body.isActive)
     #print(cube_body.activation_state, cube2_body.activation_state, obj_body.activation_state, stl_body.activation_state)
@@ -76,10 +76,10 @@ if __name__ == '__main__':
 
             cube2_body.transform = pb.Transform(pb.Quaternion(pb.Vector3(1,1,0).normalized(), y), pb.Vector3(-y - 1, 0, 0))
             cube_body.transform = pb.Transform(pb.Quaternion(pb.Vector3(0,1,0), y), pb.Vector3(y + 1, 0, 0))
-            # obj_body.transform = pb.Transform(0,  y + 1, 0)
-            # stl_body.transform = pb.Transform(0, -y - 1, 0)
+            obj_body.transform = pb.Transform(0,  y + 1, 0)
+            stl_body.transform = pb.Transform(0, -y - 1, 0)
 
-            #kw.batch_set_transforms([obj_body, cube2_body, cube_body, stl_body], pose_array)
+            # kw.batch_set_transforms([obj_body, cube2_body, cube_body, stl_body], pose_array)
 
             kw.update_aabbs()
             vis.draw_world('objects', kw)
@@ -96,4 +96,3 @@ if __name__ == '__main__':
                     vis.draw_lines('contacts', pb.Transform.identity(), 0.05, lines, r=c[0], g=c[1], b=c[2])
 
             vis.render()
-

@@ -2,7 +2,7 @@ import pydot
 
 from kineverse.model.paths           import PathDict
 from kineverse.model.history         import Timeline
-from kineverse.model.kinematic_model import KinematicModel
+from kineverse.model.articulation_model import ArticulationModel
 
 
 def get_color(name, colors):

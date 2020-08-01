@@ -1,7 +1,9 @@
-from kineverse.gradients.gradient_math     import spw, inverse_frame
+import kineverse.gradients.common_math as cm
+
+from kineverse.gradients.gradient_math     import inverse_frame, dot
 from kineverse.model.data_tree             import DataTree
 from kineverse.model.frames                import Frame, Transform
-from kineverse.model.kinematic_model       import KinematicModel
+from kineverse.model.articulation_model    import ArticulationModel
 from kineverse.model.paths                 import Path, collect_paths
 from kineverse.operations.operation        import Operation
 
@@ -24,29 +26,18 @@ def fk_a_in_b(ks, frame_a, frame_b):
         raise Exception('Frames "{}" and "{}" have no common root!'.format(frame_a, frame_b))
 
     if frame_b in tf_chain_a:
-        out = spw.eye(4)
-        for x in range(tf_chain_a.index(frame_b) + 1, len(tf_chain_a)):
-             out *= tf_chain_a[x].to_parent
-        return out
+        return dot(*[f.to_parent for f in tf_chain_a[tf_chain_a.index(frame_b) + 1:]])
     elif frame_a in tf_chain_b:
-        out = spw.eye(4)
-        for x in range(tf_chain_b.index(frame_a) + 1, len(tf_chain_b)):
-             out *= tf_chain_b[x].to_parent
-        return inverse_frame(out)
+        return inverse_frame(dot(*[f.to_parent for f in tf_chain_b[tf_chain_b.index(frame_a) + 1:]]))
     else:
         x = 0
         while tf_chain_a[x] == tf_chain_b[x]:
             x += 1
 
-        a_in_root = spw.eye(4)
-        for y in range(x, len(tf_chain_a)):
-            a_in_root *= tf_chain_a[y].to_parent
+        a_in_root = dot(*[f.to_parent for f in tf_chain_a[x:]])
+        b_in_root = dot(*[f.to_parent for f in tf_chain_b[x:]])
 
-        b_in_root = spw.eye(4)
-        for y in range(x, len(tf_chain_b)):
-            b_in_root *= tf_chain_b[y].to_parent
-
-        return inverse_frame(b_in_root) * a_in_root
+        return dot(inverse_frame(b_in_root), a_in_root)
 
 class CreateRelativeFrame(Operation):
     def init(self, path, frame):
@@ -57,7 +48,7 @@ class CreateRelativeFrame(Operation):
                                               parent=Path(self.frame.parent),
                                               **{str(a): path + a[1:] for a in attrs})
     def _apply(self, ks, parent):
-        return {'frame': Frame(self.frame.parent, parent.pose * self.frame.to_parent, self.frame.to_parent)}, {}
+        return {'frame': Frame(self.frame.parent, dot(parent.pose, self.frame.to_parent), self.frame.to_parent)}, {}
 
 
 class CreateRelativeTransform(Operation):

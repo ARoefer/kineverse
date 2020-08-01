@@ -1,6 +1,12 @@
+"""
+The paths module provides the implementation of paths that are used to identify model parts.
+"""
+
+import kineverse.gradients.common_math as cm
+
 from kineverse.json_wrapper            import JSONSerializable
-from kineverse.gradients.gradient_math import spw
-from kineverse.type_sets               import atomic_types, matrix_types, symengine_types
+from kineverse.type_sets import atomic_types, matrix_types, symbolic_types, numpy_types
+
 
 class PathException(Exception):
     def __init__(self, path, obj):
@@ -9,16 +15,17 @@ class PathException(Exception):
         self.obj  = obj
 
 
+symbol_path_separator = '__'
+
+
 class Path(tuple, JSONSerializable):
     def __new__(cls, path):
-        if type(path) == str:
-            parts = path.split('/')
-            if parts[0] == '':
-                return super(Path, cls).__new__(Path, parts[1:])
+        if type(path) == str or type(path) == unicode:
+            parts = [p for p in str(path).split('/') if p != '']
             return super(Path, cls).__new__(Path, parts)
-        elif type(path) == spw.Symbol:
-            return super(Path, cls).__new__(Path, str(path).split('__'))
-        return super(Path, cls).__new__(Path, path)
+        elif cm.is_symbol(path):
+            return super(Path, cls).__new__(Path, str(path).split(symbol_path_separator))
+        return super(Path, cls).__new__(Path, [str(p) for p in path])
 
     def __add__(self, other):
         return Path(super(Path, self).__add__(other))
@@ -43,7 +50,7 @@ class Path(tuple, JSONSerializable):
         return not self.__eq__(other)
 
     def to_symbol(self):
-        return spw.Symbol('__'.join(self))
+        return cm.Symbol(symbol_path_separator.join(self))
 
     def __str__(self):
         return '/'.join(self)
@@ -77,9 +84,10 @@ class Path(tuple, JSONSerializable):
             return None
 
 
-stopping_set = atomic_types.union(matrix_types).union(symengine_types)
+stopping_set = atomic_types.union(matrix_types).union(symbolic_types).union(numpy_types)
 
 def collect_paths(obj, root, depth=10000):
+    """Collect all paths under a given object until a given depth."""
     t = type(obj)
     out = {root}
     if depth > 0 and t not in stopping_set:
@@ -95,7 +103,28 @@ def collect_paths(obj, root, depth=10000):
                 out.update(collect_paths(getattr(obj, a), root + Path(a,), depth - 1))
     return out
 
+def find_all(path, model, target_type):
+    """Returns all data of a given type stored under an model."""
+    if isinstance(model, target_type):
+        return {path: model}
+
+    out = {}
+    t   = type(model)
+    if t not in stopping_set:
+        if t is dict:
+            for k, v in model.items():
+                if type(k) is str:
+                    out.update(find_all(path + (k,), v, target_type))
+        elif t is list:
+            for x, d in enumerate(model):
+                out.update(find_all(path + (x,), d, target_type))
+        else:
+            for a in [a for a in dir(model) if a[0] != '_' and not callable(getattr(model, a))]:
+                out.update(find_all(path + (a,), getattr(model, a), target_type))
+    return out
+
 def find_common_root(paths):
+    """Finds the longest common prefix of a set of paths."""
     out = Path([])
     if len(paths) > 0:
         idx = 0 

@@ -12,7 +12,7 @@ if __name__ == '__main__':
     model      = rospy.get_param('~model_path', '/')
     use_js_msg = rospy.get_param('~use_js_msg', False)
 
-    node = NetworkedTFBroadcaster(desc_param, js_topic, model, use_js_msg)
+    node = NetworkedTFBroadcaster(desc_param, js_topic, model, 50, use_js_msg)
 
     while not rospy.is_shutdown():
         rospy.sleep(1000)

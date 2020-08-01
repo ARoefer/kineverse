@@ -1,18 +1,23 @@
 import rospy
-from giskardpy.symengine_wrappers     import *
-from kineverse.visualization.plotting import ValueRecorder, SymbolicRecorder
-from kineverse.gradients.diff_logic   import get_symbol_type
-from kineverse.motion.min_qp_builder  import TypedQPBuilder as TQPB, \
-                                             GeomQPBuilder  as GQPB, \
-                                             extract_expr
-from kineverse.type_sets              import is_symbolic
-from kineverse.time_wrapper           import Time
+import numpy  as np
+import pandas as pd
+
+import kineverse.gradients.common_math  as cm
+import kineverse.gradients.llvm_wrapper as llvm
+
+from kineverse.visualization.plotting  import ValueRecorder, SymbolicRecorder
+from kineverse.gradients.diff_logic    import get_symbol_type, Position
+from kineverse.motion.min_qp_builder   import TypedQPBuilder as TQPB, \
+                                              GeomQPBuilder  as GQPB, \
+                                              extract_expr
+from kineverse.type_sets               import is_symbolic
+from kineverse.time_wrapper            import Time
 from tqdm import tqdm
 
-DT_SYM = sp.symbols('T_p')
+DT_SYM = Position('dt')
 
 class CommandIntegrator(object):
-    def __init__(self, qp_builder, integration_rules=None, start_state=None, recorded_terms={}, equilibrium=0.001):
+    def __init__(self, qp_builder, integration_rules=None, start_state=None, recorded_terms={}, equilibrium=0.001, printed_vars=set()):
         self.qp_builder = qp_builder
         if isinstance(qp_builder, TQPB):
             self.integration_rules = {}
@@ -21,25 +26,48 @@ class CommandIntegrator(object):
                     if str(s)[:-2] == str(c)[:-2]:
                         t_s = get_symbol_type(s)
                         t_c = get_symbol_type(c)
-                        if t_s <= t_c:
+                        if t_s < t_c:
                             self.integration_rules[s] = s + c * (DT_SYM ** (t_c - t_s))
+                        elif t_s == t_c:
+                            self.integration_rules[s] = s
 
             if integration_rules is not None:
-                self.integration_rules.update({s: r for s, r in integration_rules.items() if s in self.qp_builder.free_symbols})
+                # Only add custom rules which are fully defined given the set of state variables and the set of command variables
+                cv_set = set(self.qp_builder.cv).union({DT_SYM})
+                delta_set = {s: cm.free_symbols(r).difference(self.qp_builder.free_symbols).difference(cv_set) for s, r in integration_rules.items()}
+                for s, r in integration_rules.items():
+                    if len(delta_set[s]) == 0:
+                        self.integration_rules[s] = r
+                    else:
+                        print('Dropping rule "{}: {}". Symbols missing from state: {}'.format(s, r, delta_set[s]))
+            # print('\n  '.join(['{}: {}'.format(k, r) for k, r in sorted([(str(k), str(r)) for k, r in self.integration_rules.items()])]))
         else:
             self.integration_rules = integration_rules if integration_rules is not None else {s: s*DT_SYM for s in self.qp_builder.free_symbols}
+
         self.start_state = {s: 0.0 for s in self.qp_builder.free_symbols}
         if start_state is not None:
             self.start_state.update(start_state)
         self.recorded_terms = recorded_terms
         self.equilibrium = equilibrium
+        self.current_iteration = 0
+        self.printed_vars = printed_vars
+        self._aligned_state_vars     = None
+        self._cythonized_integration = None
 
     def restart(self, title='Integrator'):
         self.state    = self.start_state.copy()
-        self.recorder = ValueRecorder(title, *[str(s) for s in self.state.keys()])
-        self.sym_recorder = SymbolicRecorder(title, **{k: extract_expr(s) for k, s in self.recorded_terms.items() if is_symbolic(s)})
+        self.recorder = ValueRecorder(title, *sorted([str(s) for s in self.state.keys()]))
+        self.sym_recorder = SymbolicRecorder(title, **{k: extract_expr(s) for k, s in self.recorded_terms.items() 
+                                                                                   if is_symbolic(s)})
+        self.current_iteration = 0
 
-    def run(self, dt=0.02, max_iterations=200):
+        self._aligned_state_vars, rules = zip(*self.integration_rules.items())
+        rule_matrix = cm.Matrix([rules])
+        self._cythonized_integration = cm.speed_up(rule_matrix, cm.free_symbols(rule_matrix))
+
+
+    @profile
+    def run(self, dt=0.02, max_iterations=200, logging=True):
         self.state[DT_SYM] = dt
         
         # Precompute geometry related values for better plots
@@ -49,30 +77,46 @@ class CommandIntegrator(object):
         cmd_accu = np.zeros(self.qp_builder.n_cv)
         for x in range(max_iterations):
         # for x in tqdm(range(max_iterations), desc='Running "{}" for {} iterations'.format(self.recorder.title, max_iterations)):
+            self.current_iteration = x
             if rospy.is_shutdown():
                 break
 
-            self.sym_recorder.log_symbols(self.state)
-            str_state = {str(s): v for s, v in self.state.items() if s != DT_SYM}
-            for s, v in str_state.items():
-                if s in self.recorder.data:
-                    self.recorder.log_data(s, v)
+            str_state = {str(s): v for s, v in self.state.items()}
+            if logging:
+                self.sym_recorder.log_symbols(self.state)
+                for s, v in str_state.items():
+                    if s != DT_SYM and s in self.recorder.data:
+                        self.recorder.log_data(s, v)
 
             cmd = self.qp_builder.get_cmd(self.state, deltaT=dt)
             cmd_accu = cmd_accu * 0.5 + self.qp_builder._cmd_log[-1] * dt
             if self.qp_builder.equilibrium_reached(self.equilibrium, -self.equilibrium):
-                #print('Equilibrium point reached after {} iterations'.format(x))
+                # print('Equilibrium point reached after {} iterations'.format(x))
                 return
 
             if np.abs(cmd_accu).max() <= self.equilibrium:
                 return
 
             # print('---\n{}'.format('\n'.join(['{:>35}: {:>12.4f}'.format(k, v) for k, v in cmd.items()])))
-            for s, i in self.integration_rules.items():
-                update = i.subs(cmd).subs(self.state)
-                # if s in cmd:
-                #     print('Command for {}: {} Update: {}'.format(s, cmd[s], update))
-                self.state[s] = update
+            str_state.update({str(s): v for s, v in cmd.items()})
+            new_state_vector = self._cythonized_integration(**str_state) 
+
+            self.state.update(dict(zip(self._aligned_state_vars, new_state_vector[0])))
+
+            # for s, i in self.integration_rules.items():
+            #     update = i.subs(cmd).subs(self.state)
+            #     # if s in cmd:
+            #     #     print('Command for {}: {} Update: {}'.format(s, cmd[s], update))
+            #     self.state[s] = update
+
+            # if len(self.printed_vars) > 0:
+            #     strs = []
+            #     for s in sorted(self.printed_vars):
+            #         if s in self.state:
+            #             strs.append('{}: {}'.format(s, self.state[s]))
+            #         elif s in cmd:
+            #             strs.append('{}: {}'.format(s, cmd[s]))
+            #     print('\n'.join(strs))
 
             self._post_update(dt, cmd)
 
