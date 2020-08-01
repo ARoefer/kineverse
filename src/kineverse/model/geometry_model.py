@@ -79,6 +79,12 @@ class Geometry(Frame):
         return False
 
 
+GEOM_TYPE_MESH     = 'mesh'
+GEOM_TYPE_BOX      = 'box'
+GEOM_TYPE_CYLINDER = 'cylinder'
+GEOM_TYPE_SPHERE   = 'sphere'
+
+
 class InertialData(Frame):
     """Unused."""
     def __init__(self, parent_path, pose, mass=1, inertia_matrix=cm.eye(3)):
