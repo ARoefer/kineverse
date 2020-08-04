@@ -297,8 +297,8 @@ class Chunk(StampedData):
     def __init__(self, stamp, op):
         super(Chunk, self).__init__(stamp,
                                     operation=op,
-                                    dependencies={p for p in op.args_paths.values() if type(p) == Path},
-                                    modifications={p for p in op.mod_paths.values()},
+                                    dependencies=op.dependencies,
+                                    modifications=op.full_mod_paths,
                                     dependents=set())
 
     def __str__(self):

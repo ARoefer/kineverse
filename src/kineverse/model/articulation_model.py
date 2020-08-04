@@ -13,7 +13,7 @@ from kineverse.model.data_tree             import DataTree
 from kineverse.model.history               import History, Timeline, StampedData, Chunk
 from kineverse.model.paths                 import Path
 from kineverse.operations.operation        import Operation
-from kineverse.operations.basic_operations import CreateSingleValue
+# from kineverse.operations.basic_operations import CreateSingleValue
 from kineverse.type_sets                   import is_symbolic
 from kineverse.json_serializable           import JSONSerializable
 
@@ -202,23 +202,38 @@ class ArticulationModel(object):
                 raise Exception('History returned no chunk for tag "{}" associated with timestamp {}. This should not happen.'.format(tag, self.timeline_tags[tag]))
             chunk.operation.revoke(self)
             try:
+                # Execute the operation to generate full modification set and dependencies
+                op.execute(self, time)
+                
+                # Create a new chunk and try inserting it into the history
                 new_chunk = Chunk(time, op)
-                op.apply(self, self._touched_set, time)
                 self.operation_history.replace_chunk(chunk, new_chunk)
+
+                # Actually apply the generated changes to the model once
+                # history insertion worked out
+                op.apply_to_model(self, time)
                 self._touched_set |= new_chunk.modifications
                 self._touched_stamp = new_chunk.stamp
             except Exception as e:
-                raise OperationException('Failed to apply operation "{}" tagged "{}" at time "{}". Error:\n  {}'.format(op.name, tag, time, e))
+                raise OperationException('Failed to apply operation "{}" tagged "{}" at time "{}". Error:\n  {}'.format(type(op), tag, time, e))
         else:
             self.timeline_tags[tag] = time
             try:
+                # Execute the operation to generate full modification set and dependencies
+                op.execute(self, time)
+                
+                # Create a new chunk and try inserting it into the history
                 new_chunk = Chunk(time, op)
-                op.apply(self, self._touched_set)
+                # op.apply(self, self._touched_set)
                 self.operation_history.insert_chunk(new_chunk)
+                
+                # Actually apply the generated changes to the model once
+                # history insertion worked out
+                op.apply_to_model(self, time)
                 self._touched_set |= new_chunk.modifications
                 self._touched_stamp = new_chunk.stamp
             except Exception as e:
-                raise OperationException('Failed to apply operation "{}" tagged "{}" at time "{}". Traceback:\n  {}\nError: \n{}'.format(op.name, tag, time, traceback.print_exc(), e))
+                raise OperationException('Failed to apply operation "{}" tagged "{}" at time "{}". Traceback:\n  {}\nError: \n{}'.format(type(op), tag, time, traceback.print_exc(), e))
 
 
     @profile
@@ -243,13 +258,18 @@ class ArticulationModel(object):
         self.clean_structure(time)
         self.timeline_tags[tag] = time
         try:
+            # Execute the operation to generate full modification set and dependencies
+            op.execute(self, time)
+
             new_chunk = Chunk(time, op)
-            op.apply(self, self._touched_set, time)
             self.operation_history.insert_chunk(new_chunk)
+            # op.apply(self, self._touched_set, time)
+
+            op.apply_to_model(self, time)
             self._touched_set |= new_chunk.modifications
             self._touched_stamp = new_chunk.stamp
         except Exception as e:
-            raise OperationException('Failed to apply operation "{}" tagged "{}" at time "{}". Traceback:\n  {}\nError: \n{}'.format(op.name, tag, time, traceback.print_exc(), e))
+            raise OperationException('Failed to apply operation "{}" tagged "{}" at time "{}". Traceback:\n  {}\nError: \n{}'.format(type(op), tag, time, traceback.print_exc(), e))
 
 
     @profile
@@ -274,13 +294,17 @@ class ArticulationModel(object):
         self.clean_structure(time)
         self.timeline_tags[tag] = time
         try:
+            op.execute(self, time)
+
             new_chunk = Chunk(time, op)
-            op.apply(self, self._touched_set, time)
             self.operation_history.insert_chunk(new_chunk)
+            # op.apply(self, self._touched_set, time)
+            
+            op.apply_to_model(self, time)
             self._touched_set |= new_chunk.modifications
             self._touched_stamp = new_chunk.stamp
         except Exception as e:
-            raise OperationException('Failed to apply operation "{}" tagged "{}" at time "{}". Traceback:\n  {}\nError: \n{}'.format(op.name, tag, time, traceback.print_exc(), e))
+            raise OperationException('Failed to apply operation "{}" tagged "{}" at time "{}". Traceback:\n  {}\nError: \n{}'.format(type(op), tag, time, traceback.print_exc(), e))
 
 
     @profile
