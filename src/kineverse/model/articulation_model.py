@@ -8,6 +8,7 @@ and operational model building which includes merging of models.
 import traceback 
 import kineverse.gradients.common_math as cm
 import kineverse.json_wrapper          as json
+import kineverse.model.model_settings  as model_settings
 
 from kineverse.model.data_tree             import DataTree
 from kineverse.model.history               import History, Timeline, StampedData, Chunk
@@ -86,8 +87,8 @@ class TaggedOperation(StampedData):
 class TaggedIOOperation(StampedData):
     def __init__(self, stamp, tag, op):
         super(TaggedIOOperation, self).__init__(stamp, tag=tag, 
-                                                 inputs=list(set(sum([list(p) for p in op._exec_args.values() if type(p) is Path], []))),
-                                                 outputs=op.output_paths.values())
+                                                 inputs=[p for p in op._exec_args.values() if type(p) is Path],
+                                                 outputs=op.output_path_assignments.values())
 
 
 class OperationException(Exception):
@@ -326,7 +327,7 @@ class ArticulationModel(object):
         chunk.operation.revoke(self)
         self.operation_history.remove_chunk(chunk)
         self._touched_set |= chunk.modifications
-        self._touched_stamp = chunk.stamp
+        self._touched_stamp = chunk.stamp if not model_settings.BRUTE_MODE else 0
         del self.timeline_tags[tag]
 
 
@@ -347,20 +348,33 @@ class ArticulationModel(object):
         NOTE: The model should be cleaned fully, BEFORE new modifications are made, 
         DO NOT mix modifications and model cleaning.
         """
-        while len(self.operation_history.dirty_chunks) > 0 and self.operation_history.dirty_chunks[0].stamp <= until:
-            chunk = self.operation_history.dirty_chunks[0]
-            if self._touched_stamp > chunk.stamp:
+        # NOTE: Fuck the complicated update mechanism. It causes nothing but problems and is mostly irrelevant to current real-world applications
+        if model_settings.BRUTE_MODE:
+            # Implies that the model needs to be rebuilt.
+            if len(self.operation_history.chunk_history) > 0 and self._touched_stamp < self.operation_history.chunk_history[-1].stamp:
+                self.data_tree.clear()
+
+                for chunk in self.operation_history.chunk_history:
+                    chunk.operation.execute(self, chunk.stamp)
+                    chunk.operation.apply_to_model(self, chunk.stamp)
+                    self._touched_stamp = chunk.stamp
+
                 self._touched_set = set()
-            chunk.operation.execute(self, chunk.stamp)
-            chunk.operation.apply_to_model(self, chunk.stamp)
-            self._touched_set  |= chunk.modifications
-            self._touched_stamp = chunk.stamp
-            self.operation_history.flag_clean(chunk)
-            self.operation_history.flag_dirty(*chunk.dependents)
-        
-        # The entire model is cleaned now
-        if len(self.operation_history.chunk_history) == 0 or until >= self.operation_history.chunk_history[-1].stamp:
-            self._touched_set = set()
+        else:
+            while len(self.operation_history.dirty_chunks) > 0 and self.operation_history.dirty_chunks[0].stamp <= until:
+                chunk = self.operation_history.dirty_chunks[0]
+                if self._touched_stamp > chunk.stamp:
+                    self._touched_set = set()
+                chunk.operation.execute(self, chunk.stamp)
+                chunk.operation.apply_to_model(self, chunk.stamp)
+                self._touched_set  |= chunk.modifications
+                self._touched_stamp = chunk.stamp
+                self.operation_history.flag_clean(chunk)
+                self.operation_history.flag_dirty(*chunk.dependents)
+            
+            # The entire model is cleaned now
+            if len(self.operation_history.chunk_history) == 0 or until >= self.operation_history.chunk_history[-1].stamp:
+                self._touched_set = set()
 
     @profile
     def has_data(self, key, stamp=None):
@@ -371,7 +385,7 @@ class ArticulationModel(object):
         """
         if type(key) == str:
             key = Path(key)
-        if stamp is None:
+        if stamp is None or model_settings.BRUTE_MODE:
             return key in self.data_tree
         else:
             e_stamp = self.operation_history.get_earliest_stamp(key)
@@ -386,7 +400,7 @@ class ArticulationModel(object):
         """
         if type(key) == str:
             key = Path(key)
-        if time_stamp is None:
+        if time_stamp is None or model_settings.BRUTE_MODE:
             return self.data_tree[key]
         else:
             # Fetch the chunk from the history that modifies this path closest after the given stamp.

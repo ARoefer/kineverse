@@ -27,7 +27,7 @@ class CreateValue(Operation):
         super(CreateValue, self).__init__({'output': path}, value=value)
 
     def _execute_impl(self, value):
-        self.output = value
+        self.output = deepcopy(value)
         self.constraints = {}
 
 

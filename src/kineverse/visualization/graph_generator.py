@@ -22,6 +22,7 @@ def generate_modifications_graph(km, prefix_colors={}):
     for node in reversed(tl):
         node_id_str = 't_{}'.format(node.stamp)
         nodes.append('{} [label="{}", color="{}"]'.format(node_id_str, node.tag, get_color(node.tag, prefix_colors)))
+        print(node.inputs)
         for o in node.outputs:
             if o not in path_slots:
                 final_slots.append(o)
@@ -30,7 +31,7 @@ def generate_modifications_graph(km, prefix_colors={}):
         for i in node.inputs:
             path_slots[i] = '{}:{}'.format(node_id_str, str(i.to_symbol()))
 
-    return 'digraph mod_graph {{rankdir=LR\n    {};\n    {}\n}}'.format('\n    '.join(nodes), '\n    '.join(edges))
+    return 'digraph mod_graph {{rankdir=LR;\n    {};\n    {}\n}}'.format(';\n    '.join(nodes), ';\n    '.join(edges))
 
 def generate_dependency_graph(km, prefix_colors={}):
     sorted_tags = sorted([(t, tag) for tag, t in km.timeline_tags.items()])
@@ -40,6 +41,7 @@ def generate_dependency_graph(km, prefix_colors={}):
 
 
 def plot_graph(dot_graph, file):
+    print(dot_graph)
     graphs = pydot.graph_from_dot_data(dot_graph)[0]
     if file[-4:].lower() == '.png':
         graphs.write_png(file)
