@@ -1,24 +1,20 @@
 import unittest as ut
 
-import kineverse.gradients.common_math as cm
+import kineverse.gradients.gradient_math as gm
 
 from kineverse.utils                       import res_pkg_path
-from kineverse.operations.basic_operations import CreateComplexObject
-from kineverse.gradients.gradient_math     import translation3,         \
-                                                  rotation3_axis_angle, \
-                                                  frame3_axis_angle,    \
-                                                  vector3,              \
-                                                  point3,               \
-                                                  norm,                 \
-                                                  Position
+from kineverse.operations.basic_operations import CreateValue
 from kineverse.model.articulation_model    import ArticulationModel, Path
 from kineverse.operations.urdf_operations  import load_urdf,         \
                                                   KinematicLink,     \
-                                                  SetFixedJoint,     \
-                                                  SetPrismaticJoint, \
-                                                  SetRevoluteJoint,  \
-                                                  SetContinuousJoint 
-
+                                                  FixedJoint,     \
+                                                  PrismaticJoint, \
+                                                  RevoluteJoint,  \
+                                                  ContinuousJoint, \
+                                                  CreateURDFFrameConnection
+from kineverse.visualization.graph_generator import generate_modifications_graph, \
+                                                    generate_dependency_graph, \
+                                                    plot_graph
 from urdf_parser_py.urdf import URDF
 
 
@@ -34,8 +30,8 @@ class TestURDF(ut.TestCase):
 
     def test_load(self):
         urdf_model = URDF.from_xml_file(res_pkg_path('package://kineverse/urdf/testbot.urdf'))
-        ks = ArticulationModel()
-        load_urdf(ks, Path(urdf_model.name), urdf_model)
+        km = ArticulationModel()
+        load_urdf(km, Path(urdf_model.name), urdf_model)
 
     def test_double_reload(self):
         km = ArticulationModel()
@@ -48,126 +44,140 @@ class TestURDF(ut.TestCase):
         km.clean_structure()
         eef_frame_2 = km.get_data(Path(urdf_model.name) + Path('links/gripper_link/pose'))
 
-        self.assertEquals(eef_frame_1, eef_frame_2)
+        self.assertTrue(gm.cm.numeric_eq(eef_frame_1, eef_frame_2))
 
 
     def test_fixed_joint(self):
-        ks = ArticulationModel()
+        km = ArticulationModel()
 
-        a  = Position('a')
-        b  = Position('b')
-        parent_pose     = frame3_axis_angle(vector3(0,1,0), a, point3(0, b, 5))
-        joint_transform = translation3(7, -5, 33)
-        child_pose      = parent_pose * joint_transform
+        a  = gm.Position('a')
+        b  = gm.Position('b')
+        parent_pose     = gm.frame3_axis_angle(gm.vector3(0,1,0), a, gm.point3(0, b, 5))
+        joint_transform = gm.translation3(7, -5, 33)
+        child_pose      = gm.dot(parent_pose, joint_transform)
 
-        ks.apply_operation('create parent', CreateComplexObject(Path('parent'), KinematicLink('', parent_pose)))
-        ks.apply_operation('create child', CreateComplexObject(Path('child'),  KinematicLink('', cm.eye(4))))
-        self.assertTrue(ks.has_data('parent/pose'))
-        self.assertTrue(ks.has_data('child/pose'))
+        km.apply_operation('create parent', CreateValue(Path('parent'), KinematicLink('', parent_pose)))
+        km.apply_operation('create child', CreateValue(Path('child'),  KinematicLink('', gm.eye(4))))
+        self.assertTrue(km.has_data('parent/pose'))
+        self.assertTrue(km.has_data('child/pose'))
 
-        ks.apply_operation('connect parent child', SetFixedJoint(Path('parent/pose'), Path('child/pose'), Path('fixed_joint'), joint_transform))
-        self.assertTrue(ks.has_data('fixed_joint'))
-        self.assertEquals(ks.get_data('child/pose'), child_pose)
+        joint = FixedJoint('parent', 'child', joint_transform)
+        km.apply_operation('create fixed_joint', CreateValue(Path('fixed_joint'), joint))
+        km.apply_operation('connect parent child', CreateURDFFrameConnection(Path('fixed_joint'), 
+                                                                             Path('parent'), 
+                                                                             Path('child')))
+        self.assertTrue(km.has_data('fixed_joint'))
+        self.assertTrue(gm.cm.numeric_eq(km.get_data('child/pose'), child_pose))
 
     def test_prismatic_joint(self):
-        ks = ArticulationModel()
+        km = ArticulationModel()
 
-        a  = Position('a')
-        b  = Position('b')
-        c  = Position('c')
-        parent_pose     = frame3_axis_angle(vector3(0,1,0), a, point3(0, b, 5))
-        joint_transform = translation3(7, -5, 33)
-        axis            = vector3(1, -3, 7)
+        a  = gm.Position('a')
+        b  = gm.Position('b')
+        c  = gm.Position('c')
+        parent_pose     = gm.frame3_axis_angle(gm.vector3(0,1,0), a, gm.point3(0, b, 5))
+        joint_transform = gm.translation3(7, -5, 33)
+        axis            = gm.vector3(1, -3, 7)
         position        = c
-        child_pose      = parent_pose * joint_transform * translation3(*(axis[:,:3] * position))
+        pos_expr        = axis * position
+        child_pose      = gm.dot(parent_pose, joint_transform, gm.translation3(pos_expr[0], 
+                                                                               pos_expr[1], 
+                                                                               pos_expr[2]))
 
-        ks.apply_operation('create parent', CreateComplexObject(Path('parent'), KinematicLink('', parent_pose)))
-        ks.apply_operation('create child', CreateComplexObject(Path('child'),  KinematicLink('', cm.eye(4))))
-        self.assertTrue(ks.has_data('parent/pose'))
-        self.assertTrue(ks.has_data('child/pose'))
+        joint = PrismaticJoint('parent', 'child', position, axis, joint_transform, -1, 2, 0.5)
 
-        ks.apply_operation('connect parent child', 
-                           SetPrismaticJoint(Path('parent/pose'), 
-                                             Path('child/pose'), 
-                                             Path('fixed_joint'), 
-                                             joint_transform,
-                                             axis,
-                                             position,
-                                             -1, 2, 0.5))
-        self.assertTrue(ks.has_data('fixed_joint'))
-        self.assertEquals(ks.get_data('child/pose'), child_pose)
+        km.apply_operation('create parent', CreateValue(Path('parent'), KinematicLink('', parent_pose)))
+        km.apply_operation('create child', CreateValue(Path('child'),  KinematicLink('', gm.eye(4))))
+        self.assertTrue(km.has_data('parent/pose'))
+        self.assertTrue(km.has_data('child/pose'))
+
+        km.apply_operation('create prismatic joint', CreateValue(Path('prismatic_joint'), joint))
+        self.assertTrue(km.has_data('prismatic_joint'))
+
+        km.apply_operation('connect parent child',  CreateURDFFrameConnection(Path('prismatic_joint'),
+                                                                              Path('parent'),
+                                                                              Path('child')))
+        self.assertTrue(gm.cm.numeric_eq(km.get_data('child/pose'), child_pose))
 
     def test_revolute_and_continuous_joint(self):
-        ks = ArticulationModel()
+        km = ArticulationModel()
 
-        a  = Position('a')
-        b  = Position('b')
-        c  = Position('c')
-        parent_pose     = frame3_axis_angle(vector3(0,1,0), a, point3(0, b, 5))
-        joint_transform = translation3(7, -5, 33)
-        axis            = vector3(1, -3, 7)
-        axis            = axis / norm(axis)
+        a  = gm.Position('a')
+        b  = gm.Position('b')
+        c  = gm.Position('c')
+        parent_pose     = gm.frame3_axis_angle(gm.vector3(0,1,0), a, gm.point3(0, b, 5))
+        joint_transform = gm.translation3(7, -5, 33)
+        axis            = gm.vector3(1, -3, 7)
+        axis            = axis / gm.norm(axis)
         position        = c
-        child_pose      = parent_pose * joint_transform * rotation3_axis_angle(axis, position)
+        child_pose      = gm.dot(parent_pose, joint_transform, gm.rotation3_axis_angle(axis, position))
 
-        ks.apply_operation('create parent', CreateComplexObject(Path('parent'), KinematicLink('', parent_pose)))
-        ks.apply_operation('create child', CreateComplexObject(Path('child'),  KinematicLink('', cm.eye(4))))
-        self.assertTrue(ks.has_data('parent/pose'))
-        self.assertTrue(ks.has_data('child/pose'))
+        km.apply_operation('create parent', CreateValue(Path('parent'), KinematicLink('', parent_pose)))
+        km.apply_operation('create child', CreateValue(Path('child'),  KinematicLink('', gm.eye(4))))
+        self.assertTrue(km.has_data('parent/pose'))
+        self.assertTrue(km.has_data('child/pose'))
 
-        ks.apply_operation('connect parent child', 
-                           SetRevoluteJoint(Path('parent/pose'), 
-                                            Path('child/pose'), 
-                                            Path('fixed_joint'), 
-                                            joint_transform,
-                                            axis,
-                                            position,
-                                            -1, 2, 0.5))
-        self.assertTrue(ks.has_data('fixed_joint'))
-        self.assertEquals(ks.get_data('child/pose'), child_pose)
-        ks.remove_operation('connect parent child')
-        ks.apply_operation('connect parent child',
-                           SetContinuousJoint(Path('parent/pose'), 
-                                              Path('child/pose'), 
-                                              Path('fixed_joint'), 
-                                              joint_transform,
-                                              axis,
-                                              position, 0.5))
+        joint = RevoluteJoint('parent', 'child', position, axis, joint_transform, -1, 2, 0.5)
+        km.apply_operation('create revolute joint', CreateValue(Path('revolute_joint'), joint))
+        self.assertTrue(km.has_data('revolute_joint'))
+
+        km.apply_operation('connect parent child', 
+                           CreateURDFFrameConnection(Path('revolute_joint'),
+                                                     Path('parent'), 
+                                                     Path('child')))
+        self.assertTrue(gm.cm.numeric_eq(km.get_data('child/pose'), child_pose))
+
+        km.remove_operation('connect parent child')
+        km.remove_operation('create revolute joint')
+
+        joint = ContinuousJoint('parent', 'child', position, axis, joint_transform)
+        km.apply_operation('create continuous joint', CreateValue(Path('continuous_joint'), joint))
+        self.assertTrue(km.has_data('continuous_joint'))
+        self.assertFalse(km.has_data('revolute_joint'))
+        km.apply_operation('connect parent child',
+                           CreateURDFFrameConnection(Path('continuous_joint'),
+                                                     Path('parent'), 
+                                                     Path('child')))
+        self.assertTrue(gm.cm.numeric_eq(km.get_data('child/pose'), child_pose))
 
     def test_model_reform(self):
-        ks = ArticulationModel()
+        km = ArticulationModel()
 
-        a  = Position('a')
-        b  = Position('b')
-        c  = Position('c')
-        parent_pose_a   = frame3_axis_angle(vector3(0,1,0), a, point3(0, b, 5))
-        parent_pose_b   = frame3_axis_angle(vector3(1,0,0), b, point3(7* b, 0, 5))
-        joint_transform = translation3(7, -5, 33)
-        axis            = vector3(1, -3, 7)
+        a  = gm.Position('a')
+        b  = gm.Position('b')
+        c  = gm.Position('c')
+        parent_pose_a   = gm.frame3_axis_angle(gm.vector3(0,1,0), a, gm.point3(    0, b, 5))
+        parent_pose_b   = gm.frame3_axis_angle(gm.vector3(1,0,0), b, gm.point3(7 * b, 0, 5))
+        joint_transform = gm.translation3(7, -5, 33)
+        axis            = gm.vector3(1, -3, 7)
         axis            = axis
         position        = c
-        child_pose_a    = parent_pose_a * joint_transform * translation3(*(axis[:,:3] * position))
-        child_pose_b    = parent_pose_b * joint_transform * translation3(*(axis[:,:3] * position))
+        pos_expr        = axis * position
+        child_pose_a    = gm.dot(parent_pose_a, joint_transform, gm.translation3(pos_expr[0], 
+                                                                                 pos_expr[1], 
+                                                                                 pos_expr[2]))
+        child_pose_b    = gm.dot(parent_pose_b, joint_transform, gm.translation3(pos_expr[0], 
+                                                                                 pos_expr[1], 
+                                                                                 pos_expr[2]))
 
-        ks.apply_operation('create parent', CreateComplexObject(Path('parent'), KinematicLink('', parent_pose_a)))
-        ks.apply_operation('create child', CreateComplexObject(Path('child'),  KinematicLink('', cm.eye(4))))
-        self.assertTrue(ks.has_data('parent/pose'))
-        self.assertTrue(ks.has_data('child/pose'))
+        km.apply_operation('create parent', CreateValue(Path('parent'), KinematicLink('', parent_pose_a)))
+        km.apply_operation('create child', CreateValue(Path('child'),  KinematicLink('', gm.eye(4))))
+        self.assertTrue(km.has_data('parent/pose'))
+        self.assertTrue(km.has_data('child/pose'))
 
-        ks.apply_operation('connect parent child', 
-                           SetPrismaticJoint(Path('parent/pose'), 
-                                             Path('child/pose'), 
-                                             Path('fixed_joint'), 
-                                             joint_transform,
-                                             axis,
-                                             position,
-                                             -1, 2, 0.5))
-        self.assertTrue(ks.has_data('fixed_joint'))
-        self.assertEquals(ks.get_data('child/pose'), child_pose_a)
-        ks.apply_operation('create parent', CreateComplexObject(Path('parent'), KinematicLink('', parent_pose_b)))
-        ks.clean_structure()
-        self.assertTrue(ks.has_data('fixed_joint'))
-        self.assertEquals(ks.get_data('child/pose'), child_pose_b)        
+        joint = PrismaticJoint('parent', 'child', position, axis, joint_transform, -1, 2, 0.5)
+        km.apply_operation('create joint', CreateValue(Path('joint'), joint))
+        self.assertTrue(km.has_data('joint'))
+
+        km.apply_operation('connect parent child', 
+                           CreateURDFFrameConnection(Path('joint'), Path('parent'), Path('child')))
+        self.assertTrue(gm.cm.numeric_eq(km.get_data('child/pose'), child_pose_a))
+        km.apply_operation('create parent', CreateValue(Path('parent'), KinematicLink('', parent_pose_b)))
+        plot_graph(generate_dependency_graph(km), 'test_model_reform_dep.png')
+        plot_graph(generate_modifications_graph(km), 'test_model_reform_mod.png')
+        km.clean_structure()
+        self.assertTrue(km.has_data('joint'))
+        self.assertTrue(gm.cm.numeric_eq(km.get_data('child/pose'), child_pose_b, verbose=1))
 
 
 

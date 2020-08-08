@@ -86,8 +86,8 @@ class TaggedOperation(StampedData):
 class TaggedIOOperation(StampedData):
     def __init__(self, stamp, tag, op):
         super(TaggedIOOperation, self).__init__(stamp, tag=tag, 
-                                                 inputs=[p for p in op.args_paths.values() if type(p) is Path],
-                                                 outputs=op._root_set.values())
+                                                 inputs=list(set(sum([list(p) for p in op._exec_args.values() if type(p) is Path], []))),
+                                                 outputs=op.output_paths.values())
 
 
 class OperationException(Exception):
@@ -207,11 +207,12 @@ class ArticulationModel(object):
                 
                 # Create a new chunk and try inserting it into the history
                 new_chunk = Chunk(time, op)
-                self.operation_history.replace_chunk(chunk, new_chunk)
+                self.operation_history.check_can_replace(chunk, new_chunk)
 
                 # Actually apply the generated changes to the model once
                 # history insertion worked out
                 op.apply_to_model(self, time)
+                self.operation_history.replace_chunk(chunk, new_chunk)
                 self._touched_set |= new_chunk.modifications
                 self._touched_stamp = new_chunk.stamp
             except Exception as e:
@@ -225,11 +226,12 @@ class ArticulationModel(object):
                 # Create a new chunk and try inserting it into the history
                 new_chunk = Chunk(time, op)
                 # op.apply(self, self._touched_set)
-                self.operation_history.insert_chunk(new_chunk)
-                
+                self.operation_history.check_can_insert(new_chunk)
+
                 # Actually apply the generated changes to the model once
                 # history insertion worked out
                 op.apply_to_model(self, time)
+                self.operation_history.insert_chunk(new_chunk)
                 self._touched_set |= new_chunk.modifications
                 self._touched_stamp = new_chunk.stamp
             except Exception as e:
@@ -262,10 +264,11 @@ class ArticulationModel(object):
             op.execute(self, time)
 
             new_chunk = Chunk(time, op)
-            self.operation_history.insert_chunk(new_chunk)
+            self.operation_history.check_can_insert(new_chunk)
             # op.apply(self, self._touched_set, time)
 
             op.apply_to_model(self, time)
+            self.operation_history.insert_chunk(new_chunk)
             self._touched_set |= new_chunk.modifications
             self._touched_stamp = new_chunk.stamp
         except Exception as e:
@@ -297,10 +300,11 @@ class ArticulationModel(object):
             op.execute(self, time)
 
             new_chunk = Chunk(time, op)
-            self.operation_history.insert_chunk(new_chunk)
+            self.operation_history.check_can_insert(new_chunk)
             # op.apply(self, self._touched_set, time)
             
             op.apply_to_model(self, time)
+            self.operation_history.insert_chunk(new_chunk)
             self._touched_set |= new_chunk.modifications
             self._touched_stamp = new_chunk.stamp
         except Exception as e:
@@ -318,6 +322,7 @@ class ArticulationModel(object):
         chunk = self.operation_history.get_chunk(self.timeline_tags[tag])
         if chunk is None:
             raise Exception('History returned no chunk for tag "{}" associated with timestamp {}. This should not happen.'.format(tag, self.timeline_tags[tag]))
+        self.operation_history.check_can_remove(chunk)
         chunk.operation.revoke(self)
         self.operation_history.remove_chunk(chunk)
         self._touched_set |= chunk.modifications
@@ -346,7 +351,8 @@ class ArticulationModel(object):
             chunk = self.operation_history.dirty_chunks[0]
             if self._touched_stamp > chunk.stamp:
                 self._touched_set = set()
-            chunk.operation.apply(self, self._touched_set, chunk.stamp)
+            chunk.operation.execute(self, chunk.stamp)
+            chunk.operation.apply_to_model(self, chunk.stamp)
             self._touched_set  |= chunk.modifications
             self._touched_stamp = chunk.stamp
             self.operation_history.flag_clean(chunk)
@@ -368,7 +374,8 @@ class ArticulationModel(object):
         if stamp is None:
             return key in self.data_tree
         else:
-            return self.operation_history.get_earliest_stamp(stamp) is not None
+            e_stamp = self.operation_history.get_earliest_stamp(key)
+            return e_stamp is not None and e_stamp <= stamp
 
     @profile
     def get_data(self, key, time_stamp=None):
@@ -384,6 +391,9 @@ class ArticulationModel(object):
         else:
             # Fetch the chunk from the history that modifies this path closest after the given stamp.
             # Then extract the value from the chunk's memo.
+            if key in self._touched_set and time_stamp >= self._touched_stamp:
+                    return self.data_tree[key]
+            
             closest_mod_chunk = self.operation_history.get_ceil_modifying_chunk(key, time_stamp)
             if closest_mod_chunk is None:
                 return self.data_tree[key]

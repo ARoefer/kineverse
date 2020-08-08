@@ -1,4 +1,4 @@
-from kineverse.model.paths import Path, collect_paths
+from kineverse.model.paths import Path, PathDict, collect_paths
 from kineverse.utils       import copy, deepcopy
 
 class OperationException(Exception):
@@ -38,6 +38,7 @@ class Operation(object):
                          'output_paths',
                          'full_mod_paths',
                          'memento',
+                         'deep_memento',
                          '_exec_args',
                          'dependencies',
                          'constraints',
@@ -56,6 +57,7 @@ class Operation(object):
         self.output_paths   = None
         self.full_mod_paths = None
         self.memento        = None
+        self.deep_memento   = None
         self.constraints    = None
         args = set(self._execute_impl.func_code.co_varnames[1:self._execute_impl.func_code.co_argcount])
         given_args = set(exec_args.keys())
@@ -108,6 +110,16 @@ class Operation(object):
 
         self.memento = {o: km.get_data(p, stamp) for o, p in self.output_path_assignments.items() 
                                                           if km.has_data(p, stamp)}
+        self.deep_memento = {}
+        for o, d in self.memento.items():
+            level = self.deep_memento
+            # Add dictionaries for the prefix
+            for x in self.output_path_assignments[o][:-1]:
+                if x not in level:
+                    level[x] = {}
+                level = level[x]
+            level[self.output_path_assignments[o][-1]] = d
+
         self.constraint_memento = {n: km.get_constraint(n) for n in self.constraints.keys() 
                                                                  if km.has_constraint(n)}
         # Write new data to model
@@ -135,8 +147,12 @@ class Operation(object):
             else:
                 km.remove_constraint(n)
 
-        self.memento = None
+        self.memento            = None
+        self.deep_memento       = None
         self.constraint_memento = None
+
+    def get_from_memento(self, key):
+        return key.get_data_no_throw(self.deep_memento)
 
     # def _collect_deps(self, **kwargs):
     #     return set()

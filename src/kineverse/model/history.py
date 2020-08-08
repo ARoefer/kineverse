@@ -100,14 +100,20 @@ class History(object):
                 pred.dependents -= to_remove
             self.modification_history[path].add(chunk)
 
-    @profile
-    def insert_chunk(self, chunk):
+    def check_can_insert(self, chunk):
         for p in chunk.dependencies:
             if p not in self.modification_history:
                 raise Exception('Chunk depends on attribute without history!\n Operation "{}" at {}\n Attribute: {}\n'.format(chunk.operation.name, chunk.stamp, p))
             _, pred = self.modification_history[p].get_floor(chunk.stamp)
             if pred is None:
                 raise Exception('Chunk at time {} executing "{}" depends on attributes with empty history! Attributes:\n  {}'.format(chunk.stamp, chunk.operation.name, '\n  '.join([str(p) for p in chunk.dependencies if p not in self.modification_history or self.modification_history[p].get_floor(chunk.stamp)[1] is None])))
+
+    @profile
+    def insert_chunk(self, chunk):
+        self.check_can_insert(chunk)
+        # This is part of the work done in can_insert again
+        for p in chunk.dependencies:
+            _, pred = self.modification_history[p].get_floor(chunk.stamp)
             pred.dependents.add(chunk)
 
         for p in chunk.modifications:
@@ -115,16 +121,21 @@ class History(object):
 
         self.chunk_history.add(chunk)
 
-    @profile
-    def remove_chunk(self, chunk):
+
+    def check_can_remove(self, chunk):
         for p in chunk.modifications:
             if self.modification_history[p][0] == chunk and len(chunk.dependents) > 0 and max([p in c.dependencies for c in chunk.dependents]):
                 raise Exception('Can not remove chunk at timestamp {} because it is the founding chunk in the history of {} and would create dangling dependencies.'.format(chunk.stamp, p))
-        
+
+    @profile
+    def remove_chunk(self, chunk):        
+        self.check_can_remove(chunk)
+    
         for p in chunk.modifications:
             self.modification_history[p].discard(chunk)
             _, pred = self.modification_history[p].get_floor(chunk.stamp)
             # Copy dependents that depend on this variable to predecessor
+            
             if pred is not None:
                 pred.dependents.update({d for d in chunk.dependents if p in d.dependencies})
 
@@ -142,18 +153,24 @@ class History(object):
         self.chunk_history.remove(chunk)
         self.dirty_chunks.update(chunk.dependents)
 
-    @profile
-    def replace_chunk(self, c_old, c_new):
+
+    def check_can_replace(self, c_old, c_new):
         if c_old.stamp != c_new.stamp:
             raise Exception('Can only replace chunk if stamps match. Stamps:\n Old: {:>8.3f}\n New: {:>8.3f}'.format(c_old.stamp, c_new.stamp))
 
         overlap = c_old.modifications.intersection(c_new.modifications)
         if len(overlap) != len(c_old.modifications):
             raise Exception('Chunks can only be replaced by others with at least the same definition coverage. Missing variables:\n {}'.format('\n '.join(sorted(c_old.modifications.difference(c_new.modifications)))))
-
+        
         new_deps = {p: self.modification_history[p].get_floor(c_new.stamp)[1] if p in self.modification_history else None for p in c_new.dependencies.difference(overlap)}
         if None in new_deps.values():
             raise Exception('Replacement chunk at {} tries to depend on variables with insufficient histories. variables:\n {}'.format('\n '.join(sorted(new_deps.keys()))))
+
+    @profile
+    def replace_chunk(self, c_old, c_new):
+        self.check_can_replace(c_old, c_new)
+        overlap = c_old.modifications.intersection(c_new.modifications)
+        new_deps = {p: self.modification_history[p].get_floor(c_new.stamp)[1] if p in self.modification_history else None for p in c_new.dependencies.difference(overlap)}
 
         for p in overlap:
             pos, _ = self.modification_history[p].get_floor(c_old.stamp)

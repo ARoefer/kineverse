@@ -75,7 +75,10 @@ class Geometry(Frame):
 
     def __eq__(self, other):
         if isinstance(other, Geometry):
-            return super(Geometry, self).__eq__(other) and self.type == other.type and self.scale == other.scale and self.mesh == other.mesh
+            return super(Geometry, self).__eq__(other) and \
+                   self.type == other.type and \
+                   cm.eq_expr(self.scale, other.scale) and \
+                   self.mesh == other.mesh
         return False
 
 
@@ -103,7 +106,9 @@ class InertialData(Frame):
 
     def __eq__(self, other):
         if isinstance(other, InertialData):
-            return super(InertialData, self).__eq__(other) and self.mass == other.mass and self.inertia_matrix == other.inertia_matrix
+            return super(InertialData, self).__eq__(other) and \
+                   self.mass == other.mass and \
+                   cm.eq_expr(self.inertia_matrix, other.inertia_matrix)
         return False
 
 

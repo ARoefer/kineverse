@@ -10,7 +10,7 @@ from kineverse.type_sets import atomic_types, matrix_types, symbolic_types, nump
 
 class PathException(Exception):
     def __init__(self, path, obj):
-        super(PathException, self).__init__('Object {} at {} has no attribute {}.'.format(path[:-1], obj, path[-1]))
+        super(PathException, self).__init__('Object {} at "{}" has no attribute "{}".'.format(obj, path[:-1], path[-1]))
         self.path = path
         self.obj  = obj
 

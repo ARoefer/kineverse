@@ -189,7 +189,7 @@ if SYM_MATH_ENGINE == 'CASADI':
         return ca.jacobian(expression, Matrix(symbol))
 
     def eq_expr(a, b):
-        # print(ca.simplify(a), ca.simplify(b))
+        # print(type(a), type(b))
         if type(a) in math_types and type(b) in math_types:
             return ca.is_equal(ca.simplify(a), ca.simplify(b), 10000)
         return a == b
@@ -275,6 +275,30 @@ if SYM_MATH_ENGINE == 'CASADI':
         except:
             f = ca.Function('f', [Matrix(params)], ca.densify(function))
         return CompiledFunction(str_params, f, 0, function.shape)
+
+    def numeric_eq(a, b, default_range=[-1, 1], samples=1000, precision=1e-4, verbose=0):
+        vars_a = free_symbols(a)
+        vars_b = free_symbols(b)
+
+        if vars_a != vars_b:
+            return False
+
+        eval_a = speed_up(a, vars_a)
+        eval_b = speed_up(b, vars_b)
+
+        params = np.random.rand(samples, len(vars_a)) * (default_range[1] - default_range[0]) + default_range[0]
+        for x in params:
+            v_a = eval_a.call2(x)
+            v_b = eval_b.call2(x)
+
+            delta = np.max(np.abs(v_a - v_b))
+            if delta > precision:
+                if verbose > 0:
+                    print('Delta greater than {}. Delta is {}. Results:\na = \n{}\nb = \n{}'.format(precision, delta, v_a, v_b))
+                return False
+
+        return True
+
 
 elif SYM_MATH_ENGINE == 'SYMENGINE':
     import symengine as se
