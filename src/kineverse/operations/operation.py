@@ -1,3 +1,5 @@
+import kineverse.model.model_settings  as model_settings
+
 from kineverse.model.paths import Path, PathDict, collect_paths
 from kineverse.utils       import copy, deepcopy
 
@@ -100,28 +102,33 @@ class Operation(object):
         
         # Generate list of all modified paths by prefixing the write-path assigned to an output
         # to the 
-        self.full_mod_paths = set(sum([list({p + x for x in self.output_paths[o]}) 
-                                               for o, p in self.output_path_assignments.items()], []))
+        self.full_mod_paths = set(sum([[p] + [p + x for x in self.output_paths[o]]
+                                                    for o, p in self.output_path_assignments.items()], []))
 
     # Writes the data generated in execute() to the model and creates mementos for existing data
     def apply_to_model(self, km, stamp):
         if self.output_paths is None:
             raise OperationException('Dictionary containing output paths is not initialized. Did you execute the operation?')
 
-        self.memento = {o: km.get_data(p, stamp) for o, p in self.output_path_assignments.items() 
-                                                          if km.has_data(p, stamp)}
-        self.deep_memento = {}
-        for o, d in self.memento.items():
-            level = self.deep_memento
-            # Add dictionaries for the prefix
-            for x in self.output_path_assignments[o][:-1]:
-                if x not in level:
-                    level[x] = {}
-                level = level[x]
-            level[self.output_path_assignments[o][-1]] = d
+        if model_settings.BRUTE_MODE:
+            self.memento = {}
+            self.deep_memento = {}
+            self.constraint_memento = {}
+        else:
+            self.memento = {o: km.get_data(p, stamp) for o, p in self.output_path_assignments.items() 
+                                                              if km.has_data(p, stamp)}
+            self.deep_memento = {}
+            for o, d in self.memento.items():
+                level = self.deep_memento
+                # Add dictionaries for the prefix
+                for x in self.output_path_assignments[o][:-1]:
+                    if x not in level:
+                        level[x] = {}
+                    level = level[x]
+                level[self.output_path_assignments[o][-1]] = d
 
-        self.constraint_memento = {n: km.get_constraint(n) for n in self.constraints.keys() 
-                                                                 if km.has_constraint(n)}
+            self.constraint_memento = {n: km.get_constraint(n) for n in self.constraints.keys() 
+                                                                     if km.has_constraint(n)}
         # Write new data to model
         for o, p in self.output_path_assignments.items():
             km.set_data(p, getattr(self, o))
@@ -132,20 +139,21 @@ class Operation(object):
     # Revokes the application of an operation from a model.
     # Writes the data from the mementos to the model and clears mementos.
     def revoke(self, km):
-        if self.memento is None:
-            raise OperationException('Cannot revoke operation that has not been applied.')
+        if not model_settings.BRUTE_MODE:
+            if self.memento is None:
+                raise OperationException('Cannot revoke operation that has not been applied.')
 
-        for o, p in self.output_path_assignments.items():
-            if o in self.memento:
-                km.set_data(p, self.memento[o])
-            else:
-                km.remove_data(p)
+            for o, p in self.output_path_assignments.items():
+                if o in self.memento:
+                    km.set_data(p, self.memento[o])
+                else:
+                    km.remove_data(p)
 
-        for n in self.constraints.keys():
-            if n in self.constraint_memento:
-                km.add_constraint(n, self.constraint_memento[n])
-            else:
-                km.remove_constraint(n)
+            for n in self.constraints.keys():
+                if n in self.constraint_memento:
+                    km.add_constraint(n, self.constraint_memento[n])
+                else:
+                    km.remove_constraint(n)
 
         self.memento            = None
         self.deep_memento       = None
