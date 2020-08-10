@@ -6,6 +6,7 @@ import numpy as np
 
 import kineverse.gradients.common_math  as cm
 import kineverse.gradients.llvm_wrapper as llvm
+import kineverse.model.model_settings   as model_settings
 
 from kineverse.gradients.diff_logic     import Symbol, Position
 from kineverse.gradients.gradient_math  import *
@@ -286,7 +287,7 @@ class GeometryModel(EventModel):
         dynamic_poses  = {}
         for str_k in self._collision_objects:
             k = Path(str_k)
-            if k in self._callback_batch:
+            if model_settings.BRUTE_MODE or k in self._callback_batch:
                 #print('{} is a collision link and has changed in the last update batch'.format(k))
                 if self.has_data(k):
                     #print('{} was changed'.format(k))
@@ -315,7 +316,7 @@ class GeometryModel(EventModel):
         if len(static_objects) > 0:
             pb.batch_set_transforms(static_objects, np.vstack(static_poses))
             self._static_objects = static_objects
-            # print('\n  '.join(['{}: {}'.format(n, c.transform) for n, c in self._collision_objects.items()]))
+            # print('\n  '.join(['{}:\n{}'.format(n, c.transform) for n, c in self._collision_objects.items()]))
 
         if len(dynamic_poses) > 0:
             objs, matrices = zip(*[(self._collision_objects[k], m) for k, m in dynamic_poses.items()])
