@@ -35,7 +35,10 @@ class SoftConstraint(Constraint):
 
     def __eq__(self, other):
         if isinstance(other, SoftConstraint):
-            return self.lower == other.lower and self.upper == other.upper and self.expr == other.expr and self.weight == other.weight
+            return c.eq_expr(self.lower, other.lower) and \
+                   c.eq_expr(self.upper, other.upper) and \
+                   c.eq_expr(self.expr, other.expr)   and \
+                   c.eq_expr(self.weight_id, other.weight)
         return False
 
 
@@ -51,7 +54,10 @@ class ControlledValue(object):
 
     def __eq__(self, other):
         if isinstance(other, ControlledValue):
-            return self.lower == other.lower and self.upper == other.upper and self.symbol == other.symbol and self.weight == other.weight
+            return cm.eq_expr(self.lower, other.lower)   and \
+                   cm.eq_expr(self.upper, other.upper)   and \
+                   cm.eq_expr(self.symbol, other.symbol) and \
+                   cm.eq_expr(self.weight, other.weight)
         return False
 
 
