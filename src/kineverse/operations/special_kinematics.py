@@ -64,11 +64,12 @@ def create_diff_drive_joint_with_symbols(parent_path, child_path, wheel_radius, 
 
 
 class OmnibaseJoint(KinematicJoint):
-    def __init__(self, parent, child, x_pos, y_pos, a_pos, limit_lin_vel=None, limit_ang_vel=None):
+    def __init__(self, parent, child, x_pos, y_pos, a_pos, rot_axis=vector3(0,0,1), limit_lin_vel=None, limit_ang_vel=None):
         super(OmnibaseJoint, self).__init__('omni', parent, child)
         self.x_pos = x_pos
         self.y_pos = y_pos
         self.a_pos = a_pos
+        self.rot_axis = rot_axis
         self.limit_lin_vel = limit_lin_vel
         self.limit_ang_vel = limit_ang_vel
 
@@ -81,7 +82,13 @@ class OmnibaseJoint(KinematicJoint):
 
     def __eq__(self, other):
         if isinstance(other, OmnibaseJoint):
-            return super(OmnibaseJoint, self).__eq__(other) and self.x_pos == other.x_pos and self.y_pos == other.y_pos and self.a_pos == other.a_pos
+            return super(OmnibaseJoint, self).__eq__(other) and \
+                                  self.x_pos == other.x_pos and \
+                                  self.y_pos == other.y_pos and \
+                                  self.a_pos == other.a_pos and \
+                                  eq_expr(self.rot_axis, other.rot_axis) and \
+                                  eq_expr(self.limit_lin_vel, other.limit_lin_vel) and \
+                                  eq_expr(self.limit_ang_vel, other.limit_ang_vel)
         return False
 
     def __deepcopy__(self, memo):
@@ -90,6 +97,7 @@ class OmnibaseJoint(KinematicJoint):
                             self.x_pos, 
                             self.y_pos, 
                             self.a_pos, 
+                            self.rot_axis,
                             self.limit_lin_vel, 
                             self.limit_ang_vel)
         memo[id(self)] = out
@@ -97,10 +105,11 @@ class OmnibaseJoint(KinematicJoint):
 
 
 def create_omnibase_joint_with_symbols(parent_path, child_path, rot_axis, lin_vel_limit, ang_vel_limit, var_prefix):
-    return OmnibaseJoint(parent_path, child_path, rot_axis,
+    return OmnibaseJoint(parent_path, child_path,
                 Position((var_prefix + ('localization_x',)).to_symbol()),
                 Position((var_prefix + ('localization_y',)).to_symbol()),
                 Position((var_prefix + ('localization_a',)).to_symbol()),
+                rot_axis,
                 lin_vel_limit, ang_vel_limit)
 
 
@@ -189,13 +198,13 @@ class CreateAdvancedFrameConnection(CreateURDFFrameConnection):
         elif joint.type == 'omni':
             self.constraints = {}
             if joint.limit_lin_vel is not None:
-                self.constraints['{}_lin_vel'.format(self.conn_path)] = Constraint(-joint.limit_lin_vel,
+                self.constraints['{}->{}_lin_velocity'.format(joint.parent, joint.child)] = Constraint(-joint.limit_lin_vel,
                                                                                     joint.limit_lin_vel,
                                                                                    get_diff(norm(vector3(joint.x_pos, joint.y_pos, 0))))
             if joint.limit_ang_vel is not None:
-                self.constraints['{}_ang_vel'.format(self.conn_path)] = Constraint(-ang_vel_limit,
-                                                                                    ang_vel_limit,
-                                                                                    get_diff(a_pos))
+                self.constraints['{}->{}_ang_velocity'.format(joint.parent, joint.child)] = Constraint(-joint.limit_ang_vel,
+                                                                                    joint.limit_ang_vel,
+                                                                                    get_diff(joint.a_pos))
 
             self.child_parent        = joint.parent
             self.child_relative_pose = dot(translation3(joint.x_pos, joint.y_pos, 0),

@@ -412,6 +412,7 @@ def load_urdf(ks,
               reference_frame='world',
               joint_prefix=None,
               limit_prefix=None,
+              limit_symbols=False,
               robot_class=ArticulatedObject):
     """
 
@@ -523,7 +524,7 @@ def load_urdf(ks,
             upper_limit_symbol = None
             vel_limit = None
             if u_joint.limit is not None:
-                vel_limit = (limit_prefix + (u_joint.name, 'velocity')).to_symbol()
+                vel_limit = (limit_prefix + (u_joint.name, 'velocity')).to_symbol() if limit_symbols else u_joint.limit.velocity
 
                 limit_map[u_joint.name] = {'velocity': u_joint.limit.velocity}
                 if u_joint.limit.lower is not None and u_joint.type != 'continuous':
@@ -533,8 +534,8 @@ def load_urdf(ks,
                     except AttributeError:
                         lower_limit = u_joint.limit.lower
                         upper_limit = u_joint.limit.upper
-                    lower_limit_symbol = (limit_prefix + (u_joint.name, 'position', 'lower')).to_symbol()
-                    upper_limit_symbol = (limit_prefix + (u_joint.name, 'position', 'upper')).to_symbol()
+                    lower_limit_symbol = (limit_prefix + (u_joint.name, 'position', 'lower')).to_symbol() if limit_symbols else lower_limit
+                    upper_limit_symbol = (limit_prefix + (u_joint.name, 'position', 'upper')).to_symbol() if limit_symbols else upper_limit
                     limit_map[u_joint.name]['position'] = {'lower': lower_limit,
                                                            'upper': upper_limit}
                 else:
@@ -544,26 +545,12 @@ def load_urdf(ks,
             child_path  = prefix + ('links', u_joint.child)
 
             if u_joint.type == 'fixed':
-                # op = SetFixedJoint(prefix + ('links', u_joint.parent, 'pose'),
-                #                    prefix + ('links', u_joint.child, 'pose'),
-                #                    prefix + ('joints', u_joint.name),
-                #                    urdf_origin_to_transform(u_joint.origin))
                 joint_op = ExecFunction(prefix + ('joints', u_joint.name), 
                                 FixedJoint, 
                                 str(parent_path), 
-                                str(child_path)) # CreateValue(prefix + ('joints', u_joint.name))
+                                str(child_path),
+                                urdf_origin_to_transform(u_joint.origin))
             elif u_joint.type == 'prismatic':
-                # op = SetPrismaticJoint(prefix + ('links', u_joint.parent, 'pose'),
-                #                        prefix + ('links', u_joint.child, 'pose'),
-                #                        prefix + ('joints', u_joint.name),
-                #                        urdf_origin_to_transform(u_joint.origin),
-                #                        urdf_axis_to_vector(u_joint.axis),
-                #                        position,
-                #                        lower_limit_symbol,
-                #                        upper_limit_symbol,
-                #                        vel_limit,
-                #                        multiplier,
-                #                        offset)
                 joint_op = ExecFunction(prefix + ('joints', u_joint.name),
                                 PrismaticJoint,
                                 str(parent_path),
@@ -577,15 +564,6 @@ def load_urdf(ks,
                                 multiplier,
                                 offset)
             elif u_joint.type == 'continuous':
-                # op = SetContinuousJoint(prefix + ('links', u_joint.parent, 'pose'),
-                #                         prefix + ('links', u_joint.child, 'pose'),
-                #                         prefix + ('joints', u_joint.name),
-                #                         urdf_origin_to_transform(u_joint.origin),
-                #                         urdf_axis_to_vector(u_joint.axis),
-                #                         position,
-                #                         vel_limit,
-                #                         multiplier,
-                #                         offset)
                 joint_op = ExecFunction(prefix + ('joints', u_joint.name),
                                 ContinuousJoint,
                                 str(parent_path),
@@ -597,17 +575,6 @@ def load_urdf(ks,
                                 multiplier,
                                 offset)
             elif u_joint.type == 'revolute':
-                # op = SetRevoluteJoint(prefix + ('links', u_joint.parent, 'pose'),
-                #                       prefix + ('links', u_joint.child, 'pose'),
-                #                       prefix + ('joints', u_joint.name),
-                #                       urdf_origin_to_transform(u_joint.origin),
-                #                       urdf_axis_to_vector(u_joint.axis),
-                #                       position,
-                #                       lower_limit_symbol,
-                #                       upper_limit_symbol,
-                #                       vel_limit,
-                #                       multiplier,
-                #                       offset)
                 joint_op = ExecFunction(prefix + ('joints', u_joint.name),
                                 RevoluteJoint,
                                 str(parent_path),
