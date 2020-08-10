@@ -24,14 +24,14 @@ PANDA_LOGGING  = False
 class SoftConstraint(Constraint):
     def __init__(self, lower, upper, weight, expr):
         super(SoftConstraint, self).__init__(lower, upper, expr)
-        self.weight = weight
+        self.weight_id = weight
 
     @classmethod
     def from_constraint(cls, constraint, weight=1):
         return cls(constraint.lower, constraint.upper, weight, constraint.expr)
 
     def __str__(self):
-        return '{} @ {}'.format(super(SoftConstraint, self).__str__(), self.weight)
+        return '{} @ {}'.format(super(SoftConstraint, self).__str__(), self.weight_id)
 
     def __eq__(self, other):
         if isinstance(other, SoftConstraint):
@@ -47,10 +47,10 @@ class ControlledValue(object):
         self.lower  = lower
         self.upper  = upper
         self.symbol = symbol
-        self.weight = weight
+        self.weight_id = weight
 
     def __str__(self):
-        return '{} <= {} <= {} @ {}'.format(self.lower, self.symbol, self.upper, self.weight)
+        return '{} <= {} <= {} @ {}'.format(self.lower, self.symbol, self.upper, self.weight_id)
 
     def __eq__(self, other):
         if isinstance(other, ControlledValue):

@@ -6,7 +6,9 @@ import kineverse.gradients.common_math  as cm
 import kineverse.gradients.llvm_wrapper as llvm
 
 from kineverse.visualization.plotting  import ValueRecorder, SymbolicRecorder
-from kineverse.gradients.diff_logic    import get_symbol_type, Position
+from kineverse.gradients.diff_logic    import erase_type, \
+                                              get_symbol_type, \
+                                              Position
 from kineverse.motion.min_qp_builder   import TypedQPBuilder as TQPB, \
                                               GeomQPBuilder  as GQPB, \
                                               extract_expr
@@ -23,7 +25,7 @@ class CommandIntegrator(object):
             self.integration_rules = {}
             for c in qp_builder.cv:
                 for s in qp_builder.free_symbols:
-                    if str(s)[:-2] == str(c)[:-2]:
+                    if str(erase_type(s)) == str(erase_type(c)):
                         t_s = get_symbol_type(s)
                         t_c = get_symbol_type(c)
                         if t_s < t_c:
@@ -40,7 +42,7 @@ class CommandIntegrator(object):
                         self.integration_rules[s] = r
                     else:
                         print('Dropping rule "{}: {}". Symbols missing from state: {}'.format(s, r, delta_set[s]))
-            # print('\n  '.join(['{}: {}'.format(k, r) for k, r in sorted([(str(k), str(r)) for k, r in self.integration_rules.items()])]))
+            # print('Integration rules:\n  {}'.format('\n  '.join(['{}: {}'.format(k, r) for k, r in sorted([(str(k), str(r)) for k, r in self.integration_rules.items()])])))
         else:
             self.integration_rules = integration_rules if integration_rules is not None else {s: s*DT_SYM for s in self.qp_builder.free_symbols}
 
