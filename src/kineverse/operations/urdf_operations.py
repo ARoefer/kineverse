@@ -62,7 +62,7 @@ class FixedJoint(KinematicJoint):
         del json_dict['jtype']
 
     def __deepcopy__(self, memo):
-        out = FixedJoint(self.parent, self.child, self.tf_offset * 1)
+        out = type(self)(self.parent, self.child, self.tf_offset * 1)
         memo[id(self)] = out
         return out
 
@@ -85,16 +85,16 @@ class PrismaticJoint(KinematicJoint):
         json_dict.update({'position': self.position})
 
     def __deepcopy__(self, memo):
-        out = PrismaticJoint(self.parent, 
-                             self.child, 
-                             self.position, 
-                             self.axis * 1,
-                             self.tf_offset * 1,
-                             self.limit_lower,
-                             self.limit_upper,
-                             self.limit_vel,
-                             self.multiplier,
-                             self.offset)
+        out = type(self)(self.parent, 
+                         self.child, 
+                         self.position, 
+                         self.axis * 1,
+                         self.tf_offset * 1,
+                         self.limit_lower,
+                         self.limit_upper,
+                         self.limit_vel,
+                         self.multiplier,
+                         self.offset)
         memo[id(self)] = out
         return out
 
@@ -115,14 +115,14 @@ class ContinuousJoint(KinematicJoint):
         json_dict.update({'position': self.position})
 
     def __deepcopy__(self, memo):
-        out = ContinuousJoint(self.parent,
-                              self.child,
-                              self.position,
-                              self.axis * 1,      
-                              self.tf_offset * 1, 
-                              self.limit_vel, 
-                              self.multiplier,
-                              self.offset)
+        out = type(self)(self.parent,
+                         self.child,
+                         self.position,
+                         self.axis * 1,      
+                         self.tf_offset * 1, 
+                         self.limit_vel, 
+                         self.multiplier,
+                         self.offset)
         memo[id(self)] = out
         return out
 
@@ -145,196 +145,18 @@ class RevoluteJoint(KinematicJoint):
         json_dict.update({'position': self.position})
 
     def __deepcopy__(self, memo):
-        out = RevoluteJoint(self.parent,
-                            self.child,
-                            self.position,
-                            self.axis * 1,
-                            self.tf_offset * 1,
-                            self.limit_lower,
-                            self.limit_upper,
-                            self.limit_vel,
-                            self.multiplier,
-                            self.offset)
+        out = type(self)(self.parent,
+                         self.child,
+                         self.position,
+                         self.axis * 1,
+                         self.tf_offset * 1,
+                         self.limit_lower,
+                         self.limit_upper,
+                         self.limit_vel,
+                         self.multiplier,
+                         self.offset)
         memo[id(self)] = out
         return out
-
-
-# class PrismaticJoint(Kinematic1DofJoint):
-#     def __init__(self, parent, child, axis, position, lower_limit=-1e9, upper_limit=1e9):
-#         super(PrismaticJoint, self).__init__('prismatic', parent, child, axis, position)
-#         self.lower_limit = lower_limit
-#         self.upper_limit = upper_limit
-
-# class RevoluteJoint(Kinematic1DofJoint):
-#     def __init__(self, parent, child, axis, position):
-#         super(RevoluteJoint, self).__init__('revolute', parent, child, axis, position)
-
-# class HingeJoint(Kinematic1DofJoint):
-#     def __init__(self, parent, child, axis, position, lower_limit=-1e9, upper_limit=1e9):
-#         super(HingeJoint, self).__init__('hinge', parent, child, axis, position)
-#         self.lower_limit = lower_limit
-#         self.upper_limit = upper_limit
-
-
-KinematicLink = RigidBody
-
-URDFRobot = ArticulatedObject
-
-
-# class SetConnection(Operation):
-#     def init(self, name, joint_obj, parent_pose, child_pose, connection_path, connection_tf):
-#         self.joint_obj = joint_obj
-#         op_construction_wrapper(super(SetConnection, self).init,
-#                                 name,
-#                                 ['child_pose', 'child_parent', 'child_parent_tf'],
-#                                 (connection_path, 'connection', self.joint_obj),
-#                                 parent_pose=parent_pose,
-#                                 child_parent=child_pose[:-1] + ('parent',),
-#                                 child_parent_tf=child_pose[:-1] + ('to_parent',),
-#                                 child_pose=child_pose,
-#                                 connection_tf=connection_tf)
-
-#     def _apply(self, ks, parent_pose, child_pose, child_parent_tf, connection_tf):
-#         return {'child_parent': self.joint_obj.parent,
-#                 'child_parent_tf': dot(connection_tf, child_parent_tf),
-#                 'child_pose': dot(parent_pose, connection_tf, child_pose),
-#                 'connection': self.joint_obj}, {}
-
-
-# class SetFixedJoint(SetConnection):
-#     def init(self, parent_pose, child_pose, connection_path, connection_tf):
-#         super(SetFixedJoint, self).init('Fixed Joint',
-#                                         FixedJoint(str(parent_pose[:-1]),
-#                                                    str(child_pose[:-1])),
-#                                         parent_pose, child_pose, connection_path, connection_tf)
-
-
-# class SetPrismaticJoint(Operation):
-#     def init(self, parent_pose, child_pose, connection_path, connection_tf, axis, position, lower_limit, upper_limit,
-#              vel_limit, mimic_m=None, mimic_o=None):
-#         self.joint_obj = PrismaticJoint(str(parent_pose[:-1]), str(child_pose[:-1]), position)
-#         self.conn_path = connection_path
-#         op_construction_wrapper(super(SetPrismaticJoint, self).init,
-#                                 'Prismatic Joint',
-#                                 ['child_pose', 'child_parent', 'child_parent_tf'],
-#                                 (connection_path, 'connection', self.joint_obj),
-#                                 parent_pose=parent_pose,
-#                                 child_parent=child_pose[:-1] + ('parent',),
-#                                 child_parent_tf=child_pose[:-1] + ('to_parent',),
-#                                 child_pose=child_pose,
-#                                 connection_tf=connection_tf,
-#                                 axis=axis,
-#                                 position=position,
-#                                 lower_limit=lower_limit,
-#                                 upper_limit=upper_limit,
-#                                 vel_limit=vel_limit,
-#                                 mimic_m=mimic_m,
-#                                 mimic_o=mimic_o)
-
-#     def _apply(self, ks, parent_pose, child_pose, child_parent_tf, connection_tf, axis, position, lower_limit,
-#                upper_limit, vel_limit, mimic_m, mimic_o):
-#         vel = get_diff(position)
-#         pos_expr = axis * position
-#         constraints = {}
-#         if lower_limit is not None:
-#             constraints['{}_position'.format(self.conn_path)] = Constraint(lower_limit - position,
-#                                                                            upper_limit - position,
-#                                                                            position)
-#         if vel_limit is not None:
-#             constraints['{}_velocity'.format(self.conn_path)] = Constraint(-vel_limit, vel_limit, vel)
-#         return {'child_parent': self.joint_obj.parent,
-#                 'child_parent_tf': dot(connection_tf,
-#                                        translation3(pos_expr[0], pos_expr[1], pos_expr[2]),
-#                                        child_parent_tf),
-#                 'child_pose': dot(parent_pose,
-#                                   connection_tf,
-#                                   translation3(pos_expr[0], pos_expr[1], pos_expr[2]),
-#                                   child_pose),
-#                 'connection': self.joint_obj}, \
-#                constraints
-
-
-# class SetRevoluteJoint(Operation):
-#     def init(self, parent_pose, child_pose, connection_path, connection_tf, axis, position, lower_limit, upper_limit,
-#              vel_limit, mimic_m=None, mimic_o=None):
-#         self.joint_obj = RevoluteJoint(str(parent_pose[:-1]), str(child_pose[:-1]), position)
-#         self.conn_path = connection_path
-#         op_construction_wrapper(super(SetRevoluteJoint, self).init,
-#                                 'Revolute Joint',
-#                                 ['child_pose', 'child_parent', 'child_parent_tf'],
-#                                 (connection_path, 'connection', self.joint_obj),
-#                                 parent_pose=parent_pose,
-#                                 child_parent=child_pose[:-1] + ('parent',),
-#                                 child_parent_tf=child_pose[:-1] + ('to_parent',),
-#                                 child_pose=child_pose,
-#                                 connection_tf=connection_tf,
-#                                 axis=axis,
-#                                 position=position,
-#                                 lower_limit=lower_limit,
-#                                 upper_limit=upper_limit,
-#                                 vel_limit=vel_limit,
-#                                 mimic_m=mimic_m,
-#                                 mimic_o=mimic_o)
-
-#     def _apply(self, ks, parent_pose, child_pose, child_parent_tf, connection_tf, axis, position, lower_limit,
-#                upper_limit, vel_limit, mimic_m, mimic_o):
-#         position = position if mimic_m is None or mimic_o is None else position * mimic_m + mimic_o
-#         vel = get_diff(position)
-#         constraints = {}
-#         if lower_limit is not None:
-#             constraints['{}_position'.format(self.conn_path)] = Constraint(lower_limit - position,
-#                                                                           upper_limit - position,
-#                                                                           position)
-#         if vel_limit is not None:
-#             constraints['{}_velocity'.format(self.conn_path)] = Constraint(-vel_limit, vel_limit, vel)
-#         return {'child_parent': self.joint_obj.parent,
-#                 'child_parent_tf': dot(connection_tf,
-#                                        rotation3_axis_angle(axis, position),
-#                                        child_parent_tf),
-#                 'child_pose': dot(parent_pose,
-#                                   connection_tf,
-#                                   rotation3_axis_angle(axis, position),
-#                                   child_pose),
-#                 'connection': self.joint_obj}, \
-#                constraints
-
-
-# class SetContinuousJoint(Operation):
-#     def init(self, parent_pose, child_pose, connection_path, connection_tf, axis, position, vel_limit, mimic_m=None,
-#              mimic_o=None):
-#         self.joint_obj = ContinuousJoint(str(parent_pose[:-1]), str(child_pose[:-1]), position)
-#         self.conn_path = connection_path
-#         op_construction_wrapper(super(SetContinuousJoint, self).init,
-#                                 'Continuous Joint',
-#                                 ['child_pose', 'child_parent', 'child_parent_tf'],
-#                                 (connection_path, 'connection', self.joint_obj),
-#                                 parent_pose=parent_pose,
-#                                 child_parent=child_pose[:-1] + ('parent',),
-#                                 child_parent_tf=child_pose[:-1] + ('to_parent',),
-#                                 child_pose=child_pose,
-#                                 connection_tf=connection_tf,
-#                                 axis=axis,
-#                                 position=position,
-#                                 vel_limit=vel_limit,
-#                                 mimic_m=mimic_m,
-#                                 mimic_o=mimic_o)
-
-#     def _apply(self, ks, parent_pose, child_pose, child_parent_tf, connection_tf, axis, position, vel_limit, mimic_m,
-#                mimic_o):
-#         position = position if mimic_m is None or mimic_o is None else position * mimic_m + mimic_o
-#         constraints = {}
-#         if vel_limit is not None:
-#             constraints['{}_velocity'.format(self.conn_path)] = Constraint(-vel_limit, vel_limit, DiffSymbol(position))
-#         return {'child_parent': self.joint_obj.parent,
-#                 'child_parent_tf': dot(connection_tf,
-#                                        rotation3_axis_angle(axis, position),
-#                                        child_parent_tf),
-#                 'child_pose': dot(parent_pose,
-#                                   connection_tf,
-#                                   rotation3_axis_angle(axis, position),
-#                                   child_pose),
-#                 'connection': self.joint_obj}, \
-#                constraints
 
 class CreateURDFFrameConnection(Operation):
     def __init__(self, joint, parent_frame, child_frame):

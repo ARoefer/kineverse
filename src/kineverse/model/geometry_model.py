@@ -41,7 +41,7 @@ class KinematicJoint(JSONSerializable):
                           'child':  self.child})
 
     def __deepcopy__(self, memo):
-        out = KinematicJoint(self.type, self.parent, self.child)
+        out = type(self)(self.type, self.parent, self.child)
         memo[id(self)] = out
         return out
 
@@ -129,7 +129,7 @@ class RigidBody(Frame):
                           'inertial':  self.inertial})
 
     def __deepcopy__(self, memo):
-        out = RigidBody(self.parent, self.pose * 1, self.to_parent * 1, self.geometry, self.collision, self.inertial)
+        out = type(self)(self.parent, self.pose * 1, self.to_parent * 1, self.geometry, self.collision, self.inertial)
         memo[id(self)] = out
         return out
 
