@@ -6,7 +6,7 @@ matrices storing augmented gradients.
 
 import kineverse.gradients.common_math as cm
 
-from kineverse.gradients.diff_logic import DiffSymbol, IntSymbol, Symbol
+from kineverse.gradients.diff_logic import DiffSymbol, IntSymbol, Symbol, get_symbol_type, TYPE_UNKNOWN
 from kineverse.json_serializable    import JSONSerializable
 
 
@@ -33,7 +33,7 @@ class GradientContainer(JSONSerializable):
             self.expr      = expr if type(expr) is not GradientContainer else expr.expr
             self.gradients = gradient_exprs if gradient_exprs is not None else {}
         self.free_symbols = cm.free_symbols(expr)
-        self.free_diff_symbols = {DiffSymbol(s) for s in self.free_symbols if DiffSymbol(s) not in self.gradients}
+        self.free_diff_symbols = {DiffSymbol(s) for s in self.free_symbols if get_symbol_type(s) != TYPE_UNKNOWN and DiffSymbol(s) not in self.gradients}
 
     @property
     def diff_symbols(self):
@@ -259,7 +259,7 @@ class GradientContainer(JSONSerializable):
 
 
     def __str__(self):
-        return '\\/ {} [{}]'.format(str(self.expr), ', '.join([str(k) for k in self.gradients.keys()]))
+        return '\\/ {} [{}]'.format(str(self.expr), ', '.join([str(k) for k in self.diff_symbols]))
 
     def __repr__(self):
         return 'G({})'.format(self.expr)

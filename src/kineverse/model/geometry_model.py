@@ -7,7 +7,7 @@ import numpy as np
 import kineverse.gradients.common_math  as cm
 import kineverse.gradients.llvm_wrapper as llvm
 
-from kineverse.gradients.diff_logic     import Position
+from kineverse.gradients.diff_logic     import Symbol, Position
 from kineverse.gradients.gradient_math  import *
 from kineverse.json_wrapper             import JSONSerializable
 from kineverse.model.paths              import Path, PathSet, PathDict
@@ -494,15 +494,15 @@ class ContactSymbolContainer(object):
     """
     def __init__(self, path_obj, path_other=0):
         contact_name = ('contact',) + path_obj + (obj_to_obj_infix,) + path_other
-        self.on_a_x = Position((contact_name + ('onA', 'x')).to_symbol())
-        self.on_a_y = Position((contact_name + ('onA', 'y')).to_symbol())
-        self.on_a_z = Position((contact_name + ('onA', 'z')).to_symbol())
-        self.on_b_x = Position((contact_name + ('onB', 'x')).to_symbol())
-        self.on_b_y = Position((contact_name + ('onB', 'y')).to_symbol())
-        self.on_b_z = Position((contact_name + ('onB', 'z')).to_symbol())
-        self.normal_x = Position((contact_name + ('normal', 'x')).to_symbol())
-        self.normal_y = Position((contact_name + ('normal', 'y')).to_symbol())
-        self.normal_z = Position((contact_name + ('normal', 'z')).to_symbol())
+        self.on_a_x = (contact_name + ('onA', 'x')).to_symbol()
+        self.on_a_y = (contact_name + ('onA', 'y')).to_symbol()
+        self.on_a_z = (contact_name + ('onA', 'z')).to_symbol()
+        self.on_b_x = (contact_name + ('onB', 'x')).to_symbol()
+        self.on_b_y = (contact_name + ('onB', 'y')).to_symbol()
+        self.on_b_z = (contact_name + ('onB', 'z')).to_symbol()
+        self.normal_x = (contact_name + ('normal', 'x')).to_symbol()
+        self.normal_y = (contact_name + ('normal', 'y')).to_symbol()
+        self.normal_z = (contact_name + ('normal', 'z')).to_symbol()
 
     def __eq__(self, other):
         if isinstance(other, ContactSymbolContainer):
