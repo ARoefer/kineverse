@@ -58,6 +58,7 @@ if cm.SYM_MATH_ENGINE == 'CASADI':
 
 is_symbol = cm.is_symbol
 eq_expr = cm.eq_expr
+free_symbols = cm.free_symbols
 
 def is_symbolic(expr):
     """Is the given expression symbolic?"""

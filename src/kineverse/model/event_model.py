@@ -19,7 +19,8 @@ def _dispatch_model_events(pdict, data, key, call_tracker=set()):
         for k, p in pdict.items():
             _dispatch_model_events(p, Path(k).get_data_no_throw(data), key, call_tracker)
     else:
-        _dispatch_model_events(pdict.get_sub_dict(key[:1]), key[:1].get_data_no_throw(data), key[1:], call_tracker)
+        if key[0] in pdict:
+            _dispatch_model_events(pdict.get_sub_dict(key[:1]), key[:1].get_data_no_throw(data), key[1:], call_tracker)
 
 
 class EventModel(ArticulationModel):
