@@ -106,3 +106,6 @@ class DataTree(JSONSerializable):
         if isinstance(other, DataTree):
             return self.parent == other.parent and self.data_tree == other.data_tree and self.value_table == other.value_table
         return False
+
+    def clear(self):
+        self.data_tree = {}

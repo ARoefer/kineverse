@@ -8,13 +8,15 @@ and operational model building which includes merging of models.
 import traceback 
 import kineverse.gradients.common_math as cm
 import kineverse.json_wrapper          as json
+import kineverse.model.model_settings  as model_settings
 
-from kineverse.model.data_tree      import DataTree
-from kineverse.model.history        import History, Timeline, StampedData, Chunk
-from kineverse.model.paths          import Path
-from kineverse.operations.operation import Operation
-from kineverse.type_sets            import is_symbolic
-from kineverse.json_serializable    import JSONSerializable
+from kineverse.model.data_tree             import DataTree
+from kineverse.model.history               import History, Timeline, StampedData, Chunk
+from kineverse.model.paths                 import Path
+from kineverse.operations.operation        import Operation
+# from kineverse.operations.basic_operations import CreateSingleValue
+from kineverse.type_sets                   import is_symbolic
+from kineverse.json_serializable           import JSONSerializable
 
 Tag = str
 
@@ -85,8 +87,8 @@ class TaggedOperation(StampedData):
 class TaggedIOOperation(StampedData):
     def __init__(self, stamp, tag, op):
         super(TaggedIOOperation, self).__init__(stamp, tag=tag, 
-                                                 inputs=[p for p in op.args_paths.values() if type(p) is Path],
-                                                 outputs=op._root_set.values())
+                                                 inputs=[p for p in op._exec_args.values() if type(p) is Path],
+                                                 outputs=op.output_path_assignments.values())
 
 
 class OperationException(Exception):
@@ -155,6 +157,12 @@ class ArticulationModel(object):
         This will merge models, if operations have the same tags.
         """
         self.clean_structure()
+
+        if len(prefix) > 0:
+            for x in range(len(prefix) + 1):
+                if not self.has_data(prefix[:x]):
+                    self.apply_operation('create {}'.format(prefix[:x]), CreateSingleValue(prefix[:x], {}))
+
         instructions = json.load(f)
         for x, d in enumerate(instructions):
             if 'tag' not in d:
@@ -169,7 +177,10 @@ class ArticulationModel(object):
             if d['op'] is None:
                 raise Exception('Loading of model from file failed: Tag "{}" has a NULL operation.'.format(d['tag']))
 
-            self.apply_operation(d['tag'], d['op'])
+            if len(prefix) == 0:
+                self.apply_operation(d['tag'], d['op'])
+            else:
+                self.apply_operation(d['tag'], type(d['op'])(*[a if type(a) != Path else prefix + a for a in d['op']._construction_args]))
         self.clean_structure()
 
     @profile
@@ -192,23 +203,40 @@ class ArticulationModel(object):
                 raise Exception('History returned no chunk for tag "{}" associated with timestamp {}. This should not happen.'.format(tag, self.timeline_tags[tag]))
             chunk.operation.revoke(self)
             try:
+                # Execute the operation to generate full modification set and dependencies
+                op.execute(self, time)
+                
+                # Create a new chunk and try inserting it into the history
                 new_chunk = Chunk(time, op)
-                op.apply(self, self._touched_set, time)
+                self.operation_history.check_can_replace(chunk, new_chunk)
+
+                # Actually apply the generated changes to the model once
+                # history insertion worked out
+                op.apply_to_model(self, time)
                 self.operation_history.replace_chunk(chunk, new_chunk)
                 self._touched_set |= new_chunk.modifications
                 self._touched_stamp = new_chunk.stamp
             except Exception as e:
-                raise OperationException('Failed to apply operation "{}" tagged "{}" at time "{}". Error:\n  {}'.format(op.name, tag, time, e))
+                raise OperationException('Failed to apply operation "{}" tagged "{}" at time "{}". Error:\n  {}'.format(type(op), tag, time, e))
         else:
             self.timeline_tags[tag] = time
             try:
+                # Execute the operation to generate full modification set and dependencies
+                op.execute(self, time)
+                
+                # Create a new chunk and try inserting it into the history
                 new_chunk = Chunk(time, op)
-                op.apply(self, self._touched_set)
+                # op.apply(self, self._touched_set)
+                self.operation_history.check_can_insert(new_chunk)
+
+                # Actually apply the generated changes to the model once
+                # history insertion worked out
+                op.apply_to_model(self, time)
                 self.operation_history.insert_chunk(new_chunk)
                 self._touched_set |= new_chunk.modifications
                 self._touched_stamp = new_chunk.stamp
             except Exception as e:
-                raise OperationException('Failed to apply operation "{}" tagged "{}" at time "{}". Traceback:\n  {}\nError: \n{}'.format(op.name, tag, time, traceback.print_exc(), e))
+                raise OperationException('Failed to apply operation "{}" tagged "{}" at time "{}". Traceback:\n  {}\nError: \n{}'.format(type(op), tag, time, traceback.print_exc(), e))
 
 
     @profile
@@ -233,13 +261,19 @@ class ArticulationModel(object):
         self.clean_structure(time)
         self.timeline_tags[tag] = time
         try:
+            # Execute the operation to generate full modification set and dependencies
+            op.execute(self, time)
+
             new_chunk = Chunk(time, op)
-            op.apply(self, self._touched_set, time)
+            self.operation_history.check_can_insert(new_chunk)
+            # op.apply(self, self._touched_set, time)
+
+            op.apply_to_model(self, time)
             self.operation_history.insert_chunk(new_chunk)
             self._touched_set |= new_chunk.modifications
             self._touched_stamp = new_chunk.stamp
         except Exception as e:
-            raise OperationException('Failed to apply operation "{}" tagged "{}" at time "{}". Traceback:\n  {}\nError: \n{}'.format(op.name, tag, time, traceback.print_exc(), e))
+            raise OperationException('Failed to apply operation "{}" tagged "{}" at time "{}". Traceback:\n  {}\nError: \n{}'.format(type(op), tag, time, traceback.print_exc(), e))
 
 
     @profile
@@ -264,13 +298,18 @@ class ArticulationModel(object):
         self.clean_structure(time)
         self.timeline_tags[tag] = time
         try:
+            op.execute(self, time)
+
             new_chunk = Chunk(time, op)
-            op.apply(self, self._touched_set, time)
+            self.operation_history.check_can_insert(new_chunk)
+            # op.apply(self, self._touched_set, time)
+            
+            op.apply_to_model(self, time)
             self.operation_history.insert_chunk(new_chunk)
             self._touched_set |= new_chunk.modifications
             self._touched_stamp = new_chunk.stamp
         except Exception as e:
-            raise OperationException('Failed to apply operation "{}" tagged "{}" at time "{}". Traceback:\n  {}\nError: \n{}'.format(op.name, tag, time, traceback.print_exc(), e))
+            raise OperationException('Failed to apply operation "{}" tagged "{}" at time "{}". Traceback:\n  {}\nError: \n{}'.format(type(op), tag, time, traceback.print_exc(), e))
 
 
     @profile
@@ -284,10 +323,11 @@ class ArticulationModel(object):
         chunk = self.operation_history.get_chunk(self.timeline_tags[tag])
         if chunk is None:
             raise Exception('History returned no chunk for tag "{}" associated with timestamp {}. This should not happen.'.format(tag, self.timeline_tags[tag]))
+        self.operation_history.check_can_remove(chunk)
         chunk.operation.revoke(self)
         self.operation_history.remove_chunk(chunk)
         self._touched_set |= chunk.modifications
-        self._touched_stamp = chunk.stamp
+        self._touched_stamp = chunk.stamp if not model_settings.BRUTE_MODE else 0
         del self.timeline_tags[tag]
 
 
@@ -308,19 +348,33 @@ class ArticulationModel(object):
         NOTE: The model should be cleaned fully, BEFORE new modifications are made, 
         DO NOT mix modifications and model cleaning.
         """
-        while len(self.operation_history.dirty_chunks) > 0 and self.operation_history.dirty_chunks[0].stamp <= until:
-            chunk = self.operation_history.dirty_chunks[0]
-            if self._touched_stamp > chunk.stamp:
+        # NOTE: Fuck the complicated update mechanism. It causes nothing but problems and is mostly irrelevant to current real-world applications
+        if model_settings.BRUTE_MODE:
+            # Implies that the model needs to be rebuilt.
+            if len(self.operation_history.chunk_history) > 0 and self._touched_stamp < self.operation_history.chunk_history[-1].stamp:
+                self.data_tree.clear()
+
+                for chunk in self.operation_history.chunk_history:
+                    chunk.operation.execute(self, chunk.stamp)
+                    chunk.operation.apply_to_model(self, chunk.stamp)
+                    self._touched_stamp = chunk.stamp
+
                 self._touched_set = set()
-            chunk.operation.apply(self, self._touched_set, chunk.stamp)
-            self._touched_set  |= chunk.modifications
-            self._touched_stamp = chunk.stamp
-            self.operation_history.flag_clean(chunk)
-            self.operation_history.flag_dirty(*chunk.dependents)
-        
-        # The entire model is cleaned now
-        if len(self.operation_history.chunk_history) == 0 or until >= self.operation_history.chunk_history[-1].stamp:
-            self._touched_set = set()
+        else:
+            while len(self.operation_history.dirty_chunks) > 0 and self.operation_history.dirty_chunks[0].stamp <= until:
+                chunk = self.operation_history.dirty_chunks[0]
+                if self._touched_stamp > chunk.stamp:
+                    self._touched_set = set()
+                chunk.operation.execute(self, chunk.stamp)
+                chunk.operation.apply_to_model(self, chunk.stamp)
+                self._touched_set  |= chunk.modifications
+                self._touched_stamp = chunk.stamp
+                self.operation_history.flag_clean(chunk)
+                self.operation_history.flag_dirty(*chunk.dependents)
+            
+            # The entire model is cleaned now
+            if len(self.operation_history.chunk_history) == 0 or until >= self.operation_history.chunk_history[-1].stamp:
+                self._touched_set = set()
 
     @profile
     def has_data(self, key, stamp=None):
@@ -331,10 +385,11 @@ class ArticulationModel(object):
         """
         if type(key) == str:
             key = Path(key)
-        if stamp is None:
+        if stamp is None or model_settings.BRUTE_MODE:
             return key in self.data_tree
         else:
-            return self.operation_history.get_earliest_stamp(stamp) is not None
+            e_stamp = self.operation_history.get_earliest_stamp(key)
+            return e_stamp is not None and e_stamp <= stamp
 
     @profile
     def get_data(self, key, time_stamp=None):
@@ -345,11 +400,14 @@ class ArticulationModel(object):
         """
         if type(key) == str or type(key) == unicode:
             key = Path(key)
-        if time_stamp is None:
+        if time_stamp is None or model_settings.BRUTE_MODE:
             return self.data_tree[key]
         else:
             # Fetch the chunk from the history that modifies this path closest after the given stamp.
             # Then extract the value from the chunk's memo.
+            if key in self._touched_set and time_stamp >= self._touched_stamp:
+                    return self.data_tree[key]
+            
             closest_mod_chunk = self.operation_history.get_ceil_modifying_chunk(key, time_stamp)
             if closest_mod_chunk is None:
                 return self.data_tree[key]

@@ -6,8 +6,9 @@ import numpy as np
 
 import kineverse.gradients.common_math  as cm
 import kineverse.gradients.llvm_wrapper as llvm
+import kineverse.model.model_settings   as model_settings
 
-from kineverse.gradients.diff_logic     import Position
+from kineverse.gradients.diff_logic     import Symbol, Position
 from kineverse.gradients.gradient_math  import *
 from kineverse.json_wrapper             import JSONSerializable
 from kineverse.model.paths              import Path, PathSet, PathDict
@@ -75,7 +76,10 @@ class Geometry(Frame):
 
     def __eq__(self, other):
         if isinstance(other, Geometry):
-            return super(Geometry, self).__eq__(other) and self.type == other.type and self.scale == other.scale and self.mesh == other.mesh
+            return super(Geometry, self).__eq__(other) and \
+                   self.type == other.type and \
+                   cm.eq_expr(self.scale, other.scale) and \
+                   self.mesh == other.mesh
         return False
 
 
@@ -103,7 +107,9 @@ class InertialData(Frame):
 
     def __eq__(self, other):
         if isinstance(other, InertialData):
-            return super(InertialData, self).__eq__(other) and self.mass == other.mass and self.inertia_matrix == other.inertia_matrix
+            return super(InertialData, self).__eq__(other) and \
+                   self.mass == other.mass and \
+                   cm.eq_expr(self.inertia_matrix, other.inertia_matrix)
         return False
 
 
@@ -282,7 +288,7 @@ class GeometryModel(EventModel):
         removed_object = []
         for str_k in self._collision_objects:
             k = Path(str_k)
-            if k in self._callback_batch:
+            if model_settings.BRUTE_MODE or k in self._callback_batch:
                 #print('{} is a collision link and has changed in the last update batch'.format(k))
                 if self.has_data(k):
                     #print('{} was changed'.format(k))
@@ -313,7 +319,7 @@ class GeometryModel(EventModel):
         if len(static_objects) > 0:
             pb.batch_set_transforms(static_objects, np.vstack(static_poses))
             self._static_objects = static_objects
-            # print('\n  '.join(['{}: {}'.format(n, c.transform) for n, c in self._collision_objects.items()]))
+            # print('\n  '.join(['{}:\n{}'.format(n, c.transform) for n, c in self._collision_objects.items()]))
 
         if len(dynamic_poses) > 0:
             objs, matrices = zip(*[(self._collision_objects[k], m) for k, m in dynamic_poses.items()])
@@ -492,15 +498,15 @@ class ContactSymbolContainer(object):
     """
     def __init__(self, path_obj, path_other=0):
         contact_name = ('contact',) + path_obj + (obj_to_obj_infix,) + path_other
-        self.on_a_x = Position((contact_name + ('onA', 'x')).to_symbol())
-        self.on_a_y = Position((contact_name + ('onA', 'y')).to_symbol())
-        self.on_a_z = Position((contact_name + ('onA', 'z')).to_symbol())
-        self.on_b_x = Position((contact_name + ('onB', 'x')).to_symbol())
-        self.on_b_y = Position((contact_name + ('onB', 'y')).to_symbol())
-        self.on_b_z = Position((contact_name + ('onB', 'z')).to_symbol())
-        self.normal_x = Position((contact_name + ('normal', 'x')).to_symbol())
-        self.normal_y = Position((contact_name + ('normal', 'y')).to_symbol())
-        self.normal_z = Position((contact_name + ('normal', 'z')).to_symbol())
+        self.on_a_x = (contact_name + ('onA', 'x')).to_symbol()
+        self.on_a_y = (contact_name + ('onA', 'y')).to_symbol()
+        self.on_a_z = (contact_name + ('onA', 'z')).to_symbol()
+        self.on_b_x = (contact_name + ('onB', 'x')).to_symbol()
+        self.on_b_y = (contact_name + ('onB', 'y')).to_symbol()
+        self.on_b_z = (contact_name + ('onB', 'z')).to_symbol()
+        self.normal_x = (contact_name + ('normal', 'x')).to_symbol()
+        self.normal_y = (contact_name + ('normal', 'y')).to_symbol()
+        self.normal_z = (contact_name + ('normal', 'z')).to_symbol()
 
     def __eq__(self, other):
         if isinstance(other, ContactSymbolContainer):

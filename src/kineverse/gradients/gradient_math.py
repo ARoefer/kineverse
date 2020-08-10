@@ -57,8 +57,14 @@ if cm.SYM_MATH_ENGINE == 'CASADI':
     cm.ca.DM.__div__ = op_wrapper(cm.ca.DM, 'div')
 
 is_symbol = cm.is_symbol
-eq_expr = cm.eq_expr
-free_symbols = cm.free_symbols
+eq_expr   = cm.eq_expr
+eye       = cm.eye
+pos_of    = cm.pos_of
+x_of      = cm.x_of
+y_of      = cm.y_of
+z_of      = cm.z_of
+free_symbols = cm.free_symbols 
+diff      = cm.diff
 
 def is_symbolic(expr):
     """Is the given expression symbolic?"""

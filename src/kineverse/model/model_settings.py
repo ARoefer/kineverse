@@ -1,0 +1,1 @@
+BRUTE_MODE = True

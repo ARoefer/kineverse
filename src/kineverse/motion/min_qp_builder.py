@@ -24,18 +24,21 @@ PANDA_LOGGING  = False
 class SoftConstraint(Constraint):
     def __init__(self, lower, upper, weight, expr):
         super(SoftConstraint, self).__init__(lower, upper, expr)
-        self.weight = weight
+        self.weight_id = weight
 
     @classmethod
     def from_constraint(cls, constraint, weight=1):
         return cls(constraint.lower, constraint.upper, weight, constraint.expr)
 
     def __str__(self):
-        return '{} @ {}'.format(super(SoftConstraint, self).__str__(), self.weight)
+        return '{} @ {}'.format(super(SoftConstraint, self).__str__(), self.weight_id)
 
     def __eq__(self, other):
         if isinstance(other, SoftConstraint):
-            return self.lower == other.lower and self.upper == other.upper and self.expr == other.expr and self.weight == other.weight
+            return c.eq_expr(self.lower, other.lower) and \
+                   c.eq_expr(self.upper, other.upper) and \
+                   c.eq_expr(self.expr, other.expr)   and \
+                   c.eq_expr(self.weight_id, other.weight)
         return False
 
 
@@ -44,14 +47,17 @@ class ControlledValue(object):
         self.lower  = lower
         self.upper  = upper
         self.symbol = symbol
-        self.weight = weight
+        self.weight_id = weight
 
     def __str__(self):
-        return '{} <= {} <= {} @ {}'.format(self.lower, self.symbol, self.upper, self.weight)
+        return '{} <= {} <= {} @ {}'.format(self.lower, self.symbol, self.upper, self.weight_id)
 
     def __eq__(self, other):
         if isinstance(other, ControlledValue):
-            return self.lower == other.lower and self.upper == other.upper and self.symbol == other.symbol and self.weight == other.weight
+            return cm.eq_expr(self.lower, other.lower)   and \
+                   cm.eq_expr(self.upper, other.upper)   and \
+                   cm.eq_expr(self.symbol, other.symbol) and \
+                   cm.eq_expr(self.weight, other.weight)
         return False
 
 
