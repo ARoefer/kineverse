@@ -159,7 +159,7 @@ class ArticulatedObject(JSONSerializable):
         return out
 
     def __deepcopy__(self, memo):
-        out = ArticulatedObject(self.name)
+        out = type(self)(self.name)
         memo[id(self)] = out
         out.links  = {k: deepcopy(v) for k, v in self.links.items()}
         out.joints = {k: deepcopy(v) for k, v in self.joints.items()}
