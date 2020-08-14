@@ -181,7 +181,7 @@ class CreateURDFFrameConnection(Operation):
             if joint.offset is not None:
                 pos += joint.offset
 
-            if hasattr(joint, 'lower_limit') and joint.limit_lower is not None:
+            if hasattr(joint, 'limit_lower') and joint.limit_lower is not None:
                 constraints['{}_position'.format(joint_name)] = Constraint(joint.limit_lower - pos,
                                                                            joint.limit_upper - pos,
                                                                            pos)
