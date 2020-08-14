@@ -174,7 +174,7 @@ class TwoDOFRotationJoint(KinematicJoint):
 
 class CreateAdvancedFrameConnection(CreateURDFFrameConnection):
 
-    def _execute_impl(self, joint, parent_frame, child_frame):
+    def _execute_impl(self, joint_name, joint, parent_frame, child_frame):
         if joint.type == 'roomba':
             if joint.limit_vel is not None:
                 self.constraints = {'{}'.format(joint.r_wheel_vel): Constraint(-joint.limit_vel, 
@@ -198,11 +198,11 @@ class CreateAdvancedFrameConnection(CreateURDFFrameConnection):
         elif joint.type == 'omni':
             self.constraints = {}
             if joint.limit_lin_vel is not None:
-                self.constraints['{}->{}_lin_velocity'.format(joint.parent, joint.child)] = Constraint(-joint.limit_lin_vel,
+                self.constraints['{}_lin_velocity'.format(joint_name)] = Constraint(-joint.limit_lin_vel,
                                                                                     joint.limit_lin_vel,
                                                                                    get_diff(norm(vector3(joint.x_pos, joint.y_pos, 0))))
             if joint.limit_ang_vel is not None:
-                self.constraints['{}->{}_ang_velocity'.format(joint.parent, joint.child)] = Constraint(-joint.limit_ang_vel,
+                self.constraints['{}_ang_velocity'.format(joint_name)] = Constraint(-joint.limit_ang_vel,
                                                                                     joint.limit_ang_vel,
                                                                                     get_diff(joint.a_pos))
 
@@ -215,7 +215,7 @@ class CreateAdvancedFrameConnection(CreateURDFFrameConnection):
         elif joint.type == '2dof':
             raise NotImplementedError
         else:
-            super(CreateAdvancedFrameConnection, self)._execute_impl(joint, parent_frame, child_frame)
+            super(CreateAdvancedFrameConnection, self)._execute_impl(joint_name, joint, parent_frame, child_frame)
 
 # class Set2DofRotationJoint(Operation):
 #     def init(self, parent_pose, child_pose, connection_path, connection_tf, axis_x, axis_y, pos)
