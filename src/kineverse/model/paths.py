@@ -8,7 +8,7 @@ from kineverse.json_wrapper            import JSONSerializable
 from kineverse.type_sets import atomic_types, matrix_types, symbolic_types, numpy_types
 
 
-class PathException(Exception):
+class PathException(KeyError):
     def __init__(self, path, obj):
         super(PathException, self).__init__('Object {} at "{}" has no attribute "{}".'.format(obj, path[:-1], path[-1]))
         self.path = path
