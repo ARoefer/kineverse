@@ -70,13 +70,13 @@ class EventModel(ArticulationModel):
 
 
     def set_data(self, key, value):
-        key = Path(key) if type(key) == str else key
+        key = Path(key) if type(key) == str or type(key) == unicode else key
         if not self.has_data(key) or not cm.eq_expr(value, self.get_data(key)):
             self._callback_batch.add(key)
         super(EventModel, self).set_data(key, value)
 
     def remove_data(self, key):
-        key = Path(key) if type(key) == str else key
+        key = Path(key) if type(key) == str or type(key) == unicode else key
         if self.has_data(key):
             self._callback_batch.add(key)
         super(EventModel, self).remove_data(key)

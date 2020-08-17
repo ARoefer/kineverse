@@ -258,7 +258,7 @@ class GeometryModel(EventModel):
             child.set_ignore_collision(parent)
 
     def set_data(self, key, value):
-        if type(key) is str:
+        if type(key) is str or type(key) == unicode:
             key = Path(key)
 
         if isinstance(value, RigidBody):

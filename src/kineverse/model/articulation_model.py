@@ -383,7 +383,7 @@ class ArticulationModel(object):
         :param key: Path to check for.
         :type  key: str, Path
         """
-        if type(key) == str:
+        if type(key) == str or type(key) == unicode:
             key = Path(key)
         if stamp is None or model_settings.BRUTE_MODE:
             return key in self.data_tree
@@ -422,7 +422,7 @@ class ArticulationModel(object):
         :type  key: str, Path
         :param value: Data to insert.
         """
-        if type(key) == str:
+        if type(key) == str or type(key) == unicode:
             key = Path(key)
         self.data_tree[key] = value
 
@@ -433,7 +433,7 @@ class ArticulationModel(object):
         :param key: Path to remove.
         :type  key: str, Path
         """
-        if type(key) == str:
+        if type(key) == str or type(key) == unicode:
             key = Path(key)
         self.data_tree.remove_data(key)
 
