@@ -166,7 +166,8 @@ class CreateURDFFrameConnection(Operation):
         super(CreateURDFFrameConnection, self).__init__(
             {'child_parent': child_frame + ('parent',),
              'child_relative_pose': child_frame + ('to_parent',),
-             'child_full_pose': child_frame + ('pose',)},
+             'child_full_pose': child_frame + ('pose',),
+             'child_link_joint': child_frame + ('parent_joint',)},
             joint_name=str(joint), joint=joint, parent_frame=parent_frame, child_frame=child_frame)
 
     def _execute_impl(self, joint_name, joint, parent_frame, child_frame):
@@ -206,6 +207,7 @@ class CreateURDFFrameConnection(Operation):
         self.child_parent = joint.parent
         self.child_relative_pose = new_local_fk
         self.child_full_pose = dot(parent_frame.pose, new_local_fk)
+        self.child_link_joint = joint_name
         self.constraints = constraints
 
 

@@ -116,26 +116,32 @@ class InertialData(Frame):
 class RigidBody(Frame):
     """Representation of a rigid body in the URDF-sense. Consists of visual and collision geometry.
     """
-    def __init__(self, parent_path, pose, to_parent=None, geometry=None, collision=None, inertial=None):
+    def __init__(self, parent_path, pose, to_parent=None, geometry=None, collision=None, inertial=None, parent_joint=None):
         super(RigidBody, self).__init__(parent_path, pose, to_parent)
         self.geometry  = geometry
         self.collision = collision
         self.inertial  = inertial
+        self.parent_joint = parent_joint
 
     def _json_data(self, json_dict):
         super(RigidBody, self)._json_data(json_dict)
         json_dict.update({'collision': self.collision,
                           'geometry':  self.geometry,
-                          'inertial':  self.inertial})
+                          'inertial':  self.inertial,
+                          'parent_joint': self.parent_joint})
 
     def __deepcopy__(self, memo):
-        out = type(self)(self.parent, self.pose * 1, self.to_parent * 1, self.geometry, self.collision, self.inertial)
+        out = type(self)(self.parent, self.pose * 1, self.to_parent * 1, self.geometry, self.collision, self.inertial, self.parent_joint)
         memo[id(self)] = out
         return out
 
     def __eq__(self, other):
         if isinstance(other, RigidBody):
-            return super(RigidBody, self).__eq__(other) and self.geometry == other.geometry and self.collision == other.collision and self.inertial == other.inertial
+            return super(RigidBody, self).__eq__(other) and \
+                   self.geometry == other.geometry and \
+                   self.collision == other.collision and \
+                   self.inertial == other.inertial and \
+                   self.parent_joint == other.parent_joint
         return False
 
 

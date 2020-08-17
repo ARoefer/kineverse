@@ -6,11 +6,11 @@ from kineverse.utils                       import res_pkg_path
 from kineverse.operations.basic_operations import CreateValue
 from kineverse.model.articulation_model    import ArticulationModel, Path
 from kineverse.operations.urdf_operations  import load_urdf,         \
-                                                  KinematicLink,     \
-                                                  FixedJoint,     \
-                                                  PrismaticJoint, \
-                                                  RevoluteJoint,  \
-                                                  ContinuousJoint, \
+                                                  RigidBody,         \
+                                                  FixedJoint,        \
+                                                  PrismaticJoint,    \
+                                                  RevoluteJoint,     \
+                                                  ContinuousJoint,   \
                                                   CreateURDFFrameConnection
 from kineverse.visualization.graph_generator import generate_modifications_graph, \
                                                     generate_dependency_graph, \
@@ -56,8 +56,8 @@ class TestURDF(ut.TestCase):
         joint_transform = gm.translation3(7, -5, 33)
         child_pose      = gm.dot(parent_pose, joint_transform)
 
-        km.apply_operation('create parent', CreateValue(Path('parent'), KinematicLink('', parent_pose)))
-        km.apply_operation('create child', CreateValue(Path('child'),  KinematicLink('', gm.eye(4))))
+        km.apply_operation('create parent', CreateValue(Path('parent'), RigidBody('', parent_pose)))
+        km.apply_operation('create child', CreateValue(Path('child'),  RigidBody('', gm.eye(4))))
         self.assertTrue(km.has_data('parent/pose'))
         self.assertTrue(km.has_data('child/pose'))
 
@@ -68,6 +68,7 @@ class TestURDF(ut.TestCase):
                                                                              Path('child')))
         self.assertTrue(km.has_data('fixed_joint'))
         self.assertTrue(gm.cm.numeric_eq(km.get_data('child/pose'), child_pose))
+        self.assertEquals(km.get_data('child/parent_joint'), 'fixed_joint')
 
     def test_prismatic_joint(self):
         km = ArticulationModel()
@@ -86,8 +87,8 @@ class TestURDF(ut.TestCase):
 
         joint = PrismaticJoint('parent', 'child', position, axis, joint_transform, -1, 2, 0.5)
 
-        km.apply_operation('create parent', CreateValue(Path('parent'), KinematicLink('', parent_pose)))
-        km.apply_operation('create child', CreateValue(Path('child'),  KinematicLink('', gm.eye(4))))
+        km.apply_operation('create parent', CreateValue(Path('parent'), RigidBody('', parent_pose)))
+        km.apply_operation('create child', CreateValue(Path('child'),  RigidBody('', gm.eye(4))))
         self.assertTrue(km.has_data('parent/pose'))
         self.assertTrue(km.has_data('child/pose'))
 
@@ -98,6 +99,7 @@ class TestURDF(ut.TestCase):
                                                                               Path('parent'),
                                                                               Path('child')))
         self.assertTrue(gm.cm.numeric_eq(km.get_data('child/pose'), child_pose))
+        self.assertEquals(km.get_data('child/parent_joint'), 'prismatic_joint')
 
     def test_revolute_and_continuous_joint(self):
         km = ArticulationModel()
@@ -112,8 +114,8 @@ class TestURDF(ut.TestCase):
         position        = c
         child_pose      = gm.dot(parent_pose, joint_transform, gm.rotation3_axis_angle(axis, position))
 
-        km.apply_operation('create parent', CreateValue(Path('parent'), KinematicLink('', parent_pose)))
-        km.apply_operation('create child', CreateValue(Path('child'),  KinematicLink('', gm.eye(4))))
+        km.apply_operation('create parent', CreateValue(Path('parent'), RigidBody('', parent_pose)))
+        km.apply_operation('create child', CreateValue(Path('child'),  RigidBody('', gm.eye(4))))
         self.assertTrue(km.has_data('parent/pose'))
         self.assertTrue(km.has_data('child/pose'))
 
@@ -126,6 +128,7 @@ class TestURDF(ut.TestCase):
                                                      Path('parent'), 
                                                      Path('child')))
         self.assertTrue(gm.cm.numeric_eq(km.get_data('child/pose'), child_pose))
+        self.assertEquals(km.get_data('child/parent_joint'), 'revolute_joint')
 
         km.remove_operation('connect parent child')
         km.remove_operation('create revolute joint')
@@ -139,6 +142,7 @@ class TestURDF(ut.TestCase):
                                                      Path('parent'), 
                                                      Path('child')))
         self.assertTrue(gm.cm.numeric_eq(km.get_data('child/pose'), child_pose))
+        self.assertEquals(km.get_data('child/parent_joint'), 'continuous_joint')
 
     def test_model_reform(self):
         km = ArticulationModel()
@@ -160,8 +164,8 @@ class TestURDF(ut.TestCase):
                                                                                  pos_expr[1], 
                                                                                  pos_expr[2]))
 
-        km.apply_operation('create parent', CreateValue(Path('parent'), KinematicLink('', parent_pose_a)))
-        km.apply_operation('create child', CreateValue(Path('child'),  KinematicLink('', gm.eye(4))))
+        km.apply_operation('create parent', CreateValue(Path('parent'), RigidBody('', parent_pose_a)))
+        km.apply_operation('create child', CreateValue(Path('child'),  RigidBody('', gm.eye(4))))
         self.assertTrue(km.has_data('parent/pose'))
         self.assertTrue(km.has_data('child/pose'))
 
@@ -172,7 +176,7 @@ class TestURDF(ut.TestCase):
         km.apply_operation('connect parent child', 
                            CreateURDFFrameConnection(Path('joint'), Path('parent'), Path('child')))
         self.assertTrue(gm.cm.numeric_eq(km.get_data('child/pose'), child_pose_a))
-        km.apply_operation('create parent', CreateValue(Path('parent'), KinematicLink('', parent_pose_b)))
+        km.apply_operation('create parent', CreateValue(Path('parent'), RigidBody('', parent_pose_b)))
         # plot_graph(generate_dependency_graph(km), 'test_model_reform_dep.png')
         # plot_graph(generate_modifications_graph(km), 'test_model_reform_mod.png')
         km.clean_structure()

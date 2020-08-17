@@ -195,6 +195,7 @@ class CreateAdvancedFrameConnection(CreateURDFFrameConnection):
             self.child_parent        = joint.parent
             self.child_relative_pose = frame3_axis_angle(vector3(0,0,1), rot_pos, pos_pos)
             self.child_full_pose     = dot(parent_frame.pose, self.child_relative_pose)
+            self.child_link_joint    = joint_name
         elif joint.type == 'omni':
             self.constraints = {}
             if joint.limit_lin_vel is not None:
@@ -210,6 +211,7 @@ class CreateAdvancedFrameConnection(CreateURDFFrameConnection):
             self.child_relative_pose = dot(translation3(joint.x_pos, joint.y_pos, 0),
                                            rotation3_axis_angle(joint.rot_axis, joint.a_pos))
             self.child_full_pose     = dot(parent_frame.pose, self.child_relative_pose)  
+            self.child_link_joint    = joint_name
         elif joint.type == 'ball':
             raise NotImplementedError
         elif joint.type == '2dof':
