@@ -42,7 +42,7 @@ class Path(tuple, JSONSerializable):
         return Path(super(Path, self).__getslice__(i, j))
 
     def __eq__(self, other):
-        if type(other) is str:
+        if type(other) is str or type(other) is unicode:
             return self == Path(other)
         return super(Path, self).__eq__(other)
 
