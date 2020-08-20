@@ -148,12 +148,13 @@ def none_factory():
     return None
 
 class PathDict(dict):
-    def __init__(self, value=None, paths=[], default_factory=none_factory):
+    def __init__(self, value=None, paths=None, default_factory=none_factory):
         super(PathDict, self).__init__()
         self.value = value
         self._default_factory = default_factory
-        for p, v in paths:
-            self[p] = v
+        if paths is not None:
+            for p, v in paths:
+                self[p] = v
 
     def copy(self):
         out = PathDict(self.value, [], self._default_factory)
@@ -167,7 +168,13 @@ class PathDict(dict):
 
     # Gets closest value!
     def __getitem__(self, key):
-        return self.value if len(key) == 0 else super(PathDict, self).__getitem__(key[0])[key[1:]]
+        if len(key) == 0:
+            return self.value
+        else:
+            if not super(PathDict, self).__contains__(key[0]):
+                super(PathDict, self).__setitem__(key[0], PathDict(self._default_factory(),
+                                                                   default_factory=self._default_factory))
+            return super(PathDict, self).__getitem__(key[0])[key[1:]]
 
     # Gets closest value and returns its key too
     def get_with_key(self, key):
@@ -191,22 +198,24 @@ class PathDict(dict):
     # Gets all values with prefix key
     def get_all_under(self, key):
         if len(key) == 0:
-            if len(self) > 0:
-                return sum([c.get_all_under(key) for x in self.values()])
-            return []
-        return self[key[0]].get_all_under(key[1:])
+            return sum([x.get_all_under(key) for x in self.values()], [self.value]) \
+                if len(self) > 0 else [self.value]
+        return super(PathDict, self).__getitem__(key[0]).get_all_under(key[1:]) \
+            if super(PathDict, self).__contains__(key[0]) else []
 
     # Gets all values along the specified path
     def get_all_on_path(self, key):
         if len(key) == 0:
             return [self.value]
-        return [self.value] + self[key[0]].get_on_path(key[1:])
+        return [self.value] + super(PathDict, self).__getitem__(key[0]).get_on_path(key[1:]) \
+            if super(PathDict, self).__contains__(key[0]) else [self.value]
 
     # Gets all variables on the path and below the last node
     def get_all_on_and_under(self, key):
         if len(key) == 0:
             return [self.value] + self.get_all_under(key)
-        return [self.value] + self[key[0]].get_all_on_and_under(key[1:])
+        return [self.value] + super(PathDict, self).__getitem__(key[0]).get_all_on_and_under(key[1:]) \
+            if super(PathDict, self).__contains__(key[0]) else [self.value]
 
     def __str__(self):
         return '{} [{}]'.format(str(self.value), ' '.join(self.keys()))
