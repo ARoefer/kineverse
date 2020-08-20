@@ -5,7 +5,7 @@ import kineverse.model.model_settings as model_settings
 
 from sortedcontainers import SortedList, SortedSet
 
-from kineverse.model.paths import Path
+from kineverse.model.paths import Path, PathDict
 
 class Timeline(SortedList):
     def get_floor(self, key):
@@ -64,6 +64,9 @@ class History(object):
             self.modification_history = modification_history
         self.dirty_chunks  = SortedSet()
 
+        if model_settings.BRUTE_MODE:
+            self.modification_tracker = PathDict(set(), default_factory=set)
+
     def __iter__(self):
         return iter(self.chunk_history)
 
@@ -121,6 +124,9 @@ class History(object):
 
             for p in chunk.modifications:
                 self._insert_modification(chunk, p)
+        else:
+            for p in chunk.modifications:
+                self.modification_tracker[p].add(chunk)
 
         self.chunk_history.add(chunk)
 
@@ -156,6 +162,9 @@ class History(object):
                 pred.dependents.discard(chunk)
             
             self.dirty_chunks.update(chunk.dependents)
+        else:
+            for p in chunk.modifications:
+                self.modification_tracker[p].remove(chunk)
 
         self.chunk_history.remove(chunk)
 
@@ -203,6 +212,12 @@ class History(object):
 
             for c in new_deps.values():
                 c.dependents.add(c_new)
+        else:
+            for p in c_old.modifications:
+                self.modification_tracker[p].remove(c_old)
+
+            for p in c_new.modifications:
+                self.modification_tracker[p].add(c_new)
 
         self.chunk_history.remove(c_old)
         self.chunk_history.add(c_new)
@@ -244,23 +259,34 @@ class History(object):
         return History()
 
     def get_history_of(self, *paths):
-        out = set()
-        remaining = set()
-        for p in paths:
-            if p in self.modification_history:
-                remaining.update(self.modification_history[p])
+        if not model_settings.BRUTE_MODE:
+            out = set()
+            remaining = set()
+            for p in paths:
+                if p in self.modification_history:
+                    remaining.update(self.modification_history[p])
+            
+            while len(remaining) > 0:
+                chunk = remaining.pop()
+                out.add(chunk)
+                for p in chunk.dependencies:
+                    pos, dep = self.modification_history[p].get_floor(chunk.stamp)
+                    if dep == chunk: # Catch if predecessor is chunk itself
+                        dep = self.modification_history[p][pos - 1]
+                    if dep not in out:
+                        remaining.add(dep)
 
-        while len(remaining) > 0:
-            chunk = remaining.pop()
-            out.add(chunk)
-            for p in chunk.dependencies:
-                pos, dep = self.modification_history[p].get_floor(chunk.stamp)
-                if dep == chunk: # Catch if predecessor is chunk itself
-                    dep = self.modification_history[p][pos - 1]
-                if dep not in out:
-                    remaining.add(dep)
-
-        return Timeline(out)
+            return Timeline(out)
+        else:
+            chunks = set()
+            # For each of the desired paths
+            for p in paths:
+                # Get the sets of all operations that ever modified the leaf or any of its children
+                for s in self.modification_tracker.get_all_under(p):
+                    # Form a final set of modifying chunks
+                    chunks |= s
+            # This does NOT include the chunks that the modifying chunks depend on.
+            return Timeline(chunks)
 
     def get_ceil_modifying_chunk(self, path, stamp):
         if path not in self.modification_history:
@@ -323,7 +349,7 @@ class Chunk(StampedData):
         super(Chunk, self).__init__(stamp,
                                     operation=op,
                                     dependencies=op.dependencies,
-                                    modifications=op.full_mod_paths,
+                                    modifications=set(op.output_path_assignments.values()),
                                     dependents=set())
 
     def __str__(self):

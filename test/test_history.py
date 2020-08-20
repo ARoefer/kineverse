@@ -5,8 +5,9 @@ from kineverse.utils import bb
 
 
 def fake_op(deps, mods):
-    return bb(dependencies=set(deps),
-              full_mod_paths=set(mods))
+    return bb(dependencies={Path(d) for d in deps},
+              output_path_assignments={n: Path(m) for n, m in enumerate(mods)},
+              full_mod_paths={Path(m) for m in mods})
 
 op_c_a  = fake_op([], ['a'])
 op_c_ae = fake_op([], ['a', 'e'])
@@ -135,6 +136,26 @@ class TestHistory(ut.TestCase):
         h.replace_chunk(cB, cG)
         self.assertIn(c5, cG.dependents)
 
+    def test_get_subhistory(self):
+        c1 = Chunk(1, fake_op([], ['a']))
+        c2 = Chunk(2, fake_op([], ['a/bla'])) 
+        c3 = Chunk(3, fake_op([], ['a/foo']))
+        c4 = Chunk(4, fake_op([], ['a/bla/lol']))
+        c5 = Chunk(5, fake_op([], ['a/bla']))
+        c6 = Chunk(6, fake_op([], ['a/bla/trololo']))
+
+        h = History()
+        for c in [c1, c2, c3, c4, c5, c6]:
+            h.insert_chunk(c)
+
+        sh = h.get_history_of(Path('a/bla'))
+
+        self.assertIn(c2, sh)
+        self.assertIn(c4, sh)
+        self.assertIn(c5, sh)
+        self.assertIn(c6, sh)
+        self.assertNotIn(c1, sh)
+        self.assertNotIn(c3, sh)
 
 if __name__ == '__main__':
     ut.main()
