@@ -156,10 +156,11 @@ if SYM_MATH_ENGINE == 'CASADI':
         if hasattr(expr, 'subs') and callable(expr.subs):
             return expr.subs(subs_dict)
         if SYM_MATH_ENGINE == 'CASADI' and type(expr) in math_types:
-            if id(expr) not in _CASADI_SUBS_CACHE:
-                fn = speed_up(expr, free_symbols(expr))
-                _CASADI_SUBS_CACHE[id(expr)] = fn
-            return _CASADI_SUBS_CACHE[id(expr)](**{str(s): v for s, v in subs_dict.items()})
+            # if id(expr) not in _CASADI_SUBS_CACHE:
+            #     fn = speed_up(expr, free_symbols(expr))
+            #     _CASADI_SUBS_CACHE[id(expr)] = fn
+            # return _CASADI_SUBS_CACHE[id(expr)](**{str(s): v for s, v in subs_dict.items()})
+            return speed_up(expr, free_symbols(expr))(**{str(s): v for s, v in subs_dict.items()})
         return expr
 
     def cross(a, b):
