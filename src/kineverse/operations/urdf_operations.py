@@ -240,7 +240,8 @@ def load_urdf(ks,
               joint_prefix=None,
               limit_prefix=None,
               limit_symbols=False,
-              robot_class=ArticulatedObject):
+              robot_class=ArticulatedObject,
+              root_transform=None):
     """
 
     :param ks:
@@ -270,6 +271,9 @@ def load_urdf(ks,
 
     if isinstance(limit_prefix, str):
         limit_prefix = Path(limit_prefix)
+
+    if root_transform is None:
+        root_transform = cm.eye(4)
 
     ks.apply_operation('create {}'.format(str(prefix)), CreateValue(prefix, robot_class(urdf.name)))
 
@@ -306,10 +310,11 @@ def load_urdf(ks,
                                                       [uin.ixy, uin.iyy, uin.iyz],
                                                       [uin.ixz, uin.iyz, uin.izz]])
 
+        transform = urdf_origin_to_transform(u_link.origin) if urdf.get_root() != u_link.name else root_transform
+
         ks.apply_operation('create {}'.format(str(prefix + Path(u_link.name))),
                            CreateValue(link_path,
-                                       RigidBody(reference_frame, urdf_origin_to_transform(u_link.origin),
-                                                 None, geometry, collision, inertial)))
+                                       RigidBody(reference_frame, transform, None, geometry, collision, inertial)))
 
     limit_map = {}
 
