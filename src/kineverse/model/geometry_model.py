@@ -304,7 +304,8 @@ class GeometryModel(EventModel):
                     if type(pose_expr) is GM:
                         symbol_set  = symbol_set.union(pose_expr.diff_symbols)
                         pose_expr   = pose_expr.to_sym_matrix()
-                    symbol_set |= cm.free_symbols(pose_expr).union({DiffSymbol(s) for s in cm.free_symbols(pose_expr)})
+                    # fixme, this is a hack
+                    symbol_set |= cm.free_symbols(pose_expr) #.union({DiffSymbol(s) for s in cm.free_symbols(pose_expr)})
                     self._co_pose_expr[str_k]  = pose_expr
                     self._co_symbol_map[str_k] = symbol_set
                     if len(symbol_set) > 0:
