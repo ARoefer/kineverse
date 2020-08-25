@@ -341,7 +341,9 @@ class GeometryModel(EventModel):
 
     def get_active_geometry_raw(self, symbols):
         """Returns the collision objects whose FK-expressions are affected by the given symbol set."""
-        return {k: self._collision_objects[k] for k in set(sum([list(self._symbol_co_map[s]) for s in symbols if s in self._symbol_co_map], []))}
+        return {k: self._collision_objects[k] for k in set(sum([list(self._symbol_co_map[s]) 
+                                              for s in symbols 
+                                              if s in self._symbol_co_map], []))}
 
     def get_active_geometry(self, symbols, static_state=None, include_static=True):
         """Creates a so-called CollisionSubworld, which is a wrapped collision world which is focused on
@@ -394,11 +396,19 @@ class CollisionSubworld(object):
     @profile
     def update_world(self, state):
         """Update the objects' poses with a Substitution map."""
-        self._state.update({str(s): v for s, v in state.items() if s in self.free_symbols})
-        # print('Subworld state: \n {}'.format('\n '.join(['{:>20}: {}'.format(s, v) for s, v in self._state.items()])))
+        self.update_world_unchecked.update({str(s): v for s, v in state.items() if s in self.free_symbols})
+
+    @profile
+    def update_world_unchecked(self, state):
+        """Update the objects' poses with a Substitution map. 
+        THIS IS UNCHECKED, USE AT YOU OWN DISGRESSION
+        
+        :param state: Substitution map, mapping strings to values.
+        """
+        self._state.update(state)
         if self.pose_generator != None:
             pb.batch_set_transforms(self.collision_objects, self.pose_generator(**self._state))
-            self._needs_update = True
+            self._needs_update = True    
 
     @property
     def contacts(self):
