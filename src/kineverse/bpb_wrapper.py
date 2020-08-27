@@ -24,13 +24,19 @@ def transform_to_matrix(transform, matrix_func=cm.Matrix):
                         [      0,       0,       0,        1]])
 
 def create_cube_shape(extents):
-    return pb.BoxShape(pb.Vector3(*[extents[x] * 0.5 for x in range(3)])) if type(extents) is not pb.Vector3 else pb.BoxShape(extents)
+    out = pb.BoxShape(pb.Vector3(*[extents[x] * 0.5 for x in range(3)])) if type(extents) is not pb.Vector3 else pb.BoxShape(extents)
+    out.margin = 0.001
+    return out
 
 def create_cylinder_shape(diameter, height):
-    return pb.CylinderShapeZ(pb.Vector3(0.5 * diameter, 0.5 * diameter, height * 0.5))
+    out = pb.CylinderShapeZ(pb.Vector3(0.5 * diameter, 0.5 * diameter, height * 0.5))
+    out.margin = 0.001
+    return out
 
 def create_sphere_shape(diameter):
-    return pb.SphereShape(0.5 * diameter)
+    out = pb.SphereShape(0.5 * diameter)
+    out.margin = 0.001
+    return out
 
 def create_compound_shape(shapes_poses=[]):
     out = pb.CompoundShape()
