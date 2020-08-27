@@ -223,7 +223,7 @@ class GeometryModel(EventModel):
             self.kw.add_collision_object(body)
             self._collision_objects[str(key)] = body
             self._co_symbol_map[str(key)] = set()
-            print('Created collision representation for {}'.format(key))
+            # print('Created collision representation for {}'.format(key))
 
             #self.register_on_model_changed(key, update_collision_object)
 
@@ -245,7 +245,7 @@ class GeometryModel(EventModel):
         body = self._collision_objects[str(key)]
         self.kw.remove_collision_object(body)
         for s in self._co_symbol_map[str(key)]:
-            self._symbol_co_map[s].discard(body)
+            self._symbol_co_map[s].discard(str(key))
         del self._co_symbol_map[str(key)]
         del self._collision_objects[str(key)]
 
