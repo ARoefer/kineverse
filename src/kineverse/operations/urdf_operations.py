@@ -241,7 +241,8 @@ def load_urdf(ks,
               limit_prefix=None,
               limit_symbols=False,
               robot_class=ArticulatedObject,
-              root_transform=None):
+              root_transform=None,
+              name_override=None):
     """
 
     :param ks:
@@ -275,7 +276,10 @@ def load_urdf(ks,
     if root_transform is None:
         root_transform = cm.eye(4)
 
-    ks.apply_operation('create {}'.format(str(prefix)), CreateValue(prefix, robot_class(urdf.name)))
+    if name_override is None:
+        name_override = urdf.name
+
+    ks.apply_operation('create {}'.format(str(prefix)), CreateValue(prefix, robot_class(name_override)))
 
     for u_link in urdf.links:
         link_path = prefix + Path(['links', u_link.name])
