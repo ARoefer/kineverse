@@ -306,6 +306,10 @@ class GeometryModel(EventModel):
                         pose_expr   = pose_expr.to_sym_matrix()
                     # fixme, this is a hack
                     symbol_set |= cm.free_symbols(pose_expr) #.union({DiffSymbol(s) for s in cm.free_symbols(pose_expr)})
+                    if str_k in self._co_symbol_map: # The body might have been associated with different symbols before
+                        for s_discard in self._co_symbol_map[str_k].difference(symbol_set):
+                            self._symbol_co_map[s_discard].remove(str_k)
+
                     self._co_pose_expr[str_k]  = pose_expr
                     self._co_symbol_map[str_k] = symbol_set
                     if len(symbol_set) > 0:
@@ -397,7 +401,7 @@ class CollisionSubworld(object):
     @profile
     def update_world(self, state):
         """Update the objects' poses with a Substitution map."""
-        self.update_world_unchecked.update({str(s): v for s, v in state.items() if s in self.free_symbols})
+        self.update_world_unchecked({str(s): v for s, v in state.items() if s in self.free_symbols})
 
     @profile
     def update_world_unchecked(self, state):
