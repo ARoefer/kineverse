@@ -65,6 +65,8 @@ y_of      = cm.y_of
 z_of      = cm.z_of
 free_symbols = cm.free_symbols 
 diff      = cm.diff
+Matrix    = cm.Matrix
+
 
 def is_symbolic(expr):
     """Is the given expression symbolic?"""
