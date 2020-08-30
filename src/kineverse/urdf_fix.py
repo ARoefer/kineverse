@@ -18,13 +18,18 @@ def hacky_urdf_parser_fix(urdf_str):
     return fixed_urdf
 
 # Adds collision information to links if it is missing and they have visual information
-def urdf_filler(model):
+def urdf_filler(model, fill_with_visual=True):
     for link in model.links:
         if hasattr(link, 'collisions'):
-            if (link.collisions is None or len(link.collisions) == 0) and (link.visuals is not None and len(link.visuals) > 0):
+            if (link.collisions is None or len(link.collisions) == 0) and \
+                                            (link.visuals is not None and \
+                                               len(link.visuals) > 0) and fill_with_visual:
                 for v in link.visuals:
                     link.add_aggregate('collision', urdf.Collision(v.geometry, v.origin))
         else:
             if link.collision is None and link.visual is not None:
-                link.collision = urdf.Collision(link.visual.geometry, link.visual.origin)
+                if fill_with_visual:
+                    link.collision = urdf.Collision(link.visual.geometry, link.visual.origin)
+                else:
+                    link.collision = None
     return model
