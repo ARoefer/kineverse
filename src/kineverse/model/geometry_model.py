@@ -206,7 +206,7 @@ class GeometryModel(EventModel):
             shape = create_compound_shape()
             for c in link.collision.values():
                 if c.type == 'mesh':
-                    sub_shape = load_convex_mesh_shape(c.mesh)
+                    sub_shape = load_convex_mesh_shape(c.mesh, False)
                     shape.add_child(matrix_to_transform(c.to_parent), sub_shape)
                 elif c.type == 'box':
                     sub_shape = create_cube_shape(c.scale)
