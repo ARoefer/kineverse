@@ -46,8 +46,8 @@ def create_compound_shape(shapes_poses=[]):
 
 # Technically the tracker is not required here, 
 # since the loader keeps references to the loaded shapes.
-def load_convex_mesh_shape(pkg_filename):
-    return pb.load_convex_shape(res_pkg_path(pkg_filename))
+def load_convex_mesh_shape(pkg_filename, single_shape=False):
+    return pb.load_convex_shape(res_pkg_path(pkg_filename), single_shape=single_shape)
 
 
 def create_object(shape, transform=pb.Transform.identity()):
@@ -75,3 +75,82 @@ def create_compund_object(shapes_transforms, transform=pb.Transform.identity()):
 
 def create_convex_mesh(pkg_filename, transform=pb.Transform.identity()):
     return create_object(load_convex_mesh_shape(pkg_filename), transform)
+
+def vector_to_cpp_code(vector):
+    return 'btVector3({:.6f}, {:.6f}, {:.6f})'.format(vector.x, vector.y, vector.z)
+
+def quaternion_to_cpp_code(quat):
+    return 'btQuaternion({:.6f}, {:.6f}, {:.6f}, {:.6f})'.format(quat.x, quat.y, quat.z, quat.w)
+
+def transform_to_cpp_code(transform):
+    return 'btTransform({}, {})'.format(quaternion_to_cpp_code(transform.rotation), 
+                                            vector_to_cpp_code(transform.origin))
+
+BOX = 0
+SPHERE = 1
+CYLINDER = 2
+COMPOUND = 3
+CONVEX = 4
+
+def shape_to_cpp_code(s, shape_names, shape_type_names):
+    buf = ''
+    if isinstance(s, pb.BoxShape):
+        s_name = 'shape_box_{}'.format(shape_type_names[BOX])
+        shape_names[s] = s_name
+        buf += 'auto {} = std::make_shared<btBoxShape>({});\n'.format(s_name, vector_to_cpp_code(s.extents * 0.5))
+        shape_type_names[BOX] += 1
+    elif isinstance(s, pb.SphereShape):
+        s_name = 'shape_sphere_{}'.format(shape_type_names[SPHERE])
+        shape_names[s] = s_name
+        buf += 'auto {} = std::make_shared<btSphereShape>({:.3f});\n'.format(s_name, s.radius)
+        shape_type_names[SPHERE] += 1
+    elif isinstance(s, pb.CylinderShape):
+        height   = s.height
+        diameter = s.radius * 2
+        s_name = 'shape_cylinder_{}'.format(shape_type_names[CYLINDER])
+        shape_names[s] = s_name
+
+        buf += 'auto {} = std::make_shared<btCylinderShapeZ>({});\n'.format(s_name, vector_to_cpp_code(pb.Vector3(diameter, diameter, height)))
+        shape_type_names[CYLINDER] += 1
+    elif isinstance(s, pb.CompoundShape):
+        if s.file_path != '':
+            s_name = 'shape_convex_{}'.format(shape_type_names[CONVEX])
+            shape_names[s] = s_name
+            buf += 'auto {} = load_convex_shape("{}", false);\n'.format(s_name, s.file_path)
+            shape_type_names[CONVEX] += 1
+        else:
+            s_name = 'shape_compound_{}'.format(shape_type_names[COMPOUND])
+            shape_names[s] = s_name
+            buf += 'auto {} = std::make_shared<btCompoundShape>();\n'.format(s_name)
+            shape_type_names[COMPOUND] += 1
+            for x in range(s.nchildren):
+                ss = s.get_child(x)
+                buf += shape_to_cpp_code(ss, shape_names, shape_type_names)
+                buf += '{}->addChildShape({}, {});\n'.format(s_name, transform_to_cpp_code(s.get_child_transform(x)), shape_names[ss])
+    elif isinstance(s, pb.ConvexHullShape):
+        if s.file_path != '':
+            s_name = 'shape_convex_{}'.format(shape_type_names[CONVEX])
+            shape_names[s] = s_name
+            buf += 'auto {} = load_convex_shape("{}", true);\n'.format(s_name, s.file_path)
+            shape_type_names[CONVEX] += 1
+    return buf
+
+
+def world_to_cpp_code(subworld):
+    shapes = {o.collision_shape for o in subworld.collision_objects}
+    shape_names = {}
+
+    shape_type_names = {BOX: 0, SPHERE: 0, CYLINDER: 0, COMPOUND: 0, CONVEX: 0}
+
+    buf = 'KineverseWorld world;\n\n'
+    buf += '\n'.join(shape_to_cpp_code(s, shape_names, shape_type_names) for s in shapes)
+
+    obj_names = [] # store the c++ names
+    for name, obj in sorted(subworld.named_objects.items()):
+        o_name = name.replace('/', '_')
+        obj_names.append(o_name)
+        buf += 'auto {o_name} = std::make_shared<KineverseCollisionObject>();\n{o_name}->setWorldTransform({transform});\n{o_name}->setCollisionShape({shape});\n\n'.format(o_name=o_name, transform=transform_to_cpp_code(obj.transform), shape=shape_names[obj.collision_shape])
+
+    buf += '\n'.join('world.addCollisionObject({});'.format(n) for n in obj_names)
+
+    return buf + '\n'
