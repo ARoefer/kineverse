@@ -60,12 +60,14 @@ is_symbol = cm.is_symbol
 eq_expr   = cm.eq_expr
 eye       = cm.eye
 pos_of    = cm.pos_of
+rot_of    = cm.rot_of
 x_of      = cm.x_of
 y_of      = cm.y_of
 z_of      = cm.z_of
 free_symbols = cm.free_symbols 
 diff      = cm.diff
 Matrix    = cm.Matrix
+trace     = cm.trace
 
 
 def is_symbolic(expr):
