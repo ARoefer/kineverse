@@ -1,5 +1,5 @@
 from kineverse.utils                import deepcopy
-from kineverse.model.paths          import Path, collect_paths
+from kineverse.model.paths          import Path, CPath, collect_paths
 from kineverse.operations.operation import Operation #, op_construction_wrapper
 
 

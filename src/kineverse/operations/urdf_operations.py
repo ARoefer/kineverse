@@ -20,9 +20,10 @@ from kineverse.model.geometry_model import RigidBody, \
     GEOM_TYPE_CYLINDER, \
     GEOM_TYPE_SPHERE
 from kineverse.operations.basic_operations import Operation, \
-    CreateValue, \
+    CreateValue,  \
     ExecFunction, \
-    Path  # ,       \
+    Path,         \
+    CPath
 
 
 def urdf_origin_to_transform(origin):
@@ -383,14 +384,14 @@ def load_urdf(ks,
             if u_joint.type == 'fixed':
                 joint_op = ExecFunction(prefix + ('joints', u_joint.name),
                                         FixedJoint,
-                                        str(parent_path),
-                                        str(child_path),
+                                        CPath(parent_path),
+                                        CPath(child_path),
                                         urdf_origin_to_transform(u_joint.origin))
             elif u_joint.type == 'prismatic':
                 joint_op = ExecFunction(prefix + ('joints', u_joint.name),
                                         PrismaticJoint,
-                                        str(parent_path),
-                                        str(child_path),
+                                        CPath(parent_path),
+                                        CPath(child_path),
                                         position,
                                         urdf_axis_to_vector(u_joint.axis),
                                         urdf_origin_to_transform(u_joint.origin),
@@ -402,8 +403,8 @@ def load_urdf(ks,
             elif u_joint.type == 'continuous':
                 joint_op = ExecFunction(prefix + ('joints', u_joint.name),
                                         ContinuousJoint,
-                                        str(parent_path),
-                                        str(child_path),
+                                        CPath(parent_path),
+                                        CPath(child_path),
                                         position,
                                         urdf_axis_to_vector(u_joint.axis),
                                         urdf_origin_to_transform(u_joint.origin),
@@ -413,8 +414,8 @@ def load_urdf(ks,
             elif u_joint.type == 'revolute':
                 joint_op = ExecFunction(prefix + ('joints', u_joint.name),
                                         RevoluteJoint,
-                                        str(parent_path),
-                                        str(child_path),
+                                        CPath(parent_path),
+                                        CPath(child_path),
                                         position,
                                         urdf_axis_to_vector(u_joint.axis),
                                         urdf_origin_to_transform(u_joint.origin),

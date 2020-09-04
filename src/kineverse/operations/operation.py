@@ -1,6 +1,6 @@
 import kineverse.model.model_settings  as model_settings
 
-from kineverse.model.paths import Path, PathDict, collect_paths
+from kineverse.model.paths import Path, CPath, PathDict, collect_paths
 from kineverse.utils       import copy, deepcopy
 
 class OperationException(Exception):

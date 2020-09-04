@@ -53,7 +53,7 @@ class CreateRelativeFrame(Operation):
 
 class CreateRelativeTransform(Operation):
     def init(self, transform_path, from_frame, to_frame):
-        self.tf_obj = Transform(str(from_frame), str(to_frame), None)
+        self.tf_obj = Transform(from_frame, to_frame, None)
         attrs       = collect_paths(self.tf_obj, Path('transform'))
         super(CreateRelativeTransform, self).init('Relative Transform',
                                                   [str(a) for a in attrs],

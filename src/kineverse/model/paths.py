@@ -25,10 +25,10 @@ class Path(tuple, JSONSerializable):
             parts = [p for p in uri_split[-1].split('/') if p != '']
             if len(uri_split) == 2:
                 parts = ['{}://{}'.format(uri_split[0], parts[0])] + parts[1:]
-            return super(Path, cls).__new__(Path, parts)
+            return super(Path, cls).__new__(cls, parts)
         elif cm.is_symbol(path):
-            return super(Path, cls).__new__(Path, str(path).split(symbol_path_separator))
-        return super(Path, cls).__new__(Path, [str(p) for p in path])
+            return super(Path, cls).__new__(cls, str(path).split(symbol_path_separator))
+        return super(Path, cls).__new__(cls, [str(p) for p in path])
 
     def __add__(self, other):
         return Path(super(Path, self).__add__(other))
@@ -85,6 +85,12 @@ class Path(tuple, JSONSerializable):
             return self.get_data(obj)
         except PathException:
             return None
+
+class CPath(Path):
+    """This class only exists to pass paths as arguments to operations without them being evaluated.
+    """
+    def __repr__(self):
+        return 'C{}'.format(super(CPath, self).__repr__())
 
 
 stopping_set = atomic_types.union(matrix_types).union(symbolic_types).union(numpy_types)
