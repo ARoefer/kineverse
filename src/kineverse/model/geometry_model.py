@@ -218,11 +218,11 @@ class GeometryModel(EventModel):
                     sub_shape = create_sphere_shape(c.scale[0])
                     shape.add_child(matrix_to_transform(c.to_parent), sub_shape)
                 else:
-                    raise Exception('Unrecognized geometry type in collision of link {}. Type is "{}"'.format(str(key), c.type))
+                    raise Exception('Unrecognized geometry type in collision of link {}. Type is "{}"'.format(key, c.type))
             body = create_object(shape)
             self.kw.add_collision_object(body)
-            self._collision_objects[str(key)] = body
-            self._co_symbol_map[str(key)] = set()
+            self._collision_objects[key] = body
+            self._co_symbol_map[key] = set()
             # print('Created collision representation for {}'.format(key))
 
             #self.register_on_model_changed(key, update_collision_object)
@@ -242,12 +242,12 @@ class GeometryModel(EventModel):
 
     def _process_link_removal(self, key):
         """Removes a collision object from the collision world."""
-        body = self._collision_objects[str(key)]
+        body = self._collision_objects[key]
         self.kw.remove_collision_object(body)
-        for s in self._co_symbol_map[str(key)]:
-            self._symbol_co_map[s].discard(str(key))
-        del self._co_symbol_map[str(key)]
-        del self._collision_objects[str(key)]
+        for s in self._co_symbol_map[key]:
+            self._symbol_co_map[s].discard(key)
+        del self._co_symbol_map[key]
+        del self._collision_objects[key]
 
     def _process_joint_removal(self, joint):
         """Removes the collision ignore-flag of a joint's child and parent."""
@@ -292,13 +292,12 @@ class GeometryModel(EventModel):
         static_poses   = []
         dynamic_poses  = {}
         removed_object = []
-        for str_k in self._collision_objects:
-            k = Path(str_k)
-            if model_settings.BRUTE_MODE or k in self._callback_batch:
+        for k_path in self._collision_objects:
+            if model_settings.BRUTE_MODE or k_path in self._callback_batch:
                 #print('{} is a collision link and has changed in the last update batch'.format(k))
-                if self.has_data(k):
+                if self.has_data(k_path):
                     #print('{} was changed'.format(k))
-                    link = self.get_data(k)
+                    link = self.get_data(k_path)
                     pose_expr  = link.pose # * link.collision.to_parent
                     symbol_set = set()
                     if type(pose_expr) is GM:
@@ -306,27 +305,27 @@ class GeometryModel(EventModel):
                         pose_expr   = pose_expr.to_sym_matrix()
                     # fixme, this is a hack
                     symbol_set |= cm.free_symbols(pose_expr) #.union({DiffSymbol(s) for s in cm.free_symbols(pose_expr)})
-                    if str_k in self._co_symbol_map: # The body might have been associated with different symbols before
-                        for s_discard in self._co_symbol_map[str_k].difference(symbol_set):
-                            self._symbol_co_map[s_discard].remove(str_k)
+                    if k_path in self._co_symbol_map: # The body might have been associated with different symbols before
+                        for s_discard in self._co_symbol_map[k_path].difference(symbol_set):
+                            self._symbol_co_map[s_discard].remove(k_path)
 
-                    self._co_pose_expr[str_k]  = pose_expr
-                    self._co_symbol_map[str_k] = symbol_set
+                    self._co_pose_expr[k_path]  = pose_expr
+                    self._co_symbol_map[k_path] = symbol_set
                     if len(symbol_set) > 0:
                         for s in symbol_set:
                             if s not in self._symbol_co_map:
                                 self._symbol_co_map[s] = set()
-                            self._symbol_co_map[s].add(str_k)
-                        dynamic_poses[str_k] = cm.to_numpy(cm.subs(pose_expr, {s: 0 for s in cm.free_symbols(pose_expr)}))
-                        # print('Evaluation of {} yields:\n{}'.format(pose_expr, dynamic_poses[str_k]))
+                            self._symbol_co_map[s].add(k_path)
+                        dynamic_poses[k_path] = cm.to_numpy(cm.subs(pose_expr, {s: 0 for s in cm.free_symbols(pose_expr)}))
+                        # print('Evaluation of {} yields:\n{}'.format(pose_expr, dynamic_poses[k_path]))
                     else:
                         # print('{} is static, setting its pose to:\n{}'.format(k, pose_expr))
-                        static_objects.append(self._collision_objects[str_k])
+                        static_objects.append(self._collision_objects[k_path])
                         static_poses.append(cm.to_numpy(pose_expr))
                 else:
-                    removed_object.append(k)
-        for k in removed_object:
-            self._process_link_removal(k)
+                    removed_object.append(k_path)
+        for k_path in removed_object:
+            self._process_link_removal(k_path)
         if len(static_objects) > 0:
             pb.batch_set_transforms(static_objects, np.vstack(static_poses))
             self._static_objects = static_objects
@@ -531,9 +530,15 @@ class ContactSymbolContainer(object):
 
     def __eq__(self, other):
         if isinstance(other, ContactSymbolContainer):
-            return cm.eq_expr(self.on_a_x, other.on_a_x) and cm.eq_expr(self.on_a_y, other.on_a_y) and cm.eq_expr(self.on_a_z, other.on_a_z) and \
-                   cm.eq_expr(self.on_b_x, other.on_b_x) and cm.eq_expr(self.on_b_y, other.on_b_y) and cm.eq_expr(self.on_b_z, other.on_b_z) and \
-                   cm.eq_expr(self.normal_x, other.normal_x) and cm.eq_expr(self.normal_y, other.normal_y) and cm.eq_expr(self.normal_z, other.normal_z)
+            return cm.eq_expr(self.on_a_x, other.on_a_x) and \
+                   cm.eq_expr(self.on_a_y, other.on_a_y) and \
+                   cm.eq_expr(self.on_a_z, other.on_a_z) and \
+                   cm.eq_expr(self.on_b_x, other.on_b_x) and \
+                   cm.eq_expr(self.on_b_y, other.on_b_y) and \
+                   cm.eq_expr(self.on_b_z, other.on_b_z) and \
+                   cm.eq_expr(self.normal_x, other.normal_x) and \
+                   cm.eq_expr(self.normal_y, other.normal_y) and \
+                   cm.eq_expr(self.normal_z, other.normal_z)
         return False
 
 
