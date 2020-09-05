@@ -202,11 +202,11 @@ class GeometryModel(EventModel):
 
     def _process_body_insertion(self, key, link):
         """Creates a rigid body for the given link, if it has collision geometry."""
-        if link.collision is not None and str(key) not in self._collision_objects:
+        if link.collision is not None and key not in self._collision_objects:
             shape = create_compound_shape()
             for c in link.collision.values():
                 if c.type == 'mesh':
-                    sub_shape = load_convex_mesh_shape(c.mesh, False)
+                    sub_shape = load_convex_mesh_shape(c.mesh, False, c.scale)
                     shape.add_child(matrix_to_transform(c.to_parent), sub_shape)
                 elif c.type == 'box':
                     sub_shape = create_cube_shape(c.scale)
@@ -292,7 +292,7 @@ class GeometryModel(EventModel):
         static_poses   = []
         dynamic_poses  = {}
         removed_object = []
-        for k_path in self._collision_objects:
+        for k_path in self._collision_objects: # type: Path
             if model_settings.BRUTE_MODE or k_path in self._callback_batch:
                 #print('{} is a collision link and has changed in the last update batch'.format(k))
                 if self.has_data(k_path):
@@ -304,7 +304,7 @@ class GeometryModel(EventModel):
                         symbol_set  = symbol_set.union(pose_expr.diff_symbols)
                         pose_expr   = pose_expr.to_sym_matrix()
                     # fixme, this is a hack
-                    symbol_set |= cm.free_symbols(pose_expr) #.union({DiffSymbol(s) for s in cm.free_symbols(pose_expr)})
+                    symbol_set |= cm.free_symbols(pose_expr) # type: {Symbol}
                     if k_path in self._co_symbol_map: # The body might have been associated with different symbols before
                         for s_discard in self._co_symbol_map[k_path].difference(symbol_set):
                             self._symbol_co_map[s_discard].remove(k_path)

@@ -35,7 +35,7 @@ class ROSBPBVisualizer(ROSVisualizer):
             if shape.file_path != '':
                 if shape.file_path not in self._cached_file_paths:
                     self._cached_file_paths[shape.file_path] = make_pkg_path(shape.file_path)
-                self.draw_mesh(namespace, transform, [1]*3, self._cached_file_paths[shape.file_path], frame, r, g, b, a)
+                self.draw_mesh(namespace, transform, shape.scaling, self._cached_file_paths[shape.file_path], frame, r, g, b, a)
             else:
                 for x in range(shape.nchildren):
                     self.draw_collision_shape(namespace, shape.get_child(x), transform * shape.get_child_transform(x), r, g, b, a, frame)
@@ -43,7 +43,7 @@ class ROSBPBVisualizer(ROSVisualizer):
             if shape.file_path != '':
                 if shape.file_path not in self._cached_file_paths:
                     self._cached_file_paths[shape.file_path] = make_pkg_path(shape.file_path)
-                self.draw_mesh(namespace, transform, [1]*3, self._cached_file_paths[shape.file_path], frame, r, g, b, a)
+                self.draw_mesh(namespace, transform, shape.scaling, self._cached_file_paths[shape.file_path], frame, r, g, b, a)
 
 
     def draw_collision_object(self, namespace, obj, r=1, g=1, b=1, a=1, frame=None):

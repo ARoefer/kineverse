@@ -46,9 +46,10 @@ def create_compound_shape(shapes_poses=[]):
 
 # Technically the tracker is not required here, 
 # since the loader keeps references to the loaded shapes.
-def load_convex_mesh_shape(pkg_filename, single_shape=False):
-    return pb.load_convex_shape(res_pkg_path(pkg_filename), single_shape=single_shape)
-
+def load_convex_mesh_shape(pkg_filename, single_shape=False, scale=[1, 1, 1]):
+    return pb.load_convex_shape(res_pkg_path(pkg_filename), 
+                                single_shape=single_shape, 
+                                scaling=pb.Vector3(scale[0], scale[1], scale[2]))
 
 def create_object(shape, transform=pb.Transform.identity()):
     if type(transform) is not pb.Transform:

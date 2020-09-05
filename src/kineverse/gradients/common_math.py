@@ -144,6 +144,7 @@ if SYM_MATH_ENGINE == 'CASADI':
         raise Exception('This function is only meant to compute norms of casadi matrices. This is of type {}'.format(type(v)))
 
     def free_symbols(expression):
+        # type: (object) -> {ca.SX}
         if type(expression) in math_types:
             if type(expression) is ca.DM:
                 print(expression.shape, expression)
@@ -189,6 +190,7 @@ if SYM_MATH_ENGINE == 'CASADI':
         return matrix.tolist()
 
     def to_numpy(matrix):
+        # type: (object) -> np.ndarray
         if type(matrix) != np.ndarray:
             return np.array(matrix.elements()).astype(float).reshape((matrix.shape[1], matrix.shape[0])).T
         return matrix
@@ -203,17 +205,21 @@ if SYM_MATH_ENGINE == 'CASADI':
         return a == b
 
     def is_symbol(expr):
+        # tyoe: (object) -> bool
         if type(expr) in math_types:
             return expr.shape[0] * expr.shape[1] == 1 and expr.is_leaf() and len(free_symbols(expr)) > 0
         return False
 
     def is_matrix(expr):
+        # tyoe: (object) -> bool
         return hasattr(expr, 'shape') and expr.shape[0] * expr.shape[1] > 1
 
     def is_symbolic(expr):
+        # tyoe: (object) -> bool
         return len(free_symbols(expr)) > 0
 
     def vstack(*matrices):
+        # tyoe: (*ca.SX) -> ca.SX
         width = matrices[0].shape[1]
         for x, m in enumerate(matrices[1:]):
             if width != m.shape[1]:
@@ -232,6 +238,7 @@ if SYM_MATH_ENGINE == 'CASADI':
         return out
 
     def hstack(*matrices):
+        # tyoe: (*ca.SX) -> ca.SX
         height = matrices[0].shape[0]
         for x, m in enumerate(matrices[1:]):
             if height != m.shape[0]:
@@ -349,6 +356,7 @@ elif SYM_MATH_ENGINE == 'SYMENGINE':
 
 
     def free_symbols(expression):
+        # type: (object) -> {se.Symbol}
         if hasattr(expression, 'free_symbols'):
             return expression.free_symbols
         return set()
