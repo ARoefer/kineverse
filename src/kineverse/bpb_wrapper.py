@@ -29,9 +29,12 @@ def create_cube_shape(extents):
     return out
 
 def create_cylinder_shape(diameter, height):
-    out = pb.CylinderShapeZ(pb.Vector3(0.5 * diameter, 0.5 * diameter, height * 0.5))
-    out.margin = 0.001
-    return out
+    # out = pb.CylinderShapeZ(pb.Vector3(0.5 * diameter, 0.5 * diameter, height * 0.5))
+    # out.margin = 0.001
+    # Weird thing: The default URDF loader in bullet instantiates convex meshes. Idk why.
+    return load_convex_mesh_shape(res_pkg_path('package://kineverse/meshes/cylinder.obj'), 
+                                  single_shape=True, 
+                                  scale=[diameter, diameter, height])
 
 def create_sphere_shape(diameter):
     out = pb.SphereShape(0.5 * diameter)
@@ -148,7 +151,7 @@ def world_to_cpp_code(subworld):
 
     obj_names = [] # store the c++ names
     for name, obj in sorted(subworld.named_objects.items()):
-        o_name = name.replace('/', '_')
+        o_name = '_'.join(name)
         obj_names.append(o_name)
         buf += 'auto {o_name} = std::make_shared<KineverseCollisionObject>();\n{o_name}->setWorldTransform({transform});\n{o_name}->setCollisionShape({shape});\n\n'.format(o_name=o_name, transform=transform_to_cpp_code(obj.transform), shape=shape_names[obj.collision_shape])
 
