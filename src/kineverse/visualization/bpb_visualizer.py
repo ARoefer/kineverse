@@ -68,7 +68,7 @@ class ROSBPBVisualizer(ROSVisualizer):
 
     def draw_contacts(self, namespace, contacts, size, r=1, g=0, b=0, a=1, arrow_length=1.0, frame=None):
         for cp in contacts:
-            lines = sum([[cp.obj_a.transform * p.point_a, cp.obj_b.transform * p.point_b] for p in cp.points], [])
+            lines = sum([[cp.obj_a.np_transform.dot(p.point_a), cp.obj_b.np_transform.dot(p.point_b)] for p in cp.points], [])
             self.draw_lines(namespace, pb.Transform.identity(), size, lines, r, g, b, a, frame)
             self.draw_points(namespace, pb.Transform.identity(), size * 2, lines, r, g, b, a, frame)
             for x, p in enumerate(cp.points):

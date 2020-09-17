@@ -38,7 +38,7 @@ class SoftConstraint(Constraint):
             return c.eq_expr(self.lower, other.lower) and \
                    c.eq_expr(self.upper, other.upper) and \
                    c.eq_expr(self.expr, other.expr)   and \
-                   c.eq_expr(self.weight_id, other.weight)
+                   c.eq_expr(self.weight_id, other.weight_id)
         return False
 
 
@@ -294,17 +294,15 @@ class GeomQPBuilder(PIDQPBuilder): #(TypedQPBuilder):
                 path = Path(s)
                 #print(path)
                 obj_a = path[1:path.index(obj_to_obj_infix)] # Cut of the 'contact' and the onA/x bits
-                obj_a_str = str(obj_a)
-                if obj_a_str not in collision_world.named_objects:
-                    print('Object "{}" was referenced in symbol "{}" but is not part of the collision world. Skipping it.'.format(obj_a_str, s_str))
-                    missing_objects.add(obj_a_str)
+                if obj_a not in collision_world.named_objects:
+                    print('Object "{}" was referenced in symbol "{}" but is not part of the collision world. Skipping it.'.format(obj_a, s_str))
+                    missing_objects.add(obj_a)
                     continue
 
-                coll_a = collision_world.named_objects[obj_a_str]
+                coll_a = collision_world.named_objects[obj_a]
                 self.name_resolver[coll_a] = obj_a
 
                 obj_b = path[path.index(obj_to_obj_infix) + 1: -2]
-                obj_b_str = str(obj_b)
                 #print('Adding handler for distance\n {} ->\n {}'.format(obj_a_str, obj_b_str))
                 if obj_b[0] == 'anon':
                     if len(obj_b) > 1:
@@ -317,12 +315,12 @@ class GeomQPBuilder(PIDQPBuilder): #(TypedQPBuilder):
                             handler.add_passive_handle()
                 
                 else: 
-                    if obj_b_str not in collision_world.named_objects:
-                        print('Object "{}" was referenced in symbol "{}" but is not part of the collision world. Skipping it.'.format(obj_b_str, s_str))
-                        missing_objects.add(obj_b_str)
+                    if obj_b not in collision_world.named_objects:
+                        print('Object "{}" was referenced in symbol "{}" but is not part of the collision world. Skipping it.'.format(obj_b, s_str))
+                        missing_objects.add(obj_b)
                         continue
 
-                    coll_b = collision_world.named_objects[obj_b_str]
+                    coll_b = collision_world.named_objects[obj_b]
                     self.name_resolver[coll_b] = obj_b
 
                     if coll_b not in self.collision_handlers:
@@ -337,7 +335,7 @@ class GeomQPBuilder(PIDQPBuilder): #(TypedQPBuilder):
                             handler.add_active_handle(obj_a)
 
         if len(missing_objects) > 0:
-            raise Exception('Missing objects to compute queries:\n  {}\nObjects in world:\n  {}'.format('\n  '.join(sorted(missing_objects)), '\n  '.join(sorted(collision_world.names))))
+            raise Exception('Missing objects to compute queries:\n  {}\nObjects in world:\n  {}'.format('\n  '.join(sorted(missing_objects)), '\n  '.join(sorted(str(n) for n in collision_world.names))))
 
         self.closest_query_batch = {collision_object: default_query_distance for collision_object in self.collision_handlers.keys()}
         self._cb_draw = None

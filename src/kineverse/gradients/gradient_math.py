@@ -56,6 +56,16 @@ if cm.SYM_MATH_ENGINE == 'CASADI':
     cm.ca.MX.__div__ = op_wrapper(cm.ca.MX, 'div')
     cm.ca.DM.__div__ = op_wrapper(cm.ca.DM, 'div')
 
+    def subs(expr, subs_dict):
+        if type(expr) == GC:
+            return cm.subs(expr.expr, subs_dict)
+        elif type(expr) == GM:
+            return cm.subs(expr.to_sym_matrix(), subs_dict)
+        return cm.subs(expr, subs_dict)
+else:
+    subs = cm.subs
+
+
 is_symbol = cm.is_symbol
 eq_expr   = cm.eq_expr
 eye       = cm.eye
@@ -99,8 +109,6 @@ def get_diff(term, symbols=None):
         return sum([s * t for s, t in term.gradients.items()])
     else:
         return sum([s * term[s] for s in symbols if s in term])
-
-subs = cm.subs
 
 def sin(expr):
     """Sine"""
@@ -255,7 +263,7 @@ def axis_angle_from_matrix(rotation_matrix):
     
     angle = (trace(rm[:3, :3]) - 1) / 2
     angle = acos(angle)
-    angle = angle if type(angle) is not cm.ComplexDouble else angle.real
+    angle = angle # if type(angle) is not cm.ComplexDouble else angle.real
     x = (rm[2, 1] - rm[1, 2])
     y = (rm[0, 2] - rm[2, 0])
     z = (rm[1, 0] - rm[0, 1])

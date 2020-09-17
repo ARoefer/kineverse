@@ -579,15 +579,15 @@ class ContactHandler(object):
         if name not in self.var_map:
             raise Exception('Name {} is not known to contact handler'.format(name))
         container = self.var_map[name]
-        self.state.update({container.on_a_x: point_a.x,
-                           container.on_a_y: point_a.y,
-                           container.on_a_z: point_a.z,
-                           container.on_b_x: point_b.x,
-                           container.on_b_y: point_b.y,
-                           container.on_b_z: point_b.z,
-                           container.normal_x: normal.x,
-                           container.normal_y: normal.y,
-                           container.normal_z: normal.z})
+        self.state.update({container.on_a_x: point_a[0],
+                           container.on_a_y: point_a[1],
+                           container.on_a_z: point_a[2],
+                           container.on_b_x: point_b[0],
+                           container.on_b_y: point_b[1],
+                           container.on_b_z: point_b[2],
+                           container.normal_x: normal[0],
+                           container.normal_y: normal[1],
+                           container.normal_z: normal[2]})
 
     @profile
     def handle_contacts(self, contacts, name_resolver=None):
@@ -598,7 +598,7 @@ class ContactHandler(object):
                     name = name_resolver[cp.obj_b]
                     self.handle_contact(cp.points[0].point_a, cp.points[0].point_b, cp.points[0].normal_world_b, name)
                 elif anon_idx < self._num_anon_contacts:
-                    self.handle_contact(cp.points[0].point_a, cp.obj_b.transform * cp.points[0].point_b, cp.points[0].normal_world_b, anon_idx)
+                    self.handle_contact(cp.points[0].point_a, cp.obj_b.np_transform.dot(cp.points[0].point_b), cp.points[0].normal_world_b, anon_idx)
                     anon_idx += 1
         
         if anon_idx < self._num_anon_contacts:

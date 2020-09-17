@@ -52,7 +52,7 @@ class DiffDriveJoint(KinematicJoint):
         return out
 
 
-def create_diff_drive_joint_with_symbols(parent_path, child_path, wheel_radius, wheel_distance, wheel_vel_limit, var_prefix):
+def create_diff_drive_joint_with_symbols(parent_pose, child_pose, wheel_radius, wheel_distance, wheel_vel_limit, var_prefix):
     return DiffDriveJoint(parent_pose, child_pose,
                 Position((var_prefix + ('localization_x',)).to_symbol()),
                 Position((var_prefix + ('localization_y',)).to_symbol()),
@@ -60,7 +60,7 @@ def create_diff_drive_joint_with_symbols(parent_path, child_path, wheel_radius, 
                 Position((var_prefix + ('localization_a',)).to_symbol()),
                 Velocity((var_prefix + ('l_wheel',)).to_symbol()),
                 Velocity((var_prefix + ('r_wheel',)).to_symbol()),
-                wheel_vel_limit, wheel_radius, wheel_distance)
+                wheel_radius, wheel_distance, wheel_vel_limit)
 
 
 class OmnibaseJoint(KinematicJoint):
@@ -184,13 +184,14 @@ class CreateAdvancedFrameConnection(CreateURDFFrameConnection):
             else:
                 self.constraints = {}
 
-            pos_pos = point3(GC(x_pos, {r_wheel_vel: cos(a_pos) * wheel_radius * 0.5,
-                                    l_wheel_vel: cos(a_pos) * wheel_radius * 0.5}), 
-                             GC(y_pos, {r_wheel_vel: sin(a_pos) * wheel_radius * 0.5,
-                                        l_wheel_vel: sin(a_pos) * wheel_radius * 0.5}), z_pos)
+            pos_pos = point3(GC(joint.x_pos, {joint.r_wheel_vel: cos(joint.a_pos) * joint.wheel_radius * 0.5,
+                                              joint.l_wheel_vel: cos(joint.a_pos) * joint.wheel_radius * 0.5}), 
+                             GC(joint.y_pos, {joint.r_wheel_vel: sin(joint.a_pos) * joint.wheel_radius * 0.5,
+                                              joint.l_wheel_vel: sin(joint.a_pos) * joint.wheel_radius * 0.5}),
+                             joint.z_pos)
 
-            rot_pos = GC(a_pos, {r_wheel_vel:   wheel_radius / wheel_distance,
-                                 l_wheel_vel: - wheel_radius / wheel_distance})
+            rot_pos = GC(joint.a_pos, {joint.r_wheel_vel:   joint.wheel_radius / joint.wheel_distance,
+                                       joint.l_wheel_vel: - joint.wheel_radius / joint.wheel_distance})
 
             self.child_parent        = joint.parent
             self.child_relative_pose = frame3_axis_angle(vector3(0,0,1), rot_pos, pos_pos)

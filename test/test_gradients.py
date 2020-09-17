@@ -20,9 +20,9 @@ class TestOperators(ut.TestCase):
 
         gc_xy = gc_x + gc_y
 
-        self.assertTrue(cm.eq_expr(gc_xy.expr, baseline))
-        self.assertTrue(cm.eq_expr(gc_xy[DiffSymbol(x)], cm.diff(baseline, x)))
-        self.assertTrue(cm.eq_expr(gc_xy[DiffSymbol(y)], cm.diff(baseline, y)))
+        self.assertTrue(cm.numeric_eq(gc_xy.expr, baseline, default_range=[-10, 10]))
+        self.assertTrue(cm.numeric_eq(gc_xy[DiffSymbol(x)], cm.diff(baseline, x), default_range=[-10, 10]))
+        self.assertTrue(cm.numeric_eq(gc_xy[DiffSymbol(y)], cm.diff(baseline, y), default_range=[-10, 10]))
 
     def test_subtraction(self):
         x, y = [Position(x) for x in 'xy']
@@ -37,9 +37,9 @@ class TestOperators(ut.TestCase):
 
         gc_xy = gc_x - gc_y
 
-        self.assertTrue(cm.eq_expr(gc_xy.expr, baseline))
-        self.assertTrue(cm.eq_expr(gc_xy[DiffSymbol(x)], cm.diff(baseline, x)))
-        self.assertTrue(cm.eq_expr(gc_xy[DiffSymbol(y)], cm.diff(baseline, y)))
+        self.assertTrue(cm.numeric_eq(gc_xy.expr, baseline, default_range=[-10, 10]))
+        self.assertTrue(cm.numeric_eq(gc_xy[DiffSymbol(x)], cm.diff(baseline, x), default_range=[-10, 10]))
+        self.assertTrue(cm.numeric_eq(gc_xy[DiffSymbol(y)], cm.diff(baseline, y), default_range=[-10, 10]))
 
 
     def test_multiplication(self):
@@ -55,9 +55,9 @@ class TestOperators(ut.TestCase):
 
         gc_xy = gc_x * gc_y
 
-        self.assertTrue(cm.eq_expr(gc_xy.expr, baseline))
-        self.assertTrue(cm.eq_expr(gc_xy[DiffSymbol(x)], cm.diff(baseline, x)))
-        self.assertTrue(cm.eq_expr(gc_xy[DiffSymbol(y)], cm.diff(baseline, y)))
+        self.assertTrue(cm.numeric_eq(gc_xy.expr, baseline, default_range=[-10, 10]))
+        self.assertTrue(cm.numeric_eq(gc_xy[DiffSymbol(x)], cm.diff(baseline, x), default_range=[-10, 10]))
+        self.assertTrue(cm.numeric_eq(gc_xy[DiffSymbol(y)], cm.diff(baseline, y), default_range=[-10, 10]))
 
 
     def test_division(self):
@@ -73,9 +73,9 @@ class TestOperators(ut.TestCase):
 
         gc_xy = gc_x / gc_y
 
-        self.assertTrue(cm.eq_expr(gc_xy.expr, baseline))
-        self.assertTrue(cm.eq_expr(gc_xy[DiffSymbol(x)], cm.diff(baseline, x)))
-        self.assertTrue(cm.eq_expr(gc_xy[DiffSymbol(y)], cm.diff(baseline, y)))
+        self.assertTrue(cm.numeric_eq(gc_xy.expr, baseline, default_range=[-10, 10]))
+        self.assertTrue(cm.numeric_eq(gc_xy[DiffSymbol(x)], cm.diff(baseline, x), default_range=[-10, 10]))
+        self.assertTrue(cm.numeric_eq(gc_xy[DiffSymbol(y)], cm.diff(baseline, y), default_range=[-10, 10]))
 
 
     def testow(self):
@@ -91,16 +91,16 @@ class TestOperators(ut.TestCase):
 
         gc_xy = gc_x ** gc_y
 
-        temp = cm.eq_expr(gc_xy.expr, baseline)
+        temp = cm.numeric_eq(gc_xy.expr, baseline, default_range=[-10, 10])
         print(gc_xy.expr, baseline)
         print(temp, type(temp))
         self.assertTrue(temp)
-        self.assertTrue(cm.eq_expr(gc_xy[DiffSymbol(x)], cm.diff(baseline, x)))
+        self.assertTrue(cm.numeric_eq(gc_xy[DiffSymbol(x)], cm.diff(baseline, x), default_range=[-10, 10]))
         d_grad_y = gc_xy[DiffSymbol(y)]
         d_baseline_y = cm.diff(baseline, y)
         print('Gradient d/y: {}\nBaseline d/y: {}'.format(d_grad_y, d_baseline_y))
         print(d_baseline_y)
-        self.assertTrue(cm.eq_expr(d_grad_y, d_baseline_y))
+        self.assertTrue(cm.numeric_eq(d_grad_y, d_baseline_y, default_range=[-10, 10]))
 
 
 class TestFunctions(ut.TestCase):
@@ -118,9 +118,9 @@ class TestFunctions(ut.TestCase):
 
         gc_xy = sin(gc_x + gc_y)
 
-        self.assertTrue(cm.eq_expr(gc_xy.expr, baseline))
-        self.assertTrue(cm.eq_expr(gc_xy[DiffSymbol(x)], cm.diff(baseline, x)))
-        self.assertTrue(cm.eq_expr(gc_xy[DiffSymbol(y)], cm.diff(baseline, y)))
+        self.assertTrue(cm.numeric_eq(gc_xy.expr, baseline, default_range=[-10, 10]))
+        self.assertTrue(cm.numeric_eq(gc_xy[DiffSymbol(x)], cm.diff(baseline, x), default_range=[-10, 10]))
+        self.assertTrue(cm.numeric_eq(gc_xy[DiffSymbol(y)], cm.diff(baseline, y), default_range=[-10, 10]))
 
     def test_cos(self):
         x, y = [Position(x) for x in 'xy']
@@ -135,9 +135,9 @@ class TestFunctions(ut.TestCase):
 
         gc_xy = cos(gc_x + gc_y)
 
-        self.assertTrue(cm.eq_expr(gc_xy.expr, baseline))
-        self.assertTrue(cm.eq_expr(gc_xy[DiffSymbol(x)], cm.diff(baseline, x)))
-        self.assertTrue(cm.eq_expr(gc_xy[DiffSymbol(y)], cm.diff(baseline, y)))
+        self.assertTrue(cm.numeric_eq(gc_xy.expr, baseline, default_range=[-10, 10]))
+        self.assertTrue(cm.numeric_eq(gc_xy[DiffSymbol(x)], cm.diff(baseline, x), default_range=[-10, 10]))
+        self.assertTrue(cm.numeric_eq(gc_xy[DiffSymbol(y)], cm.diff(baseline, y), default_range=[-10, 10]))
 
     def test_tan(self):
         x, y = [Position(x) for x in 'xy']
@@ -152,9 +152,9 @@ class TestFunctions(ut.TestCase):
 
         gc_xy = tan(gc_x + gc_y)
 
-        self.assertTrue(cm.eq_expr(gc_xy.expr, baseline))
-        self.assertTrue(cm.eq_expr(gc_xy[DiffSymbol(x)], cm.diff(baseline, x)))
-        self.assertTrue(cm.eq_expr(gc_xy[DiffSymbol(y)], cm.diff(baseline, y)))
+        self.assertTrue(cm.numeric_eq(gc_xy.expr, baseline, default_range=[-10, 10]))
+        self.assertTrue(cm.numeric_eq(gc_xy[DiffSymbol(x)], cm.diff(baseline, x), default_range=[-10, 10]))
+        self.assertTrue(cm.numeric_eq(gc_xy[DiffSymbol(y)], cm.diff(baseline, y), default_range=[-10, 10]))
 
     def test_asin(self):
         x, y = [Position(x) for x in 'xy']
@@ -169,9 +169,9 @@ class TestFunctions(ut.TestCase):
 
         gc_xy = asin(gc_x + gc_y)
 
-        self.assertTrue(cm.eq_expr(gc_xy.expr, baseline))
-        self.assertTrue(cm.eq_expr(gc_xy[DiffSymbol(x)], cm.diff(baseline, x)))
-        self.assertTrue(cm.eq_expr(gc_xy[DiffSymbol(y)], cm.diff(baseline, y)))
+        self.assertTrue(cm.numeric_eq(gc_xy.expr, baseline, default_range=[-10, 10]))
+        self.assertTrue(cm.numeric_eq(gc_xy[DiffSymbol(x)], cm.diff(baseline, x), default_range=[-10, 10]))
+        self.assertTrue(cm.numeric_eq(gc_xy[DiffSymbol(y)], cm.diff(baseline, y), default_range=[-10, 10]))
 
     def test_acos(self):
         x, y = [Position(x) for x in 'xy']
@@ -186,9 +186,9 @@ class TestFunctions(ut.TestCase):
 
         gc_xy = acos(gc_x + gc_y)
 
-        self.assertTrue(cm.eq_expr(gc_xy.expr, baseline))
-        self.assertTrue(cm.eq_expr(gc_xy[DiffSymbol(x)], cm.diff(baseline, x)))
-        self.assertTrue(cm.eq_expr(gc_xy[DiffSymbol(y)], cm.diff(baseline, y)))
+        self.assertTrue(cm.numeric_eq(gc_xy.expr, baseline, default_range=[-10, 10]))
+        self.assertTrue(cm.numeric_eq(gc_xy[DiffSymbol(x)], cm.diff(baseline, x), default_range=[-10, 10]))
+        self.assertTrue(cm.numeric_eq(gc_xy[DiffSymbol(y)], cm.diff(baseline, y), default_range=[-10, 10]))
 
     def test_atan(self):
         x, y = [Position(x) for x in 'xy']
@@ -203,9 +203,9 @@ class TestFunctions(ut.TestCase):
 
         gc_xy = atan(gc_x + gc_y)
 
-        self.assertTrue(cm.eq_expr(gc_xy.expr, baseline))
-        self.assertTrue(cm.eq_expr(gc_xy[DiffSymbol(x)], cm.diff(baseline, x)))
-        self.assertTrue(cm.eq_expr(gc_xy[DiffSymbol(y)], cm.diff(baseline, y)))
+        self.assertTrue(cm.numeric_eq(gc_xy.expr, baseline, default_range=[-10, 10]))
+        self.assertTrue(cm.numeric_eq(gc_xy[DiffSymbol(x)], cm.diff(baseline, x), default_range=[-10, 10]))
+        self.assertTrue(cm.numeric_eq(gc_xy[DiffSymbol(y)], cm.diff(baseline, y), default_range=[-10, 10]))
 
     def test_sinh(self):
         x, y = [Position(x) for x in 'xy']
@@ -220,9 +220,9 @@ class TestFunctions(ut.TestCase):
 
         gc_xy = sinh(gc_x + gc_y)
 
-        self.assertTrue(cm.eq_expr(gc_xy.expr, baseline))
-        self.assertTrue(cm.eq_expr(gc_xy[DiffSymbol(x)], cm.diff(baseline, x)))
-        self.assertTrue(cm.eq_expr(gc_xy[DiffSymbol(y)], cm.diff(baseline, y)))
+        self.assertTrue(cm.numeric_eq(gc_xy.expr, baseline, default_range=[-10, 10]))
+        self.assertTrue(cm.numeric_eq(gc_xy[DiffSymbol(x)], cm.diff(baseline, x), default_range=[-10, 10]))
+        self.assertTrue(cm.numeric_eq(gc_xy[DiffSymbol(y)], cm.diff(baseline, y), default_range=[-10, 10]))
 
     def test_cosh(self):
         x, y = [Position(x) for x in 'xy']
@@ -237,9 +237,9 @@ class TestFunctions(ut.TestCase):
 
         gc_xy = cosh(gc_x + gc_y)
 
-        self.assertTrue(cm.eq_expr(gc_xy.expr, baseline))
-        self.assertTrue(cm.eq_expr(gc_xy[DiffSymbol(x)], cm.diff(baseline, x)))
-        self.assertTrue(cm.eq_expr(gc_xy[DiffSymbol(y)], cm.diff(baseline, y)))
+        self.assertTrue(cm.numeric_eq(gc_xy.expr, baseline, default_range=[-10, 10]))
+        self.assertTrue(cm.numeric_eq(gc_xy[DiffSymbol(x)], cm.diff(baseline, x), default_range=[-10, 10]))
+        self.assertTrue(cm.numeric_eq(gc_xy[DiffSymbol(y)], cm.diff(baseline, y), default_range=[-10, 10]))
 
     def test_tanh(self):
         x, y = [Position(x) for x in 'xy']
@@ -254,9 +254,9 @@ class TestFunctions(ut.TestCase):
 
         gc_xy = tanh(gc_x + gc_y)
 
-        self.assertTrue(cm.eq_expr(gc_xy.expr, baseline))
-        self.assertTrue(cm.eq_expr(gc_xy[DiffSymbol(x)], cm.diff(baseline, x)))
-        self.assertTrue(cm.eq_expr(gc_xy[DiffSymbol(y)], cm.diff(baseline, y)))
+        self.assertTrue(cm.numeric_eq(gc_xy.expr, baseline, default_range=[-10, 10]))
+        self.assertTrue(cm.numeric_eq(gc_xy[DiffSymbol(x)], cm.diff(baseline, x), default_range=[-10, 10]))
+        self.assertTrue(cm.numeric_eq(gc_xy[DiffSymbol(y)], cm.diff(baseline, y), default_range=[-10, 10]))
 
     def test_asinh(self):
         x, y = [Position(x) for x in 'xy']
@@ -271,9 +271,9 @@ class TestFunctions(ut.TestCase):
 
         gc_xy = asinh(gc_x + gc_y)
 
-        self.assertTrue(cm.eq_expr(gc_xy.expr, baseline))
-        self.assertTrue(cm.eq_expr(gc_xy[DiffSymbol(x)], cm.diff(baseline, x)))
-        self.assertTrue(cm.eq_expr(gc_xy[DiffSymbol(y)], cm.diff(baseline, y)))
+        self.assertTrue(cm.numeric_eq(gc_xy.expr, baseline, default_range=[-10, 10]))
+        self.assertTrue(cm.numeric_eq(gc_xy[DiffSymbol(x)], cm.diff(baseline, x), default_range=[-10, 10]))
+        self.assertTrue(cm.numeric_eq(gc_xy[DiffSymbol(y)], cm.diff(baseline, y), default_range=[-10, 10]))
 
     def test_acosh(self):
         x, y = [Position(x) for x in 'xy']
@@ -288,9 +288,9 @@ class TestFunctions(ut.TestCase):
 
         gc_xy = acosh(gc_x + gc_y)
 
-        self.assertTrue(cm.eq_expr(gc_xy.expr, baseline))
-        self.assertTrue(cm.eq_expr(gc_xy[DiffSymbol(x)], cm.diff(baseline, x)))
-        self.assertTrue(cm.eq_expr(gc_xy[DiffSymbol(y)], cm.diff(baseline, y)))
+        self.assertTrue(cm.numeric_eq(gc_xy.expr, baseline, default_range=[-10, 10]))
+        self.assertTrue(cm.numeric_eq(gc_xy[DiffSymbol(x)], cm.diff(baseline, x), default_range=[-10, 10]))
+        self.assertTrue(cm.numeric_eq(gc_xy[DiffSymbol(y)], cm.diff(baseline, y), default_range=[-10, 10]))
 
     def test_atanh(self):
         x, y = [Position(x) for x in 'xy']
@@ -305,9 +305,9 @@ class TestFunctions(ut.TestCase):
 
         gc_xy = atanh(gc_x + gc_y)
 
-        self.assertTrue(cm.eq_expr(gc_xy.expr, baseline))
-        self.assertTrue(cm.eq_expr(gc_xy[DiffSymbol(x)], cm.diff(baseline, x)))
-        self.assertTrue(cm.eq_expr(gc_xy[DiffSymbol(y)], cm.diff(baseline, y)))
+        self.assertTrue(cm.numeric_eq(gc_xy.expr, baseline, default_range=[-10, 10]))
+        self.assertTrue(cm.numeric_eq(gc_xy[DiffSymbol(x)], cm.diff(baseline, x), default_range=[-10, 10]))
+        self.assertTrue(cm.numeric_eq(gc_xy[DiffSymbol(y)], cm.diff(baseline, y), default_range=[-10, 10]))
 
     def test_exp(self):
         x, y = [Position(x) for x in 'xy']
@@ -322,9 +322,9 @@ class TestFunctions(ut.TestCase):
 
         gc_xy = exp(gc_x + gc_y)
 
-        self.assertTrue(cm.eq_expr(gc_xy.expr, baseline))
-        self.assertTrue(cm.eq_expr(gc_xy[DiffSymbol(x)], cm.diff(baseline, x)))
-        self.assertTrue(cm.eq_expr(gc_xy[DiffSymbol(y)], cm.diff(baseline, y)))
+        self.assertTrue(cm.numeric_eq(gc_xy.expr, baseline, default_range=[-10, 10]))
+        self.assertTrue(cm.numeric_eq(gc_xy[DiffSymbol(x)], cm.diff(baseline, x), default_range=[-10, 10]))
+        self.assertTrue(cm.numeric_eq(gc_xy[DiffSymbol(y)], cm.diff(baseline, y), default_range=[-10, 10]))
 
     def test_log(self):
         x, y = [Position(x) for x in 'xy']
@@ -339,9 +339,9 @@ class TestFunctions(ut.TestCase):
 
         gc_xy = log(gc_x + gc_y)
 
-        self.assertTrue(cm.eq_expr(gc_xy.expr, baseline))
-        self.assertTrue(cm.eq_expr(gc_xy[DiffSymbol(x)], cm.diff(baseline, x)))
-        self.assertTrue(cm.eq_expr(gc_xy[DiffSymbol(y)], cm.diff(baseline, y)))
+        self.assertTrue(cm.numeric_eq(gc_xy.expr, baseline, default_range=[-10, 10]))
+        self.assertTrue(cm.numeric_eq(gc_xy[DiffSymbol(x)], cm.diff(baseline, x), default_range=[-10, 10]))
+        self.assertTrue(cm.numeric_eq(gc_xy[DiffSymbol(y)], cm.diff(baseline, y), default_range=[-10, 10]))
 
     def test_sqrt(self):
         x, y = [Position(x) for x in 'xy']
@@ -356,9 +356,9 @@ class TestFunctions(ut.TestCase):
 
         gc_xy = sqrt(gc_x + gc_y)
 
-        self.assertTrue(cm.eq_expr(gc_xy.expr, baseline))
-        self.assertTrue(cm.eq_expr(gc_xy[DiffSymbol(x)], cm.diff(baseline, x)))
-        self.assertTrue(cm.eq_expr(gc_xy[DiffSymbol(y)], cm.diff(baseline, y)))
+        self.assertTrue(cm.numeric_eq(gc_xy.expr, baseline, default_range=[-10, 10]))
+        self.assertTrue(cm.numeric_eq(gc_xy[DiffSymbol(x)], cm.diff(baseline, x), default_range=[-10, 10]))
+        self.assertTrue(cm.numeric_eq(gc_xy[DiffSymbol(y)], cm.diff(baseline, y), default_range=[-10, 10]))
 
     def test_abs(self):
         x, y = [Position(x) for x in 'xy']
@@ -373,21 +373,21 @@ class TestFunctions(ut.TestCase):
 
         gc_xy = abs(gc_x + gc_y)
 
-        self.assertTrue(cm.eq_expr(gc_xy.expr, baseline))
-        self.assertTrue(cm.eq_expr(gc_xy[DiffSymbol(x)], cm.diff(baseline, x)))
-        self.assertTrue(cm.eq_expr(gc_xy[DiffSymbol(y)], cm.diff(baseline, y)))
+        self.assertTrue(cm.numeric_eq(gc_xy.expr, baseline, default_range=[-10, 10]))
+        self.assertTrue(cm.numeric_eq(gc_xy[DiffSymbol(x)], cm.diff(baseline, x), default_range=[-10, 10]))
+        self.assertTrue(cm.numeric_eq(gc_xy[DiffSymbol(y)], cm.diff(baseline, y), default_range=[-10, 10]))
 
 
 class TestMatrix(ut.TestCase):
     def test_operators(self):
         M = cm.Matrix([[1,2],[3,4],[5,6]])
 
-        baseline = M * cm.Matrix([[4],[9]])
+        baseline = cm.dot(M, cm.Matrix([[4],[9]]))
         gm_M = GM(M)
-        gm_R = gm_M * cm.Matrix([[4],[9]])
+        gm_R = cm.dot(gm_M, cm.Matrix([[4],[9]]))
 
-        self.assertEqual(gm_M, GM(M))
-        self.assertEqual(gm_R, GM(baseline))
+        self.assertTrue(cm.numeric_eq(gm_M.to_sym_matrix(), M, default_range=[-10, 10]))
+        self.assertTrue(cm.numeric_eq(gm_R.to_sym_matrix(), baseline, default_range=[-10, 10]))
 
     def test_transpose(self):
         M = cm.Matrix([[1,2],[3,4],[5,6]])
@@ -396,7 +396,7 @@ class TestMatrix(ut.TestCase):
         gm_M = GM(M).T
 
         for e, x in zip(gm_M, GM(baseline)):
-            self.assertEqual(e, x)
+            self.assertTrue(cm.numeric_eq(e.expr, x.expr, default_range=[-10, 10]))
 
 
 if __name__ == '__main__':

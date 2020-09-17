@@ -154,8 +154,6 @@ if SYM_MATH_ENGINE == 'CASADI':
         return set()
 
     def subs(expr, subs_dict):
-        if hasattr(expr, 'subs') and callable(expr.subs):
-            return expr.subs(subs_dict)
         if SYM_MATH_ENGINE == 'CASADI' and type(expr) in math_types:
             # if id(expr) not in _CASADI_SUBS_CACHE:
             #     fn = speed_up(expr, free_symbols(expr))
@@ -310,6 +308,8 @@ if SYM_MATH_ENGINE == 'CASADI':
             if delta > precision:
                 if verbose > 0:
                     print('Delta greater than {}. Delta is {}. Results:\na = \n{}\nb = \n{}'.format(precision, delta, v_a, v_b))
+                if verbose > 1:
+                    print('Expressions:\na: {}\nb: {}'.format(a, b))
                 return False
 
         return True

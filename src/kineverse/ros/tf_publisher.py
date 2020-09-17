@@ -79,7 +79,7 @@ class ModelTFBroadcaster(object):
                     pose     = self.np_poses[x*4: x*4 + 4, :4]
                     position = (pose[0, 3], pose[1, 3], pose[2, 3])
                     quat     = real_quat_from_matrix(pose)
-                    self.broadcaster.sendTransform(position, quat, now, n, f.parent)
+                    self.broadcaster.sendTransform(position, quat, now, n, str(f.parent))
                     # published_frames.append((n, f.parent))
 
                 for n, param in self.static_frames.items():
@@ -129,8 +129,8 @@ class ModelTFBroadcaster(object):
                         to_parent = f.to_parent if not isinstance(f.to_parent, GM) else f.to_parent.to_sym_matrix()
                         position  = (to_parent[0, 3], to_parent[1, 3], to_parent[2, 3])
                         quat      = real_quat_from_matrix(to_parent)
-                        self.static_frames[n] = (position, quat, n, f.parent)
-                        self.broadcaster.sendTransform(position, quat, now, n, f.parent)
+                        self.static_frames[n] = (position, quat, n, str(f.parent))
+                        self.broadcaster.sendTransform(position, quat, now, n, str(f.parent))
 
 
 class ModelTFBroadcaster_URDF(ModelTFBroadcaster):
