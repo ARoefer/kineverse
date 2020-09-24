@@ -78,6 +78,9 @@ free_symbols = cm.free_symbols
 diff      = cm.diff
 Matrix    = cm.Matrix
 trace     = cm.trace
+speed_up  = cm.speed_up
+vstack    = cm.vstack
+hstack    = cm.hstack
 
 
 def is_symbolic(expr):

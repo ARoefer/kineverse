@@ -389,7 +389,7 @@ class GradientMatrix(JSONSerializable):
             self.expr[idx[0]][idx[1]] = expr if type(expr) == GC else GC(expr)
 
     def __len__(self):
-        return cm.ncolsself.expr, () * cm.nrowsself.expr, ()
+        return self._nrows * self._ncols
 
     def __iter__(self):
         return iter(sum(self.expr, []))

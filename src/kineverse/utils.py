@@ -141,3 +141,10 @@ def bb(**kwargs):
     for k, v in kwargs.items():
         setattr(out, k, v)
     return out
+
+
+def union(sets, starting_set=None):
+    out = set() if starting_set is None else starting_set
+    for s in sets:
+        out = out.union(s)
+    return out
