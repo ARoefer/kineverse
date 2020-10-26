@@ -27,9 +27,9 @@ def generate_modifications_graph(km, prefix_colors={}):
             if o not in path_slots:
                 final_slots.append(o)
                 path_slots[o] = '_final:{}'.format(len(final_slots))
-            edges.append('{}:{} -> {}'.format(node_id_str, str(o.to_symbol()), path_slots[o]))
+            edges.append('{}:{} -> {}'.format(node_id_str, str(o.identivier_to_symbol()), path_slots[o]))
         for i in node.inputs:
-            path_slots[i] = '{}:{}'.format(node_id_str, str(i.to_symbol()))
+            path_slots[i] = '{}:{}'.format(node_id_str, str(i.identivier_to_symbol()))
 
     return 'digraph mod_graph {{rankdir=LR;\n    {};\n    {}\n}}'.format(';\n    '.join(nodes), ';\n    '.join(edges))
 

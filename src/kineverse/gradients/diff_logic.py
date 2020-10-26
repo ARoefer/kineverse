@@ -35,7 +35,7 @@ def create_symbol(symbol, stype):
     :rtype: symengine.Smybol
     """
     if type(symbol) is not str and not cm.is_symbol(symbol):
-        symbol = symbol.to_symbol()
+        symbol = symbol.identivier_to_symbol()
 
     if stype not in TYPE_SUFFIXES_INV:
         raise Exception('Can not create symbol for type {}: Type id not defined.'.format(stype))

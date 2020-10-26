@@ -54,13 +54,13 @@ class DiffDriveJoint(KinematicJoint):
 
 def create_diff_drive_joint_with_symbols(parent_pose, child_pose, wheel_radius, wheel_distance, wheel_vel_limit, var_prefix):
     return DiffDriveJoint(parent_pose, child_pose,
-                Position((var_prefix + ('localization_x',)).to_symbol()),
-                Position((var_prefix + ('localization_y',)).to_symbol()),
-                Position((var_prefix + ('localization_z',)).to_symbol()),
-                Position((var_prefix + ('localization_a',)).to_symbol()),
-                Velocity((var_prefix + ('l_wheel',)).to_symbol()),
-                Velocity((var_prefix + ('r_wheel',)).to_symbol()),
-                wheel_radius, wheel_distance, wheel_vel_limit)
+                          Position((var_prefix + ('localization_x',)).identivier_to_symbol()),
+                          Position((var_prefix + ('localization_y',)).identivier_to_symbol()),
+                          Position((var_prefix + ('localization_z',)).identivier_to_symbol()),
+                          Position((var_prefix + ('localization_a',)).identivier_to_symbol()),
+                          Velocity((var_prefix + ('l_wheel',)).identivier_to_symbol()),
+                          Velocity((var_prefix + ('r_wheel',)).identivier_to_symbol()),
+                          wheel_radius, wheel_distance, wheel_vel_limit)
 
 
 class OmnibaseJoint(KinematicJoint):
@@ -106,11 +106,11 @@ class OmnibaseJoint(KinematicJoint):
 
 def create_omnibase_joint_with_symbols(parent_path, child_path, rot_axis, lin_vel_limit, ang_vel_limit, var_prefix):
     return OmnibaseJoint(parent_path, child_path,
-                Position((var_prefix + ('localization_x',)).to_symbol()),
-                Position((var_prefix + ('localization_y',)).to_symbol()),
-                Position((var_prefix + ('localization_a',)).to_symbol()),
-                rot_axis,
-                lin_vel_limit, ang_vel_limit)
+                         Position((var_prefix + ('localization_x',)).identivier_to_symbol()),
+                         Position((var_prefix + ('localization_y',)).identivier_to_symbol()),
+                         Position((var_prefix + ('localization_a',)).identivier_to_symbol()),
+                         rot_axis,
+                         lin_vel_limit, ang_vel_limit)
 
 
 class BallJoint(KinematicJoint):
@@ -185,7 +185,7 @@ class CreateAdvancedFrameConnection(CreateURDFFrameConnection):
                 self.constraints = {}
 
             pos_pos = point3(GC(joint.x_pos, {joint.r_wheel_vel: cos(joint.a_pos) * joint.wheel_radius * 0.5,
-                                              joint.l_wheel_vel: cos(joint.a_pos) * joint.wheel_radius * 0.5}), 
+                                              joint.l_wheel_vel: cos(joint.a_pos) * joint.wheel_radius * 0.5}),
                              GC(joint.y_pos, {joint.r_wheel_vel: sin(joint.a_pos) * joint.wheel_radius * 0.5,
                                               joint.l_wheel_vel: sin(joint.a_pos) * joint.wheel_radius * 0.5}),
                              joint.z_pos)

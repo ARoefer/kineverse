@@ -1,6 +1,6 @@
 try:
     import __builtin__ as builtins
-    
+
     try:
         f = profile
     except NameError:

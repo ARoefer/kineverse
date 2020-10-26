@@ -346,7 +346,7 @@ class GeomQPBuilder(PIDQPBuilder): #(TypedQPBuilder):
 
     @profile
     def compute_queries(self, substitutions):
-        self.collision_world.update_world(substitutions)
+        self.collision_world._update_world_srv(substitutions)
         closest = self.collision_world.closest_distances(self.closest_query_batch)
 
         if self.visualizer is not None:
