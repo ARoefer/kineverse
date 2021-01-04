@@ -9,6 +9,7 @@ import traceback
 import kineverse.gradients.common_math as cm
 import kineverse.json_wrapper          as json
 import kineverse.model.model_settings  as model_settings
+from kineverse import type_check
 
 from kineverse.model.data_tree             import DataTree
 from kineverse.model.history               import History, Timeline, StampedData, Chunk
@@ -17,6 +18,7 @@ from kineverse.operations.operation        import Operation
 # from kineverse.operations.basic_operations import CreateSingleValue
 from kineverse.type_sets                   import is_symbolic
 from kineverse.json_serializable           import JSONSerializable
+from kineverse.utils import is_string
 
 Tag = str
 
@@ -383,7 +385,7 @@ class ArticulationModel(object):
         :param key: Path to check for.
         :type  key: str, Path
         """
-        if type(key) == str or type(key) == unicode:
+        if is_string(key):
             key = Path(key)
         if stamp is None or model_settings.BRUTE_MODE:
             return key in self.data_tree
@@ -398,7 +400,7 @@ class ArticulationModel(object):
         :param key: Path to check for.
         :type  key: str, Path
         """
-        if type(key) == str or type(key) == unicode:
+        if is_string(key):
             key = Path(key)
         if time_stamp is None or model_settings.BRUTE_MODE:
             return self.data_tree[key]
@@ -422,7 +424,7 @@ class ArticulationModel(object):
         :type  key: str, Path
         :param value: Data to insert.
         """
-        if type(key) == str or type(key) == unicode:
+        if is_string(key):
             key = Path(key)
         self.data_tree[key] = value
 
@@ -433,7 +435,7 @@ class ArticulationModel(object):
         :param key: Path to remove.
         :type  key: str, Path
         """
-        if type(key) == str or type(key) == unicode:
+        if is_string(key):
             key = Path(key)
         self.data_tree.remove_data(key)
 

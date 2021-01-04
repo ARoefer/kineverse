@@ -4,14 +4,11 @@ This model recognizes the insertion of rigid bodies and builds up a collision sc
 """
 import numpy as np
 
-import kineverse.gradients.common_math  as cm
-import kineverse.gradients.llvm_wrapper as llvm
 import kineverse.model.model_settings   as model_settings
 
-from kineverse.gradients.diff_logic     import Symbol, Position
 from kineverse.gradients.gradient_math  import *
-from kineverse.json_wrapper             import JSONSerializable
-from kineverse.model.paths              import Path, PathSet, PathDict
+from kineverse.json_serializable import JSONSerializable
+from kineverse.model.paths              import Path, PathDict
 from kineverse.model.articulation_model import Constraint
 from kineverse.model.event_model        import EventModel
 from kineverse.model.frames             import Frame
@@ -23,7 +20,7 @@ from kineverse.bpb_wrapper              import pb,                     \
                                                create_compound_shape,  \
                                                load_convex_mesh_shape, \
                                                matrix_to_transform
-from kineverse.utils                    import rot3_to_rpy
+from kineverse.utils import rot3_to_rpy, is_string
 
 
 class KinematicJoint(JSONSerializable):
@@ -258,7 +255,7 @@ class GeometryModel(EventModel):
             child.set_ignore_collision(parent)
 
     def set_data(self, key, value):
-        if type(key) is str or type(key) == unicode:
+        if is_string(key):
             key = Path(key)
 
         if isinstance(value, RigidBody):

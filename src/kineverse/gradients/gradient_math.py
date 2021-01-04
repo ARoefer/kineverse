@@ -16,8 +16,11 @@ from kineverse.gradients.diff_logic         import Position, \
                                                    DiffSymbol, \
                                                    IntSymbol
 from kineverse.gradients.gradient_container import GradientContainer as GC, \
-                                                   GradientMatrix    as GM 
-from kineverse.symengine_types              import symengine_types, symengine_matrix_types
+                                                   GradientMatrix    as GM
+try:
+    from kineverse.symengine_types              import symengine_types, symengine_matrix_types
+except:
+    symengine_types = []
 
 contrast = 1e10
 

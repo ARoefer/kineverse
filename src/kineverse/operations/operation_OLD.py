@@ -28,7 +28,10 @@ class Operation(JSONSerializable):
         """
         self.name = name
         # list of arguments that need to be passed to the implementation _apply
-        args = self._apply.func_code.co_varnames[2:self._apply.func_code.co_argcount]
+        try:
+            args = self._apply.func_code.co_varnames[2:self._apply.func_code.co_argcount]
+        except AttributeError:
+            args = self._apply.__code__.co_varnames[2:self._apply.__code__.co_argcount]
         # print('{} kwargs:\n{}'.format(self.name, ' \n'.join(sorted(kwargs.keys()))))
         # Retrieve the arguments required by _apply from kwargs
         self.args_paths = {a : kwargs[a] for a in args}

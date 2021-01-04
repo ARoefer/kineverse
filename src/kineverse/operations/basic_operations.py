@@ -10,7 +10,7 @@ from kineverse.operations.operation import Operation #, op_construction_wrapper
 
 #     def _apply(self, ks):
 #         return {'path': self.value}, {}
-        
+
 
 # class CreateComplexObject(Operation):
 #     def init(self, path, obj):
@@ -35,17 +35,27 @@ class ExecFunction(Operation):
     def __init__(self, out_path, fn, *fn_args):
         if type(fn) == type:
             # Remove the "self" argument
-            args    = fn.__init__.im_func.func_code.co_varnames[1:fn.__init__.im_func.func_code.co_argcount]
-            n_def   = len(fn.__init__.im_func.func_defaults) if fn.__init__.im_func.func_defaults is not None else 0
+            try:
+                args    = fn.__init__.im_func.func_code.co_varnames[1:fn.__init__.im_func.func_code.co_argcount]
+                n_def   = len(fn.__init__.im_func.func_defaults) if fn.__init__.im_func.func_defaults is not None else 0
+            except AttributeError:
+                args    = fn.__init__.__code__.co_varnames[1:fn.__init__.__code__.co_argcount]
+                n_def   = len(fn.__init__.__defaults__) if fn.__init__.__defaults__ is not None else 0
+
             fn_name = str(fn)
         else:
-            args    = fn.func_code.co_varnames[:fn.func_code.co_argcount]
-            n_def   = len(fn.func_defaults) if fn.func_defaults is not None else 0
-            fn_name = fn.func_name
+            try:
+                args    = fn.func_code.co_varnames[:fn.func_code.co_argcount]
+                n_def   = len(fn.func_defaults) if fn.func_defaults is not None else 0
+                fn_name = fn.func_name
+            except AttributeError:
+                args    = fn.__code__.co_varnames[:fn.__code__.co_argcount]
+                n_def   = len(fn.__defaults__) if fn.__defaults__ is not None else 0
+                fn_name = fn.__name__
         if len(fn_args) < len(args) - n_def:
             raise Exception('Too few arguments given! Arguments "{}" are required by function "{}" but not given to the operation wrapper'.format(', '.join(args[len(fn_args) - 1:-n_def]), fn_name))
         super(ExecFunction, self).__init__({'result': out_path}, function=fn)
-        
+
         # Manually modify the arguments and dependencies for this operation. DO NOT DO THIS OTHERWISE, IT IS BAD PRACTICE
         self._exec_args.update({k: deepcopy(v) for k, v in zip(args[:len(fn_args)], fn_args)})
         self.dependencies = {d for d in self._exec_args.values() if type(d) == Path}

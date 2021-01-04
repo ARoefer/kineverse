@@ -19,11 +19,16 @@ def check_function_signature(fn, args_dict, base_fn=None, superset=False):
 
     Returns the arguments required by the function.
     """
-
-    args = set(fn.func_code.co_varnames[:fn.func_code.co_argcount])
+    try:
+        args = set(fn.func_code.co_varnames[:fn.func_code.co_argcount])
+    except AttributeError:
+        args = set(fn.__code__.co_varnames[:fn.__code__.co_argcount])
 
     if base_fn is not None:
-        args -= set(base_fn.func_code.co_varnames[:base_fn.func_code.co_argcount])
+        try:
+            args -= set(base_fn.func_code.co_varnames[:base_fn.func_code.co_argcount])
+        except AttributeError:
+            args -= set(base_fn.__code__.co_varnames[:base_fn.__code__.co_argcount])
 
     given_args = set(args_dict.keys())
     if len(args) > len(given_args) or (len(args) != len(given_args) and not superset):
@@ -61,7 +66,10 @@ class Operation(object):
         self.memento        = None
         self.deep_memento   = None
         self.constraints    = None
-        args = set(self._execute_impl.func_code.co_varnames[1:self._execute_impl.func_code.co_argcount])
+        try:
+            args = set(self._execute_impl.func_code.co_varnames[1:self._execute_impl.func_code.co_argcount])
+        except AttributeError:
+            args = set(self._execute_impl.__code__.co_varnames[1:self._execute_impl.__code__.co_argcount])
         given_args = set(exec_args.keys())
 
         self._exec_args       = {k: deepcopy(exec_args[k]) for k in check_function_signature(self._execute_impl, 

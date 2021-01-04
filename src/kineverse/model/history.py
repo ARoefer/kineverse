@@ -6,6 +6,8 @@ import kineverse.model.model_settings as model_settings
 from sortedcontainers import SortedList, SortedSet
 
 from kineverse.model.paths import Path, PathDict
+from kineverse.utils import cmp
+
 
 class Timeline(SortedList):
     def get_floor(self, key):
@@ -330,6 +332,16 @@ class StampedData(object):
             return self.stamp > other.stamp
         return self.stamp > other
 
+    def __ge__(self, other):
+        if isinstance(other, StampedData):
+            return self.stamp >= other.stamp
+        return self.stamp >= other
+
+    def __le__(self, other):
+        if isinstance(other, StampedData):
+            return self.stamp <= other.stamp
+        return self.stamp <= other
+
     def __cmp__(self, other):
         if isinstance(other, StampedData):
             return cmp(self.stamp, other.stamp)
@@ -351,6 +363,9 @@ class Chunk(StampedData):
                                     dependencies=op.dependencies,
                                     modifications=set(op.output_path_assignments.values()),
                                     dependents=set())
+
+    def __hash__(self):
+        return hash(self.stamp)
 
     def __str__(self):
         return 'Stamp: {}\n Arguments: {}\n Modifications: {}\n Dependents: {}\n'.format(self.stamp, ', '.join(self.dependencies), ', '.join(self.modifications), ', '.join([str(d.stamp) for d in self.dependents]))

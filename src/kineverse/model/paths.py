@@ -3,9 +3,10 @@ The paths module provides the implementation of paths that are used to identify 
 """
 
 import kineverse.gradients.common_math as cm
+from kineverse.json_serializable import JSONSerializable
 
-from kineverse.json_wrapper            import JSONSerializable
 from kineverse.type_sets import atomic_types, matrix_types, symbolic_types, numpy_types
+from kineverse.utils import is_string
 
 
 class PathException(KeyError):
@@ -20,7 +21,7 @@ symbol_path_separator = '__'
 
 class Path(tuple, JSONSerializable):
     def __new__(cls, path):
-        if type(path) == str or type(path) == unicode:
+        if is_string(path):
             uri_split = str(path).split('://')
             parts = [p for p in uri_split[-1].split('/') if p != '']
             if len(uri_split) == 2:
@@ -36,6 +37,9 @@ class Path(tuple, JSONSerializable):
     def __radd__(self, other):
         return Path(other) + self
 
+    def __hash__(self):
+        return hash(str(self))
+
     def __getitem__(self, idx):
         if type(idx) is int:
             return super(Path, self).__getitem__(idx)
@@ -45,7 +49,7 @@ class Path(tuple, JSONSerializable):
         return Path(super(Path, self).__getslice__(i, j))
 
     def __eq__(self, other):
-        if type(other) is str or type(other) is unicode:
+        if is_string(other):
             return self == Path(other)
         return super(Path, self).__eq__(other)
 

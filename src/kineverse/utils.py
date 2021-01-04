@@ -9,6 +9,12 @@ from collections                       import namedtuple
 from kineverse.time_wrapper            import Time
 from kineverse.symengine_types         import symengine_types
 
+def is_string(s):
+    return isinstance(s, ("".__class__, u"".__class__))
+
+def cmp(a, b):
+    return (a > b) - (a < b)
+
 def res_pkg_path(rpath):
     """Resolves a ROS package relative path to a global path.
     :param rpath: Potential ROS URI to resolve.
