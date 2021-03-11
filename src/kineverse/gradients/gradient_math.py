@@ -14,7 +14,8 @@ from kineverse.gradients.diff_logic         import Position, \
                                                    Snap, \
                                                    Symbol, \
                                                    DiffSymbol, \
-                                                   IntSymbol
+                                                   IntSymbol, \
+                                                   erase_type
 from kineverse.gradients.gradient_container import GradientContainer as GC, \
                                                    GradientMatrix    as GM 
 from kineverse.symengine_types              import symengine_types, symengine_matrix_types

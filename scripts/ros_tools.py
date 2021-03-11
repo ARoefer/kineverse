@@ -22,7 +22,7 @@ class Tool(object):
 
     @classmethod
     def sig_str(cls):
-        args     = cls._call.func_code.co_varnames[1:cls._call.func_code.co_argcount]
+        args     = cls._call.__code__.co_varnames[1:cls._call.__code__.co_argcount]
         defaults = cls._call.func_defaults if cls._call.func_defaults is not None else []
         return '{} {} {}'.format(cls.name(), ' '.join(args[:-len(defaults)]), ' '.join(['[{}]'.format(x) for x in args[-len(defaults):]]))
 
@@ -30,7 +30,7 @@ class Tool(object):
         if '-h' in raw_args or '--help' in raw_args:
             return 'Usage: {}'.format(self.sig_str())
 
-        args     = self._call.func_code.co_varnames[1:self._call.func_code.co_argcount]
+        args     = self._call.__code__.co_varnames[1:self._call.__code__.co_argcount]
         defaults = self._call.func_defaults
             
         if len(raw_args) < len(args) - len(defaults):

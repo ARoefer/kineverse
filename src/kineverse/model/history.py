@@ -363,3 +363,6 @@ class Chunk(StampedData):
         elif isinstance(other, Chunk):
             return super(Chunk, self).__eq__(other) and self.operation == other.operation and self.dependencies == other.dependencies and self.modifications == other.modifications
         return False
+
+    def __hash__(self):
+        return hash(self.operation) ^ hash(self.stamp)

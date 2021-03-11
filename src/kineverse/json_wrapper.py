@@ -41,7 +41,7 @@ def nested_list_to_sym(l):
     if type(l) == list:
         return [nested_list_to_sym(x) for x in l]
     else:
-        return sp.sympify(l.encode('utf-8')) if isinstance(l, unicode) else sp.sympify(l)
+        return sp.sympify(l)
 
 
 def json_decoder(dct):
@@ -51,7 +51,7 @@ def json_decoder(dct):
             return sp.Matrix(dct['data'])# nested_list_to_sym(dct['data'])
         elif t == json_sym_expr:
             try:
-                return sp.sympify(dct['data'].encode('utf-8')) if isinstance(dct['data'], unicode) else sp.sympify(dct['data'])
+                return sp.sympify(dct['data'])
             except NameError as e:
                 raise Exception('NameError Occured while trying to sympify string {}. Error: {}\n{}'.format(repr(dct['data']), str(e), traceback.format_exc()))
         elif t[:8] == '<class \'' and t[-2:] == '\'>':

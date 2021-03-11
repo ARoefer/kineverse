@@ -1,7 +1,8 @@
+import inspect
+
 from kineverse.utils                import deepcopy
 from kineverse.model.paths          import Path, CPath, collect_paths
 from kineverse.operations.operation import Operation #, op_construction_wrapper
-
 
 # class CreateSingleValue(Operation):
 #     def init(self, path, value):
@@ -35,11 +36,12 @@ class ExecFunction(Operation):
     def __init__(self, out_path, fn, *fn_args):
         if type(fn) == type:
             # Remove the "self" argument
-            args    = fn.__init__.im_func.func_code.co_varnames[1:fn.__init__.im_func.func_code.co_argcount]
-            n_def   = len(fn.__init__.im_func.func_defaults) if fn.__init__.im_func.func_defaults is not None else 0
+
+            args    = [k for k in inspect.signature(fn.__init__).parameters.keys()][1:]
+            n_def   = len([p for p in inspect.signature(fn.__init__).parameters.values() if p.default != inspect._empty])
             fn_name = str(fn)
         else:
-            args    = fn.func_code.co_varnames[:fn.func_code.co_argcount]
+            args    = fn.__code__.co_varnames[:fn.__code__.co_argcount]
             n_def   = len(fn.func_defaults) if fn.func_defaults is not None else 0
             fn_name = fn.func_name
         if len(fn_args) < len(args) - n_def:
@@ -57,10 +59,10 @@ class ExecFunction(Operation):
 
 # class CallFunctionOperator(Operation):
 #     def init(self, path, fn, *params):
-#         if not hasattr(fn, 'func_code'):
+#         if not hasattr(fn, '__code__'):
 #             raise Exception('fn does not seem to be a function')
 
-#         args    = fn.func_code.co_varnames[:fn.func_code.co_argcount]
+#         args    = fn.__code__.co_varnames[:fn.__code__.co_argcount]
 #         n_def   = len(fn.func_defaults) if fn.func_defaults is not None else 0
 #         if len(params) < len(args) - n_def:
 #             raise Exception('Too few arguments given! Arguments "{}" are required by function "{}" but not given to the operation wrapper'.format(', '.join(args[len(params) - 1:-n_def]), fn.func_name))
