@@ -7,28 +7,30 @@ fi
 
 cd $1
 
-git clone https://github.com/pybind/pybind11.git
-cd pybind11
-mkdir build
-cd build
-if [ -z ${ROS_DISTRO} ] || [ ${ROS_DISTRO} = "noetic" ]; then
-    cmake .. -DCMAKE_BUILD_TYPE=Release -DPYBIND11_PYTHON_VERSION=3 -DPYBIND11_TEST=OFF
-else
-    cmake .. -DCMAKE_BUILD_TYPE=Release -DPYBIND11_PYTHON_VERSION=2 -DPYBIND11_TEST=OFF
+if [ ! -d "pybind11" ]; then
+    git clone https://github.com/pybind/pybind11.git
+    cd pybind11
+    mkdir build
+    cd build
+    if [ -z ${ROS_DISTRO} ] || [ ${ROS_DISTRO} = "noetic" ]; then
+        cmake .. -DCMAKE_BUILD_TYPE=Release -DPYBIND11_PYTHON_VERSION=3 -DPYBIND11_TEST=OFF
+    else
+        cmake .. -DCMAKE_BUILD_TYPE=Release -DPYBIND11_PYTHON_VERSION=2 -DPYBIND11_TEST=OFF
+    fi
+    sudo make install
+    cd ../..
 fi
 
-sudo make install -j4
+if [ ! -d "bullet3" ]; then
+    git clone https://github.com/ARoefer/bullet3.git --branch kineverse_new
 
-cd ../..
-git clone https://github.com/ARoefer/bullet3.git
+    cd bullet3
 
-cd bullet3
-git checkout kineverse_new
+    if [ -z ${ROS_DISTRO} ] || [ ${ROS_DISTRO} = "noetic" ]; then
+        ./build_cmake_pybullet_3.8_double.sh Release
+    else
+        ./build_cmake_pybullet_2.7_double.sh Release
+    fi
 
-if [ -z ${ROS_DISTRO} ] || [ ${ROS_DISTRO} = "noetic" ]; then
-    ./build_cmake_pybullet_3.8_double.sh Release
-else
-    ./build_cmake_pybullet_2.7_double.sh Release
+    echo "export PYTHONPATH=${PYTHONPATH}:${PWD}/build_cmake/better_python:${PWD}/build_cmake/examples/pybullet" >> ~/.bashrc
 fi
-
-echo "export PYTHONPATH=${PYTHONPATH}:${PWD}/build_cmake/better_python:${PWD}/build_cmake/examples/pybullet" >> ~/.bashrc
