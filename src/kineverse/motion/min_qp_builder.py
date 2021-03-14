@@ -162,7 +162,15 @@ class MinimalQPBuilder(object):
         return {cv: xdot_full[i] for i, cv in enumerate(self.cv)}
 
     def equilibrium_reached(self, low_eq=1e-3, up_eq=-1e-3):
-        return (self.np_lb <= low_eq).min() and (self.np_lbA <= low_eq).min() and (self.np_ub >= up_eq).min() and (self.np_ubA >= up_eq).min()
+        return (self.np_lb <= low_eq).min()  and \
+               (self.np_lbA <= low_eq).min() and \
+               (self.np_ub >= up_eq).min()   and \
+               (self.np_ubA >= up_eq).min()
+
+    def get_violating_bounds(self, low_eq=1e-3, up_eq=-1e-3):
+        return {n: (l, u) for n, l, u in zip(self.row_names, 
+                                             self.np_lbA.flatten(),
+                                             self.np_ubA.flatten()) if l > low_eq or u < up_eq}
 
     def last_matrix_str(self):
         if len(self.A_dfs) > 0:
