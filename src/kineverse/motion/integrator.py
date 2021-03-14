@@ -93,10 +93,11 @@ class CommandIntegrator(object):
             cmd = self.qp_builder.get_cmd(self.state, deltaT=dt)
             cmd_accu = cmd_accu * 0.5 + self.qp_builder._cmd_log[-1] * dt
             if self.qp_builder.equilibrium_reached(self.equilibrium, -self.equilibrium):
-                # print('Equilibrium point reached after {} iterations'.format(x))
+                print('Equilibrium point reached after {} iterations'.format(x))
                 return
 
             if np.abs(cmd_accu).max() <= self.equilibrium:
+                print('Lack of command signal. Aborting early...')
                 return
 
             # print('---\n{}'.format('\n'.join(['{:>35}: {:>12.4f}'.format(k, v) for k, v in cmd.items()])))
