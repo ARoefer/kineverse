@@ -5,7 +5,6 @@ This model recognizes the insertion of rigid bodies and builds up a collision sc
 import numpy as np
 
 import kineverse.gradients.common_math  as cm
-import kineverse.gradients.llvm_wrapper as llvm
 import kineverse.model.model_settings   as model_settings
 
 from kineverse.gradients.diff_logic     import Symbol, Position
