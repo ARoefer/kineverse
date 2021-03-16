@@ -2,7 +2,6 @@ import numpy  as np
 import pandas as pd
 
 import kineverse.gradients.common_math  as cm
-import kineverse.gradients.llvm_wrapper as llvm
 
 from kineverse.motion.qp_solver             import QPSolver, QPSolverException
 
