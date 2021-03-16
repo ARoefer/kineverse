@@ -3,7 +3,6 @@ import numpy  as np
 import pandas as pd
 
 import kineverse.gradients.common_math  as cm
-import kineverse.gradients.llvm_wrapper as llvm
 
 from kineverse.visualization.plotting  import ValueRecorder, SymbolicRecorder
 from kineverse.gradients.diff_logic    import erase_type, \
