@@ -7,7 +7,12 @@ import kineverse.gradients.common_math as cm
 
 from collections                       import namedtuple
 from kineverse.time_wrapper            import Time
-from kineverse.symengine_types         import symengine_types
+
+if cm.SYM_MATH_ENGINE == 'SYMENGINE':
+    from kineverse.symengine_types         import symengine_types
+else:
+    symengine_types = set()
+
 
 def res_pkg_path(rpath):
     """Resolves a ROS package relative path to a global path.
