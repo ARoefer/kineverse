@@ -14,10 +14,11 @@ from kineverse.gradients.diff_logic         import Position, \
                                                    Snap, \
                                                    Symbol, \
                                                    DiffSymbol, \
-                                                   IntSymbol
+                                                   IntSymbol, \
+                                                   erase_type
 from kineverse.gradients.gradient_container import GradientContainer as GC, \
                                                    GradientMatrix    as GM 
-from kineverse.symengine_types              import symengine_types, symengine_matrix_types
+
 
 contrast = 1e10
 
@@ -63,6 +64,8 @@ if cm.SYM_MATH_ENGINE == 'CASADI':
             return cm.subs(expr.to_sym_matrix(), subs_dict)
         return cm.subs(expr, subs_dict)
 else:
+    from kineverse.symengine_types              import symengine_types, symengine_matrix_types
+    
     subs = cm.subs
 
 
