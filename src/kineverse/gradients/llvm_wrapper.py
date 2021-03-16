@@ -3,7 +3,7 @@
 # Project page: https://github.com/SemRoCo/giskardpy
 # -------------------------------------------------------------
 import numpy     as np
-import symengine as se
+
 from symengine.lib.symengine_wrapper import Lambdify
 
 class SymengineException(Exception):

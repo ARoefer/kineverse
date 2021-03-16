@@ -2,7 +2,9 @@ import traceback
 
 import kineverse.gradients.common_math as cm
 import simplejson as json
-import symengine  as sp
+
+if cm.SYM_MATH_ENGINE == 'SYMENGINE':
+    import symengine  as sp
 
 from kineverse.json_serializable import JSONSerializable
 from kineverse.utils             import import_class
