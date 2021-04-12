@@ -256,3 +256,11 @@ class PathSet(set):
         if type(key) != Path:
             raise Exception('Path sets can only store paths. Key: "{}" is of type {}.'.format(key, type(key)))
         super(PathSet, self).add(key)
+
+    def intersection(self, other_set):
+        out = PathSet()
+        for p in self:
+            for x in range(1, len(p)):
+                if p[:x] in other_set:
+                    out.add(p)
+        return out

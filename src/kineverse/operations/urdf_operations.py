@@ -84,7 +84,14 @@ class PrismaticJoint(KinematicJoint):
     def _json_data(self, json_dict):
         super(PrismaticJoint, self)._json_data(json_dict)
         del json_dict['jtype']
-        json_dict.update({'position': self.position})
+        json_dict.update({'position'   : self.position,
+                          'axis'       : self.axis,
+                          'tf_offset'  : self.tf_offset,
+                          'limit_lower': self.limit_lower,
+                          'limit_upper': self.limit_upper,
+                          'limit_vel'  : self.limit_vel,
+                          'multiplier' : self.multiplier,
+                          'offset'     : self.offset})
 
     def __deepcopy__(self, memo):
         out = type(self)(self.parent,
@@ -114,7 +121,12 @@ class ContinuousJoint(KinematicJoint):
     def _json_data(self, json_dict):
         super(ContinuousJoint, self)._json_data(json_dict)
         del json_dict['jtype']
-        json_dict.update({'position': self.position})
+        json_dict.update({'position'   : self.position,
+                          'axis'       : self.axis,
+                          'tf_offset'  : self.tf_offset,
+                          'limit_vel'  : self.limit_vel,
+                          'multiplier' : self.multiplier,
+                          'offset'     : self.offset})
 
     def __deepcopy__(self, memo):
         out = type(self)(self.parent,
@@ -145,7 +157,14 @@ class RevoluteJoint(KinematicJoint):
     def _json_data(self, json_dict):
         super(RevoluteJoint, self)._json_data(json_dict)
         del json_dict['jtype']
-        json_dict.update({'position': self.position})
+        json_dict.update({'position'   : self.position,
+                          'axis'       : self.axis,
+                          'tf_offset'  : self.tf_offset,
+                          'limit_lower': self.limit_lower,
+                          'limit_upper': self.limit_upper,
+                          'limit_vel'  : self.limit_vel,
+                          'multiplier' : self.multiplier,
+                          'offset'     : self.offset})
 
     def __deepcopy__(self, memo):
         out = type(self)(self.parent,
@@ -170,6 +189,7 @@ class CreateURDFFrameConnection(Operation):
              'child_full_pose': child_frame + ('pose',),
              'child_link_joint': child_frame + ('parent_joint',)},
             joint_name=str(joint), joint=joint, parent_frame=parent_frame, child_frame=child_frame)
+        self._construction_args = [joint, parent_frame, child_frame]
 
     def _execute_impl(self, joint_name, joint, parent_frame, child_frame):
         constraints = {}

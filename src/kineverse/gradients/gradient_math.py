@@ -62,9 +62,57 @@ if cm.SYM_MATH_ENGINE == 'CASADI':
         elif type(expr) == GM:
             return cm.subs(expr.to_sym_matrix(), subs_dict)
         return cm.subs(expr, subs_dict)
+
+    import kineverse.casadi_parser as cp
+
+    JSON_TRIGGERS = {'CA_EXPRESSION'} 
+
+    def serialize_json(expression):
+        if type(expression) not in cm.math_types:
+            raise Exception('Object of type "{}" is not a Casadi math object.'.format(type(expression)))
+        return {'__type__': 'CA_EXPRESSION', 'data': repr(expression)}
+
+    def deserialize_json(json_dict):
+        if '__type__' not in json_dict:
+            raise Exception('Field "__type__" must be contained in passed JSON dict.')
+
+        if json_dict['__type__'] not in JSON_TRIGGERS:
+            raise Exception('JSON type hint "{}" does not name a Casadi expression type.'.format(json_dict['__type__']))
+
+        return cp.parse_casadi(json_dict['data'])
+
 else:
     subs = cm.subs
 
+    JSON_TRIGGERS = {'SYM_MATRIX', 'SYM_EXPR'} 
+
+    def encode_symbolic_number(obj):
+        return float(obj) if type(obj) in cm.symfloats else int(obj)
+
+    def serialize_json(expression):
+        if type(expression) not in cm.math_types:
+            raise Exception('Object of type "{}" is not a Symengine math object.'.format(type(expression)))
+        if cm.is_matrix(expression):
+            return {'__type__': 'SYM_MATRIX', 'data': obj.tolist()}
+        else:
+            return {'__type__': 'SYM_EXPR',   'data': str(obj)} if cm.is_symbolic(obj) else encode_symengine_number(obj)
+
+    def deserialize_json(expression):
+        if '__type__' not in json_dict:
+            raise Exception('Field "__type__" must be contained in passed JSON dict.')
+
+        if json_dict['__type__'] not in JSON_TRIGGERS:
+            raise Exception('JSON type hint "{}" does not name a Symengine expression type.'.format(json_dict['__type__']))
+
+        if json_dict['__type__'] == 'SYM_MATRIX':
+            return cm.Matrix(json_dict['data'])# nested_list_to_sym(json_dict['data'])
+        else:
+            try:
+                return cm.sp.sympify(json_dict['data'].encode('utf-8')) if isinstance(json_dict['data'], unicode) else cm.sp.sympify(json_dict['data'])
+            except NameError as e:
+                raise Exception('NameError Occured while trying to sympify string {}. Error: {}\n'.format(repr(json_dict['data']), str(e)))
+
+math_types = cm.math_types
 
 is_symbol = cm.is_symbol
 eq_expr   = cm.eq_expr

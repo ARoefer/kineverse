@@ -29,7 +29,8 @@ class DiffDriveJoint(KinematicJoint):
                           'r_wheel_vel' : self.r_wheel_vel,
                           'l_wheel_vel' : self.l_wheel_vel,
                           'wheel_radius' : self.wheel_radius,
-                          'wheel_distance' : self.wheel_distance})
+                          'wheel_distance' : self.wheel_distance,
+                          'limit_vel' : self.limit_vel})
 
     def __eq__(self, other):
         if isinstance(other, DiffDriveJoint):
@@ -78,7 +79,10 @@ class OmnibaseJoint(KinematicJoint):
         del json_dict['jtype']
         json_dict.update({'x_pos'   : self.x_pos,
                           'y_pos'   : self.y_pos,
-                          'a_pos'   : self.a_pos})
+                          'a_pos'   : self.a_pos,
+                          'rot_axis': self.rot_axis,
+                          'limit_lin_vel': self.limit_lin_vel,
+                          'limit_ang_vel': self.limit_ang_vel})
 
     def __eq__(self, other):
         if isinstance(other, OmnibaseJoint):
@@ -126,39 +130,39 @@ class BallJoint(KinematicJoint):
         return False
 
 
-class SetBallJoint(Operation):
-    def init(self, parent_pose, child_pose, connection_path, connection_tf, axis_x, axis_y, axis_z, pos_limit, vel_limit):
-        self.joint_obj = BallJoint(str(parent_pose[:-1]), str(child_pose[:-1]), axis_x, axis_y, axis_z)
-        self.conn_path = connection_path
-        op_construction_wrapper(super(SetBallJoint, self).init,
-                                'Ball Joint',
-                                ['child_pose', 'child_parent', 'child_parent_tf'],
-                                (connection_path, 'connection', self.joint_obj),
-                                parent_pose=parent_pose,
-                                child_pose=child_pose,
-                                child_parent=child_pose[:-1] + ('parent',),
-                                child_parent_tf=child_pose[:-1] + ('to_parent',),
-                                connection_tf=connection_tf,
-                                axis_x=axis_x,
-                                axis_y=axis_y,
-                                axis_z=axis_z,
-                                pos_limit=pos_limit,
-                                vel_limit=vel_limit)
+# class SetBallJoint(Operation):
+#     def init(self, parent_pose, child_pose, connection_path, connection_tf, axis_x, axis_y, axis_z, pos_limit, vel_limit):
+#         self.joint_obj = BallJoint(str(parent_pose[:-1]), str(child_pose[:-1]), axis_x, axis_y, axis_z)
+#         self.conn_path = connection_path
+#         op_construction_wrapper(super(SetBallJoint, self).init,
+#                                 'Ball Joint',
+#                                 ['child_pose', 'child_parent', 'child_parent_tf'],
+#                                 (connection_path, 'connection', self.joint_obj),
+#                                 parent_pose=parent_pose,
+#                                 child_pose=child_pose,
+#                                 child_parent=child_pose[:-1] + ('parent',),
+#                                 child_parent_tf=child_pose[:-1] + ('to_parent',),
+#                                 connection_tf=connection_tf,
+#                                 axis_x=axis_x,
+#                                 axis_y=axis_y,
+#                                 axis_z=axis_z,
+#                                 pos_limit=pos_limit,
+#                                 vel_limit=vel_limit)
 
-    def _apply(self, km, parent_pose, child_pose, child_parent, child_parent_tf, connection_tf, axis_x, axis_y, axis_z, pos_limit, vel_limit):
-        rot_axis = vector3(axis_x, axis_y, axis_z)
-        normed_axis = rot_axis / (norm(rot_axis) + 1e-4)
-        rot_matrix = rotation3_axis_angle(normed_axis, norm(rot_axis))
+#     def _apply(self, km, parent_pose, child_pose, child_parent, child_parent_tf, connection_tf, axis_x, axis_y, axis_z, pos_limit, vel_limit):
+#         rot_axis = vector3(axis_x, axis_y, axis_z)
+#         normed_axis = rot_axis / (norm(rot_axis) + 1e-4)
+#         rot_matrix = rotation3_axis_angle(normed_axis, norm(rot_axis))
 
-        pos_measure = dot_product(vector3(0,0,1), normed_axis)
-        limit_dot_space = cos(pos_limit)
+#         pos_measure = dot_product(vector3(0,0,1), normed_axis)
+#         limit_dot_space = cos(pos_limit)
 
-        return {'child_parent': self.joint_obj.parent,
-                'child_parent_tf': dot(connection_tf, child_parent_tf),
-                'child_pose': dot(parent_pose, connection_tf, rot_matrix, child_pose),
-                'connection': self.joint_obj}, \
-               {'{}_position'.format(self.conn_path): Constraint(limit_dot_space - pos_measure, 1, get_diff(pos_measure)),
-                '{}_velocity'.format(self.conn_path): Constraint(-vel_limit, vel_limit, get_diff(norm(rot_axis)))}
+#         return {'child_parent': self.joint_obj.parent,
+#                 'child_parent_tf': dot(connection_tf, child_parent_tf),
+#                 'child_pose': dot(parent_pose, connection_tf, rot_matrix, child_pose),
+#                 'connection': self.joint_obj}, \
+#                {'{}_position'.format(self.conn_path): Constraint(limit_dot_space - pos_measure, 1, get_diff(pos_measure)),
+#                 '{}_velocity'.format(self.conn_path): Constraint(-vel_limit, vel_limit, get_diff(norm(rot_axis)))}
 
 
 class TwoDOFRotationJoint(KinematicJoint):

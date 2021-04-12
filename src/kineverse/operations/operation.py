@@ -54,6 +54,7 @@ class Operation(object):
             raise OperationException('Declared outputs would interfer with normal attributes. Outputs in question:\n {}'.format('\n '.join(sorted(illegal_outputs))))
         
         self._outputs = output_paths.keys()
+        self._construction_args = NotImplemented
 
         self.output_path_assignments = {k: v if type(v) == Path else Path(v) for k, v in output_paths.items()}
         self.output_paths   = None

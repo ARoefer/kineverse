@@ -4,7 +4,8 @@ import datetime
 
 from multiprocessing import RLock
 
-import kineverse.network.names as stdn 
+import kineverse.gradients.gradient_math as gm
+import kineverse.network.names           as stdn
 
 from kineverse.model.paths             import Path, PathDict, collect_paths
 from kineverse.model.event_model       import EventModel
@@ -59,9 +60,9 @@ class ModelServer_NoROS(object):
                 changed_ops[call_msg.tag] = call_msg.operation
                 removed_ops.discard(call_msg.tag)
                 instr = decode_operation_instruction(call_msg)
-                for p in instr.op._root_set.values():
+                for p in instr.op.output_path_assignments.values():
                     if p[0] not in self._changed_set:
-                        self._changed_set[p[0]] = PathDict(False, default_factory=lambda: False)
+                        self._changed_set[p[0]] = PathDict(False, default_factory=bool)
                     self._changed_set[p[0]][p[1:]] = True
                 # FIXME: self._changed_constraints.update(op._root_set.values())
                 batch.append(instr)
@@ -76,9 +77,9 @@ class ModelServer_NoROS(object):
 
         for k in self._changed_constraints:
             if self.km.has_constraint(k):
-                model_update_msg.update.constraints.append(encode_constraint(k, km.get_constraint(k)))
+                model_update_msg.update.constraints.append(encode_constraint(k, self.km.get_constraint(k)))
             else:
-                cm.deleted_constraints.append(k)
+                self.km.deleted_constraints.append(k)
 
         self._changed_set         = {}
         self._changed_constraints = {}
@@ -126,16 +127,16 @@ class ModelServer_NoROS(object):
     def srv_get_constraints(self, req):
         res = GetConstraintsResponseMsg()
         with self.lock:
-            for k, c in self.km.get_constraints_by_symbols({se.Symbol(s) for s in req.symbols}).items():
+            for k, c in self.km.get_constraints_by_symbols({gm.Symbol(s) for s in req.symbols}).items():
                 res.constraints.append(encode_constraint(k, c))
         return res
 
     def srv_get_history(self, req):
         res = GetHistoryResponseMsg()
-        res.stamp = Time.now()
+        stamp = Time.now()
 
         with self.lock:
-            res.history = encode_operation_update(res.stamp, self.km.get_history_of([Path(x) for x in req.paths]))
+            res.history = encode_operation_update(stamp, self.km.get_history_of([Path(x) for x in req.paths]))
         return res
 
     @profile

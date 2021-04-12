@@ -39,6 +39,9 @@ def make_pkg_path(path):
     return path
 
 
+def import_module(module):
+    return importlib.import_module(module)
+
 def import_class(class_path):
     """Imports a class using a type string.
 
@@ -47,7 +50,7 @@ def import_class(class_path):
     :rtype: type
     """
     components = class_path.split('.')
-    mod = importlib.import_module('.'.join(components[:-1]))
+    mod = import_module('.'.join(components[:-1]))
     try:
         return getattr(mod, components[-1])
     except AttributeError:

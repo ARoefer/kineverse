@@ -39,6 +39,7 @@ class TestOperations(ut.TestCase):
         self.assertTrue(km.has_data(p))
         self.assertEquals(km.get_data(p), 5)
         km.remove_operation('create my_var')
+        km.clean_structure()
         self.assertFalse(km.has_data(p))
 
 
@@ -67,6 +68,7 @@ class TestOperations(ut.TestCase):
         self.assertEquals(km.get_data('my_obj/some_subobj/y'), 5)
         self.assertEquals(km.get_data('my_obj/some_subobj/z'), 10)
         km.remove_operation('create my_obj')
+        km.clean_structure()
         self.assertFalse(km.has_data('my_obj'))
         self.assertFalse(km.has_data('my_obj/some_scalar'))
         self.assertFalse(km.has_data('my_obj/some_subobj'))
@@ -89,6 +91,7 @@ class TestOperations(ut.TestCase):
         self.assertTrue(km.has_data('sin_of_my_var'))
         self.assertEquals(km.get_data('sin_of_my_var'), sin(5))
         km.remove_operation('compute sin of my_var')
+        km.clean_structure()
         self.assertFalse(km.has_data('sin_of_my_var'))
 
         with self.assertRaises(Exception):
@@ -103,6 +106,7 @@ class TestOperations(ut.TestCase):
         self.assertTrue(km.has_data('cross_of_a_b'))
         self.assertTrue(eq_expr(km.get_data('cross_of_a_b'), vector3(0,0,1)))
         km.remove_operation('compute cross of vectors')
+        km.clean_structure()
         self.assertFalse(km.has_data('cross_of_a_b'))
 
 if __name__ == '__main__':

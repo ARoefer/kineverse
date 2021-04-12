@@ -8,7 +8,8 @@ import kineverse.gradients.llvm_wrapper as llvm
 from kineverse.visualization.plotting  import ValueRecorder, SymbolicRecorder
 from kineverse.gradients.diff_logic    import erase_type, \
                                               get_symbol_type, \
-                                              Position
+                                              Position, \
+                                              Symbol
 from kineverse.motion.min_qp_builder   import TypedQPBuilder as TQPB, \
                                               GeomQPBuilder  as GQPB, \
                                               extract_expr
@@ -16,7 +17,7 @@ from kineverse.type_sets               import is_symbolic
 from kineverse.time_wrapper            import Time
 from tqdm import tqdm
 
-DT_SYM = Position('dt')
+DT_SYM = Symbol('dt')
 
 class CommandIntegrator(object):
     def __init__(self, qp_builder, integration_rules=None, start_state=None, recorded_terms={}, equilibrium=0.001, printed_vars=set()):

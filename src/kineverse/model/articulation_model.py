@@ -184,6 +184,39 @@ class ArticulationModel(object):
         self.clean_structure()
 
     @profile
+    # @type_check(float, Tag, Operation)
+    def _place_operation(self, stamp, tag, op):
+        self.clean_structure(stamp)
+        if tag in self.timeline_tags:
+            chunk = self.operation_history.get_chunk(self.timeline_tags[tag])
+            chunk.operation.revoke(self)
+
+        op.execute(self, stamp)
+        new_chunk = Chunk(stamp, op)
+
+        try:
+            if tag in self.timeline_tags:
+                self.operation_history.check_can_replace(chunk, new_chunk)
+
+                # Actually apply the generated changes to the model once
+                # history insertion worked out
+                self.operation_history.replace_chunk(chunk, new_chunk)
+            else:
+                self.timeline_tags[tag] = stamp
+                self.operation_history.check_can_insert(new_chunk)
+
+                # Actually apply the generated changes to the model once
+                # history insertion worked out
+                self.operation_history.insert_chunk(new_chunk)
+
+            op.apply_to_model(self, stamp)
+            self._touched_set  |= new_chunk.modifications
+            self._touched_stamp = new_chunk.stamp
+        except  Exception as e:
+            raise OperationException('Failed to apply operation "{}" tagged "{}" at time "{}". Error:\n  {}'.format(type(op), tag, stamp, e))
+
+
+    @profile
     @type_check(Tag, Operation)
     def apply_operation(self, tag, op):
         """Apply a single operation to the model. Operation is added at 
@@ -195,48 +228,7 @@ class ArticulationModel(object):
         :type   op: Operation
         """
         time = self.timeline_tags[tag] if tag in self.timeline_tags else self.operation_history.get_time_stamp()
-        self.clean_structure(time)
-
-        if tag in self.timeline_tags:
-            chunk = self.operation_history.get_chunk(self.timeline_tags[tag])
-            if chunk is None:
-                raise Exception('History returned no chunk for tag "{}" associated with timestamp {}. This should not happen.'.format(tag, self.timeline_tags[tag]))
-            chunk.operation.revoke(self)
-            try:
-                # Execute the operation to generate full modification set and dependencies
-                op.execute(self, time)
-                
-                # Create a new chunk and try inserting it into the history
-                new_chunk = Chunk(time, op)
-                self.operation_history.check_can_replace(chunk, new_chunk)
-
-                # Actually apply the generated changes to the model once
-                # history insertion worked out
-                op.apply_to_model(self, time)
-                self.operation_history.replace_chunk(chunk, new_chunk)
-                self._touched_set |= new_chunk.modifications
-                self._touched_stamp = new_chunk.stamp
-            except Exception as e:
-                raise OperationException('Failed to apply operation "{}" tagged "{}" at time "{}". Error:\n  {}'.format(type(op), tag, time, e))
-        else:
-            self.timeline_tags[tag] = time
-            try:
-                # Execute the operation to generate full modification set and dependencies
-                op.execute(self, time)
-                
-                # Create a new chunk and try inserting it into the history
-                new_chunk = Chunk(time, op)
-                # op.apply(self, self._touched_set)
-                self.operation_history.check_can_insert(new_chunk)
-
-                # Actually apply the generated changes to the model once
-                # history insertion worked out
-                op.apply_to_model(self, time)
-                self.operation_history.insert_chunk(new_chunk)
-                self._touched_set |= new_chunk.modifications
-                self._touched_stamp = new_chunk.stamp
-            except Exception as e:
-                raise OperationException('Failed to apply operation "{}" tagged "{}" at time "{}". Traceback:\n  {}\nError: \n{}'.format(type(op), tag, time, traceback.print_exc(), e))
+        self._place_operation(time, tag, op)
 
 
     @profile
@@ -258,22 +250,7 @@ class ArticulationModel(object):
             raise Exception('Inserting operations before others can only be done for new operations. Tag "{}" is already refering to an operation.'.format(tag))
 
         time = self.operation_history.get_time_stamp(before=self.timeline_tags[before_tag])
-        self.clean_structure(time)
-        self.timeline_tags[tag] = time
-        try:
-            # Execute the operation to generate full modification set and dependencies
-            op.execute(self, time)
-
-            new_chunk = Chunk(time, op)
-            self.operation_history.check_can_insert(new_chunk)
-            # op.apply(self, self._touched_set, time)
-
-            op.apply_to_model(self, time)
-            self.operation_history.insert_chunk(new_chunk)
-            self._touched_set |= new_chunk.modifications
-            self._touched_stamp = new_chunk.stamp
-        except Exception as e:
-            raise OperationException('Failed to apply operation "{}" tagged "{}" at time "{}". Traceback:\n  {}\nError: \n{}'.format(type(op), tag, time, traceback.print_exc(), e))
+        self._place_operation(time, tag, op)
 
 
     @profile
@@ -295,21 +272,7 @@ class ArticulationModel(object):
             raise Exception('Inserting operations after others can only be done for new operations. Tag "{}" is already refering to an operation.'.format(tag))
 
         time = self.operation_history.get_time_stamp(after=self.timeline_tags[after_tag])
-        self.clean_structure(time)
-        self.timeline_tags[tag] = time
-        try:
-            op.execute(self, time)
-
-            new_chunk = Chunk(time, op)
-            self.operation_history.check_can_insert(new_chunk)
-            # op.apply(self, self._touched_set, time)
-            
-            op.apply_to_model(self, time)
-            self.operation_history.insert_chunk(new_chunk)
-            self._touched_set |= new_chunk.modifications
-            self._touched_stamp = new_chunk.stamp
-        except Exception as e:
-            raise OperationException('Failed to apply operation "{}" tagged "{}" at time "{}". Traceback:\n  {}\nError: \n{}'.format(type(op), tag, time, traceback.print_exc(), e))
+        self._place_operation(time, tag, op)
 
 
     @profile
@@ -326,7 +289,7 @@ class ArticulationModel(object):
         self.operation_history.check_can_remove(chunk)
         chunk.operation.revoke(self)
         self.operation_history.remove_chunk(chunk)
-        self._touched_set |= chunk.modifications
+        self._touched_set  |= chunk.modifications
         self._touched_stamp = chunk.stamp if not model_settings.BRUTE_MODE else 0
         del self.timeline_tags[tag]
 
@@ -360,6 +323,8 @@ class ArticulationModel(object):
                     self._touched_stamp = chunk.stamp
 
                 self._touched_set = set()
+            elif len(self.operation_history.chunk_history) == 0:
+                self.data_tree.clear()
         else:
             while len(self.operation_history.dirty_chunks) > 0 and self.operation_history.dirty_chunks[0].stamp <= until:
                 chunk = self.operation_history.dirty_chunks[0]

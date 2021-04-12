@@ -1,3 +1,5 @@
+import numpy as np
+
 from kineverse.utils                import deepcopy
 from kineverse.model.paths          import Path, CPath, collect_paths
 from kineverse.operations.operation import Operation #, op_construction_wrapper
@@ -25,6 +27,7 @@ from kineverse.operations.operation import Operation #, op_construction_wrapper
 class CreateValue(Operation):
     def __init__(self, path, value):
         super(CreateValue, self).__init__({'output': path}, value=value)
+        self._construction_args = [path, value]
 
     def _execute_impl(self, value):
         self.output = deepcopy(value)
@@ -38,13 +41,14 @@ class ExecFunction(Operation):
             args    = fn.__init__.im_func.func_code.co_varnames[1:fn.__init__.im_func.func_code.co_argcount]
             n_def   = len(fn.__init__.im_func.func_defaults) if fn.__init__.im_func.func_defaults is not None else 0
             fn_name = str(fn)
-        else:
+        else: # type is 'function'
             args    = fn.func_code.co_varnames[:fn.func_code.co_argcount]
             n_def   = len(fn.func_defaults) if fn.func_defaults is not None else 0
             fn_name = fn.func_name
         if len(fn_args) < len(args) - n_def:
             raise Exception('Too few arguments given! Arguments "{}" are required by function "{}" but not given to the operation wrapper'.format(', '.join(args[len(fn_args) - 1:-n_def]), fn_name))
         super(ExecFunction, self).__init__({'result': out_path}, function=fn)
+        self._construction_args = (out_path, fn) + tuple(fn_args)
         
         # Manually modify the arguments and dependencies for this operation. DO NOT DO THIS OTHERWISE, IT IS BAD PRACTICE
         self._exec_args.update({k: deepcopy(v) for k, v in zip(args[:len(fn_args)], fn_args)})

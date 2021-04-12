@@ -19,7 +19,7 @@ default_bound  = 1e9
 
 HardConstraint = Constraint
 
-PANDA_LOGGING  = False
+PANDA_LOGGING  = True
 
 class SoftConstraint(Constraint):
     def __init__(self, lower, upper, weight, expr):
@@ -131,7 +131,7 @@ class MinimalQPBuilder(object):
             if PANDA_LOGGING:
                 self.A_dfs.append(dfA)
                 self.H_dfs.append(dfH)
-            self._cmd_log.append(xdot_full[:self.n_cv])
+            self._cmd_log.append(xdot_full[:self.n_cv].copy())
         except QPSolverException as e:
             if not PANDA_LOGGING:
                 dfH = pd.DataFrame(np.vstack((self.np_lb, self.np_ub, self.np_H.diagonal())), index=['lb', 'ub', 'weight'], columns=self.col_names)

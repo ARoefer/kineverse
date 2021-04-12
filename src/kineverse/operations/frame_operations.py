@@ -39,29 +39,31 @@ def fk_a_in_b(ks, frame_a, frame_b):
 
         return dot(inverse_frame(b_in_root), a_in_root)
 
-class CreateRelativeFrame(Operation):
-    def init(self, path, frame):
-        self.frame = frame
-        attrs = collect_paths(self.frame, Path('frame'))
-        super(CreateRelativeFrame, self).init('Frame',
-                                              [str(a) for a in attrs],
-                                              parent=Path(self.frame.parent),
-                                              **{str(a): path + a[1:] for a in attrs})
-    def _apply(self, ks, parent):
-        return {'frame': Frame(self.frame.parent, dot(parent.pose, self.frame.to_parent), self.frame.to_parent)}, {}
+# class CreateRelativeFrame(Operation):
+#     def init(self, path, frame):
+#         self.frame = frame
+#         attrs = collect_paths(self.frame, Path('frame'))
+#         super(CreateRelativeFrame, self).init('Frame',
+#                                               [str(a) for a in attrs],
+#                                               parent=Path(self.frame.parent),
+#                                               **{str(a): path + a[1:] for a in attrs})
+#         self._construction_args = [path, frame]
+
+#     def _apply(self, ks, parent):
+#         return {'frame': Frame(self.frame.parent, dot(parent.pose, self.frame.to_parent), self.frame.to_parent)}, {}
 
 
-class CreateRelativeTransform(Operation):
-    def init(self, transform_path, from_frame, to_frame):
-        self.tf_obj = Transform(from_frame, to_frame, None)
-        attrs       = collect_paths(self.tf_obj, Path('transform'))
-        super(CreateRelativeTransform, self).init('Relative Transform',
-                                                  [str(a) for a in attrs],
-                                                  frame_a=from_frame,
-                                                  frame_b=to_frame,
-                                                  **{str(a): transform_path + a[1:] for a in attrs})
+# class CreateRelativeTransform(Operation):
+#     def init(self, transform_path, from_frame, to_frame):
+#         self.tf_obj = Transform(from_frame, to_frame, None)
+#         attrs       = collect_paths(self.tf_obj, Path('transform'))
+#         super(CreateRelativeTransform, self).init('Relative Transform',
+#                                                   [str(a) for a in attrs],
+#                                                   frame_a=from_frame,
+#                                                   frame_b=to_frame,
+#                                                   **{str(a): transform_path + a[1:] for a in attrs})
 
-    def _apply(self, ks, frame_a, frame_b):
-        return {'transform': Transform(self.tf_obj.from_frame, 
-                                       self.tf_obj.to_frame, 
-                                       fk_a_in_b(ks, frame_a, frame_b))}, {}
+#     def _apply(self, ks, frame_a, frame_b):
+#         return {'transform': Transform(self.tf_obj.from_frame, 
+#                                        self.tf_obj.to_frame, 
+#                                        fk_a_in_b(ks, frame_a, frame_b))}, {}

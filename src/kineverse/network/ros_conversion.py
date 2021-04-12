@@ -30,7 +30,9 @@ inv_call_mapping = {v: t for t, v in call_mapping.items()}
 def encode_operation_update(stamp, tagged_ops):
     out = OperationsUpdateMsg()
     out.stamp = stamp
-    out.tags, out.stamps, out.operations = zip(*[(to.tag, to.stamp, encode_operation(to.op)) for to in tagged_ops])
+
+    if len(tagged_ops) > 0:
+        out.tags, out.stamps, out.operations = zip(*[(to.tag, to.stamp, encode_operation(to.op)) for to in tagged_ops])
     return out
 
 def decode_op_msg(msg):
