@@ -10,7 +10,7 @@ from kineverse.utils                    import bb
 
 class EmptyOperation(Operation):
     def __init__(self):
-        super(EmptyOperation, self).__init__('Empty Operation', [])
+        super(EmptyOperation, self).__init__([])
 
     def _apply(self, ks):
         return {}, {}

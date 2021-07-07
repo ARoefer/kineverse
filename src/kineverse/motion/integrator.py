@@ -3,7 +3,6 @@ import numpy  as np
 import pandas as pd
 
 import kineverse.gradients.common_math  as cm
-import kineverse.gradients.llvm_wrapper as llvm
 
 from kineverse.visualization.plotting  import ValueRecorder, SymbolicRecorder
 from kineverse.gradients.diff_logic    import erase_type, \
@@ -69,7 +68,7 @@ class CommandIntegrator(object):
 
 
     @profile
-    def run(self, dt=0.02, max_iterations=200, logging=True):
+    def run(self, dt=0.02, max_iterations=200, logging=True, show_progress=False):
         self.state[DT_SYM] = dt
         
         # Precompute geometry related values for better plots
@@ -77,8 +76,9 @@ class CommandIntegrator(object):
             self.qp_builder.compute_queries(self.state)
 
         cmd_accu = np.zeros(self.qp_builder.n_cv)
-        # for x in range(max_iterations):
-        for x in tqdm(range(max_iterations), desc='Running "{}" for {} iterations'.format(self.recorder.title, max_iterations)):
+        temp = range(max_iterations) if not show_progress \
+                                     else tqdm(range(max_iterations), desc='Running "{}" for {} iterations'.format(self.recorder.title, max_iterations))
+        for x in temp:
             self.current_iteration = x
             if rospy.is_shutdown():
                 break
@@ -127,3 +127,6 @@ class CommandIntegrator(object):
 
     def _post_update(self, dt, cmd):
         pass
+
+    def get_latest_error(self):
+        return self.qp_builder.latest_error

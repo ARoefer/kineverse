@@ -294,7 +294,7 @@ def load_urdf(ks,
                 urdf_to_geometry(c.geometry, collision[x])
         elif u_link.collision is not None:
             collision = {'0': Geometry(str(link_path), urdf_origin_to_transform(u_link.collision.origin), '')}
-            urdf_to_geometry(u_link.collision.geometry, collision.values()[0])
+            urdf_to_geometry(u_link.collision.geometry, next(iter(collision.values())))
 
         if hasattr(u_link, 'visuals') and u_link.visuals is not None and len(u_link.visuals) > 0:
             geometry = {}
@@ -303,7 +303,7 @@ def load_urdf(ks,
                 urdf_to_geometry(v.geometry, geometry[x])
         elif u_link.visual is not None:
             geometry = {'0': Geometry(str(link_path), urdf_origin_to_transform(u_link.visual.origin), '')}
-            urdf_to_geometry(u_link.visual.geometry, geometry.values()[0])
+            urdf_to_geometry(u_link.visual.geometry, next(iter(geometry.values())))
 
         if u_link.inertial is not None:
             if u_link.inertial.origin is not None:

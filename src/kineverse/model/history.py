@@ -16,11 +16,11 @@ class Timeline(SortedList):
 
         while first <= last:
             pos   = (first + last) // 2
-            found = self[pos] if self[pos] <= key else found
-            if self[pos] == key:
+            found = self[pos] if self[pos].stamp <= key else found
+            if self[pos].stamp == key:
                 break
 
-            if key < self[pos]:
+            if key < self[pos].stamp:
                 last  = pos - 1
             else:
                 first = pos + 1
@@ -34,11 +34,11 @@ class Timeline(SortedList):
 
         while first <= last:
             pos   = (first + last) // 2
-            found = self[pos] if self[pos] >= key else found
-            if self[pos] == key:
+            found = self[pos] if self[pos].stamp >= key else found
+            if self[pos].stamp == key:
                 break
 
-            if key < self[pos]:
+            if key < self[pos].stamp:
                 last  = pos - 1
             else:
                 first = pos + 1

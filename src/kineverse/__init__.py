@@ -1,6 +1,7 @@
 try:
     import builtins
-    
+    import inspect
+
     try:
         f = profile
     except NameError:
@@ -14,9 +15,9 @@ try:
         def dec_check(f):
             if TYPE_CHECKING:
                 def checked_f(*args):
-                    args_start = 0 if f.__code__.co_varnames[0] != 'self' else 1
+                    args_start = 0 if next(iter(inspect.signature(f).parameters.keys())) != 'self' else 1
                     if min([isinstance(v, t) for t, v in zip(types[:len(args) - args_start], args[args_start:])]) is False:
-                        raise Exception('Function {} called with wrong types:\n  Signature: {}\n      Given: {}'.format(f.func_name, ', '.join([str(t) for t in types[:len(args) - args_start]]), ', '.join([str(type(a)) for a in args[args_start:]])))
+                        raise Exception('Function {} called with wrong types:\n  Signature: {}\n      Given: {}'.format(str(f), ', '.join([str(t) for t in types[:len(args) - args_start]]), ', '.join([str(type(a)) for a in args[args_start:]])))
                     return f(*args)
                 return checked_f
             else:

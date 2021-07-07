@@ -43,7 +43,7 @@ class TrajectoryVisualizer(object):
 
 
     def visualize(self, traj_dict, hz=50):
-        joints      = sum(self.joint_symbols.values(), [])
+        joints      = sum(list(self.joint_symbols.values()), [])
         traj_len    = len(traj_dict.values()[0])
 
         traj      = {j: [0.0] * traj_len if str(j) not in traj_dict else traj_dict[str(j)] for j in joints}

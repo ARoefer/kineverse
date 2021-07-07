@@ -2,7 +2,6 @@ import numpy  as np
 import pandas as pd
 
 import kineverse.gradients.common_math  as cm
-import kineverse.gradients.llvm_wrapper as llvm
 
 from kineverse.motion.qp_solver             import QPSolver, QPSolverException
 
@@ -87,7 +86,8 @@ class MinimalQPBuilder(object):
         self.A_dfs     = []
         self.H_dfs     = []
         self._cmd_log  = []
-        
+        self.latest_error = None
+
         self._build_M()
 
     def _build_M(self):
@@ -104,6 +104,7 @@ class MinimalQPBuilder(object):
 
     def reset_solver(self):
         self.qp_solver = QPSolver(self.A.shape[1], self.A.shape[0])
+        self.latest_error = None
 
     @profile
     def get_cmd(self, substitutions, nWSR=None, deltaT=None):
@@ -128,6 +129,7 @@ class MinimalQPBuilder(object):
         try:
             xdot_full = self.qp_solver.solve(self.np_H, self.np_g, self.np_A, self.np_lb,  self.np_ub, 
                                                                     self.np_lbA, self.np_ubA, nWSR)
+            self.latest_error = np.sum(xdot_full[len(self.cv):])
             if PANDA_LOGGING:
                 self.A_dfs.append(dfA)
                 self.H_dfs.append(dfH)

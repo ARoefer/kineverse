@@ -87,6 +87,18 @@ GEOM_TYPE_BOX      = 'box'
 GEOM_TYPE_CYLINDER = 'cylinder'
 GEOM_TYPE_SPHERE   = 'sphere'
 
+def Box(parent_path, pose, scale=None):
+    return Geometry(parent_path, pose, GEOM_TYPE_BOX, scale, None)
+
+def Mesh(parent_path, pose, mesh, scale=None):
+    return Geometry(parent_path, pose, GEOM_TYPE_MESH, scale, mesh)
+
+def Cylinder(parent_path, pose, diameter, height):
+    return Geometry(parent_path, pose, GEOM_TYPE_CYLINDER, vector3(diameter, diameter, height), None)
+
+def Sphere(parent_path, pose, radius):
+    return Geometry(parent_path, pose, GEOM_TYPE_SPHERE, vector3(radius, radius, radius), None)
+
 
 class InertialData(Frame):
     """Unused."""

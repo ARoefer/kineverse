@@ -41,9 +41,9 @@ class ExecFunction(Operation):
             n_def   = len([p for p in inspect.signature(fn.__init__).parameters.values() if p.default != inspect._empty])
             fn_name = str(fn)
         else:
-            args    = fn.__code__.co_varnames[:fn.__code__.co_argcount]
-            n_def   = len(fn.func_defaults) if fn.func_defaults is not None else 0
-            fn_name = fn.func_name
+            args    = [k for k in inspect.signature(fn).parameters.keys()]
+            n_def   = len([p for p in inspect.signature(fn).parameters.values() if p.default != inspect._empty])
+            fn_name = str(fn)
         if len(fn_args) < len(args) - n_def:
             raise Exception('Too few arguments given! Arguments "{}" are required by function "{}" but not given to the operation wrapper'.format(', '.join(args[len(fn_args) - 1:-n_def]), fn_name))
         super(ExecFunction, self).__init__({'result': out_path}, function=fn)

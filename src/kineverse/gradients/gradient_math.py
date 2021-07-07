@@ -84,7 +84,9 @@ trace     = cm.trace
 speed_up  = cm.speed_up
 vstack    = cm.vstack
 hstack    = cm.hstack
-
+atan2     = cm.atan2
+numeric_eq = cm.numeric_eq
+to_list   = cm.to_list
 
 def is_symbolic(expr):
     """Is the given expression symbolic?"""
@@ -254,6 +256,7 @@ def norm(v):
 
 dot  = cm.dot
 dot_product = cm.dot_product
+diag = cm.diag
 
 def cross(u, v):
     """Computes the cross product between two vectors."""

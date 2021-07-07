@@ -70,7 +70,7 @@ class ModelTFBroadcaster(object):
                 indices = set(sum(self.s_frame_map.values(), [])) # set(sum([self.s_frame_map[s] for s in update if s in self.s_frame_map], []))
                 now     = Time.now()
                 self.visualizer.begin_draw_cycle('debug')
-                self.visualizer.draw_poses('debug', cm.eye(4), 0.1, 0.01, [cm.Matrix(self.np_poses[x * 4:x * 4 + 4].tolist()) for x in range(self.np_poses.shape[0]/4)])
+                self.visualizer.draw_poses('debug', cm.eye(4), 0.1, 0.01, [cm.Matrix(self.np_poses[x * 4:x * 4 + 4].tolist()) for x in range(self.np_poses.shape[0] // 4)])
                 self.visualizer.render('debug')
 
                 published_frames = []
@@ -150,7 +150,7 @@ class ModelTFBroadcaster_URDF(ModelTFBroadcaster):
             root_frames = get_root_frames(frames)
             if len(root_frames) != 1:
                 raise Exception('There should be exactly one root frame in a model. There are: {}\nFrames:\n {}\nRoots:\n {}'.format(len(root_frames), '\n '.join(frames.keys()), '\n '.join(root_frames)))
-            root_frame = root_frames.values()[0].parent
+            root_frame = next(iter(root_frames.values())).parent
 
             fs  = {}
             rbs = {}
