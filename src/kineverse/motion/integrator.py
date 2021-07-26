@@ -68,7 +68,7 @@ class CommandIntegrator(object):
 
 
     @profile
-    def run(self, dt=0.02, max_iterations=200, logging=True, show_progress=False):
+    def run(self, dt=0.02, max_iterations=200, logging=True, show_progress=False, real_time=False):
         self.state[DT_SYM] = dt
         
         # Precompute geometry related values for better plots
@@ -122,8 +122,8 @@ class CommandIntegrator(object):
             #     print('\n'.join(strs))
 
             self._post_update(dt, cmd)
-
-            # Time.sleep(dt)
+            if real_time:
+                Time.sleep(dt)
 
     def _post_update(self, dt, cmd):
         pass
