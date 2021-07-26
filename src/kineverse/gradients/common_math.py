@@ -190,7 +190,7 @@ if SYM_MATH_ENGINE == 'CASADI':
     def to_numpy(matrix):
         # type: (object) -> np.ndarray
         if type(matrix) != np.ndarray:
-            return np.array(matrix.elements()).astype(float).reshape((matrix.shape[1], matrix.shape[0])).T
+            return np.array([float(x) for x in matrix.elements()]).reshape((matrix.shape[1], matrix.shape[0])).T
         return matrix
 
     def diff(expression, symbol):
