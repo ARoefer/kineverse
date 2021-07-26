@@ -6,7 +6,14 @@ from catkin_pkg.python_setup import generate_distutils_setup
 d = generate_distutils_setup(
    packages=['kineverse'],
    package_dir={'': 'src'},
-   requires=['numpy', 'symengine']
+   requires=['numpy', 
+             'casadi', 
+             'simplejson',
+             'tqdm',
+             'sortedcontainers',
+             'pandas',
+             'matplotlib',
+             'urdf_parser_py']
 )
 
 setup(**d)
