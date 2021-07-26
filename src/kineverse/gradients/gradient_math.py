@@ -15,7 +15,14 @@ from kineverse.gradients.diff_logic         import Position, \
                                                    Symbol, \
                                                    DiffSymbol, \
                                                    IntSymbol, \
-                                                   erase_type
+                                                   erase_type, \
+                                                   get_symbol_type, \
+                                                   TYPE_UNKNOWN, \
+                                                   TYPE_POSITION, \
+                                                   TYPE_VELOCITY, \
+                                                   TYPE_ACCEL, \
+                                                   TYPE_JERK, \
+                                                   TYPE_SNAP
 from kineverse.gradients.gradient_container import GradientContainer as GC, \
                                                    GradientMatrix    as GM 
 

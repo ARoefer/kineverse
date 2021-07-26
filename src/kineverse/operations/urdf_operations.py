@@ -184,13 +184,13 @@ class CreateURDFFrameConnection(Operation):
                 pos += joint.offset
 
             if hasattr(joint, 'limit_lower') and joint.limit_lower is not None:
-                constraints['{}_position'.format(joint_name)] = Constraint(joint.limit_lower - pos,
-                                                                           joint.limit_upper - pos,
-                                                                           pos)
+                constraints[f'{joint_name}_position'] = Constraint(joint.limit_lower - pos,
+                                                                   joint.limit_upper - pos,
+                                                                   pos)
             if joint.limit_vel is not None:
-                constraints['{}_velocity'.format(joint_name)] = Constraint(-joint.limit_vel,
-                                                                           joint.limit_vel,
-                                                                           vel)
+                constraints[f'{joint_name}_velocity'] = Constraint(-joint.limit_vel,
+                                                                    joint.limit_vel,
+                                                                    vel)
 
             if joint.type == 'prismatic':
                 new_local_fk = dot(joint.tf_offset,
