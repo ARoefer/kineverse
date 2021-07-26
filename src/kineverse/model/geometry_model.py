@@ -387,26 +387,30 @@ class GeometryModel(EventModel):
         cythonized_matrix = cm.speed_up(pose_matrix, cm.free_symbols(pose_matrix))
 
         # world = pb.KineverseWorld()
-        # filtered_objs = objs if not include_static else objs + self._static_objects
         # for obj in filtered_objs:
         #     world.add_collision_object(obj)
 
-        return CollisionSubworld(self.kw, obj_names, objs, cm.free_symbols(pose_matrix), cythonized_matrix)
+        if include_static:
+            return CollisionSubworld(self.kw, obj_names, objs, 
+                                     cm.free_symbols(pose_matrix), cythonized_matrix, self._static_objects.copy())
+        return CollisionSubworld(self.kw, obj_names, objs, 
+                                 cm.free_symbols(pose_matrix), cythonized_matrix)
 
 
 class CollisionSubworld(object):
     """A wrapper around the bpb collision world which is focused on a subset of objects."""
-    def __init__(self, world, names, collision_objects, free_symbols, pose_generator):
+    def __init__(self, world, names, dynamic_objects, free_symbols, pose_generator, static_objects=[]):
         self.world = world
         self.names = names
-        self.collision_objects = collision_objects
-        self.named_objects     = dict(zip(self.names, self.collision_objects))
-        self.object_name_map   = {o: n for n, o in self.named_objects.items()}
-        self.free_symbols      = free_symbols
-        self.pose_generator    = pose_generator
-        self._state            = {}
-        self._needs_update     = False 
-        self._contacts         = None
+        self.dynamic_objects = dynamic_objects
+        self.static_objects  = static_objects
+        self.named_objects   = dict(zip(self.names, self.dynamic_objects))
+        self.object_name_map = {o: n for n, o in self.named_objects.items()}
+        self.free_symbols    = free_symbols
+        self.pose_generator  = pose_generator
+        self._state          = {}
+        self._needs_update   = False 
+        self._contacts       = None
 
     @profile
     def update_world(self, state):
@@ -422,8 +426,12 @@ class CollisionSubworld(object):
         """
         self._state.update(state)
         if self.pose_generator != None:
-            pb.batch_set_transforms(self.collision_objects, self.pose_generator(**self._state))
+            pb.batch_set_transforms(self.dynamic_objects, self.pose_generator(**self._state))
             self._needs_update = True
+
+    @property
+    def collision_objects(self):
+        return self.dynamic_objects + self.static_objects
 
     @property
     def contacts(self):
