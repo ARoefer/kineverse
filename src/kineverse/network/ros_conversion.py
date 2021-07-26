@@ -135,9 +135,9 @@ def auto_encode(data):
             return encode_pose(m)
         elif m.shape == (3, 3):
             return encode_rotation(m)
-        elif m.shape == (3, 1):
+        elif m.shape == (3, 1) or m.shape == (3,):
             return encode_point(m)
-        elif m.shape == (4, 1):
+        elif m.shape == (4, 1) or m.shape == (4,):
             return encode_vector(m) if m[3] == 0 else encode_point(m)
         else:
             raise Exception('No encoding known for matrices of shape {}'.format(m.shape))

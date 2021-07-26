@@ -210,7 +210,7 @@ if SYM_MATH_ENGINE == 'CASADI':
 
     def is_matrix(expr):
         # tyoe: (object) -> bool
-        return hasattr(expr, 'shape') and expr.shape[0] * expr.shape[1] > 1
+        return hasattr(expr, 'shape') and (expr.shape[0] > 1 or (len(expr.shape) == 2 and expr.shape[0] * expr.shape[1] > 1))
 
     def is_symbolic(expr):
         # tyoe: (object) -> bool
