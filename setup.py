@@ -29,6 +29,7 @@ except ModuleNotFoundError:
                    'pandas',
                    'simplejson',
                    'sortedcontainers',
-                   'qpoases']
+                   'qpoases',
+                   'urdf_parser_py']
         )
 

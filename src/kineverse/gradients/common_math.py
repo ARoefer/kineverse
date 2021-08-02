@@ -96,28 +96,6 @@ if SYM_MATH_ENGINE == 'CASADI':
     lt     = ca.lt
     gt     = ca.gt
 
-    acos   = ca.acos
-    acosh  = ca.acosh
-    asin   = ca.asin
-    asinh  = ca.asinh
-    atan   = ca.atan
-    atanh  = ca.atanh
-    cos    = ca.cos
-    cosh   = ca.cosh
-    exp    = ca.exp
-    log    = ca.log
-    sin    = ca.sin
-    sinh   = ca.sinh
-    sqrt   = ca.sqrt
-    tan    = ca.tan
-    tanh   = ca.tanh
-
-    eq     = ca.eq
-    le     = ca.le
-    ge     = ca.ge
-    lt     = ca.lt
-    gt     = ca.gt
-
     matrix_types = {ca.SX, ca.DM, ca.MX}
     math_types   = set(matrix_types)
     symfloats    = set()
@@ -190,7 +168,7 @@ if SYM_MATH_ENGINE == 'CASADI':
     def to_numpy(matrix):
         # type: (object) -> np.ndarray
         if type(matrix) != np.ndarray:
-            return np.array(matrix.elements()).astype(float).reshape((matrix.shape[1], matrix.shape[0])).T
+            return np.array([float(x) for x in matrix.elements()]).reshape((matrix.shape[1], matrix.shape[0])).T
         return matrix
 
     def diff(expression, symbol):
