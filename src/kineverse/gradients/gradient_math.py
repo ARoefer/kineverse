@@ -94,6 +94,7 @@ hstack    = cm.hstack
 atan2     = cm.atan2
 numeric_eq = cm.numeric_eq
 to_list   = cm.to_list
+to_numpy  = cm.to_numpy
 
 def is_symbolic(expr):
     """Is the given expression symbolic?"""
