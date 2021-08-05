@@ -11,7 +11,7 @@ def cart_force_to_q_forces(cartesian_point, cartesian_force, symbols):
         symbols (iterable): Symbols that shall be considered in the force 
                             calculation. Order determines the order of torque 
                             vector.
-    Returns:
+    Return:
         (Matrix) Torque column vector.
     """
     return gm.dot(gm.jacobian(cartesian_point, symbols).T, cartesian_force)
