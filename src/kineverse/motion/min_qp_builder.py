@@ -315,6 +315,7 @@ class GeomQPBuilder(PIDQPBuilder): #(TypedQPBuilder):
                 obj_b = path[path.index(obj_to_obj_infix) + 1: -2]
                 #print('Adding handler for distance\n {} ->\n {}'.format(obj_a_str, obj_b_str))
                 if obj_b[0] == 'anon':
+                    n_anon = 0
                     if len(obj_b) > 1:
                         n_anon = int(obj_b[1]) + 1 
                     if coll_a not in self.collision_handlers:

@@ -112,8 +112,29 @@ def wrap_expr(expr):
     """Wrap the expression in an augmented gradient, if it is not one already."""
     return expr if type(expr) == GC else GC(expr)
 
+def diff(term, symbol):
+    if is_symbolic(term):
+        return term.diff(symbol) if type(term) == GC else cm.diff(term, symbol)
+    return 0
+
+def jacobian(vector, symbols):
+    if is_matrix(vector):
+        if len(vector.shape) == 1: # GM is always 2d so casadi can be assumed
+            return matrix_wrapper([[diff(t, s) for s in symbols] 
+                                               for t in vector.elements()])
+        elif len(vector.shape) == 2:
+            if len(vector.shape) == 2 and vector.shape[1] > 1:
+                raise Exception(f'Cannot generate jacobian for 2d matrix.'
+                                f'Shape is {vector.shape}')
+            return matrix_wrapper([[diff(t[y, 0], s) for s in symbols] 
+                                                     for y in range(vector.shape[0])])
+    return matrix_wrapper([[0]*len(symbols)])
+
 def get_diff(term, symbols=None):
-    """Returns the derivative of a passed expression."""
+    """Returns the derivative of a passed expression.
+     TODO: This should be using diff from above now, or even Jacobian with a 
+           sum over axis 1
+    """
     if is_symbol(term):
         return DiffSymbol(term)
     
