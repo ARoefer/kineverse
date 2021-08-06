@@ -114,7 +114,7 @@ def wrap_expr(expr):
 
 def get_diff(term, symbols=None):
     """Returns the derivative of a passed expression."""
-    if cm.is_symbol(term):
+    if is_symbol(term):
         return DiffSymbol(term)
     
     if type(term) != GC:
@@ -125,6 +125,14 @@ def get_diff(term, symbols=None):
         return sum([s * t for s, t in term.gradients.items()])
     else:
         return sum([s * term[s] for s in symbols if s in term])
+
+def get_diff_symbols(expr):
+    if not is_symbolic(expr):
+        return set()
+    if type(expr) == GM or type(expr) == GC:
+            return expr.diff_symbols
+    return {DiffSymbol(s) for s in free_symbols(expr) 
+                                if get_symbol_type(s) != TYPE_UNKNOWN}
 
 def sin(expr):
     """Sine"""
