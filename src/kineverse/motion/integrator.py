@@ -2,7 +2,7 @@ import rospy
 import numpy  as np
 import pandas as pd
 
-import kineverse.gradients.common_math  as cm
+import kineverse.gradients.gradient_math  as gm
 
 from kineverse.visualization.plotting  import ValueRecorder, SymbolicRecorder
 from kineverse.gradients.diff_logic    import erase_type, \
@@ -18,15 +18,15 @@ from tqdm import tqdm
 DT_SYM = Position('dt')
 
 class CommandIntegrator(object):
-    def __init__(self, qp_builder, integration_rules=None, start_state=None, recorded_terms={}, equilibrium=0.001, printed_vars=set()):
+    def __init__(self, qp_builder, integration_rules=None, start_state=None, recorded_terms={}, equilibrium=0.001, printed_exprs={}):
         self.qp_builder = qp_builder
         if isinstance(qp_builder, TQPB):
             self.integration_rules = {}
             for c in qp_builder.cv:
                 for s in qp_builder.free_symbols:
-                    if str(erase_type(s)) == str(erase_type(c)):
-                        t_s = get_symbol_type(s)
-                        t_c = get_symbol_type(c)
+                    if str(gm.erase_type(s)) == str(gm.erase_type(c)):
+                        t_s = gm.get_symbol_type(s)
+                        t_c = gm.get_symbol_type(c)
                         if t_s < t_c:
                             self.integration_rules[s] = s + c * (DT_SYM ** (t_c - t_s))
                         elif t_s == t_c:
@@ -35,7 +35,7 @@ class CommandIntegrator(object):
             if integration_rules is not None:
                 # Only add custom rules which are fully defined given the set of state variables and the set of command variables
                 cv_set = set(self.qp_builder.cv).union({DT_SYM})
-                delta_set = {s: cm.free_symbols(r).difference(self.qp_builder.free_symbols).difference(cv_set) for s, r in integration_rules.items()}
+                delta_set = {s: gm.free_symbols(r).difference(self.qp_builder.free_symbols).difference(cv_set) for s, r in integration_rules.items()}
                 for s, r in integration_rules.items():
                     if len(delta_set[s]) == 0:
                         self.integration_rules[s] = r
@@ -51,7 +51,8 @@ class CommandIntegrator(object):
         self.recorded_terms = recorded_terms
         self.equilibrium = equilibrium
         self.current_iteration = 0
-        self.printed_vars = printed_vars
+        self.printed_exprs = sorted(list(printed_exprs.items()))
+        self._cythonized_printed_exprs = None
         self._aligned_state_vars     = None
         self._cythonized_integration = None
 
@@ -63,9 +64,12 @@ class CommandIntegrator(object):
         self.current_iteration = 0
 
         self._aligned_state_vars, rules = zip(*self.integration_rules.items())
-        rule_matrix = cm.Matrix([rules])
-        self._cythonized_integration = cm.speed_up(rule_matrix, cm.free_symbols(rule_matrix))
+        rule_matrix = gm.Matrix([rules])
+        self._cythonized_integration = gm.speed_up(rule_matrix, gm.free_symbols(rule_matrix))
 
+        if len(self.printed_exprs) > 0:
+            expr_matrix = gm.Matrix([gm.extract_expr(e) for _, e in self.printed_exprs])
+            self._cythonized_printed_exprs = gm.speed_up(expr_matrix, gm.free_symbols(expr_matrix))
 
     @profile
     def run(self, dt=0.02, max_iterations=200, logging=True, show_progress=False, real_time=False):
@@ -112,14 +116,10 @@ class CommandIntegrator(object):
             #     #     print('Command for {}: {} Update: {}'.format(s, cmd[s], update))
             #     self.state[s] = update
 
-            # if len(self.printed_vars) > 0:
-            #     strs = []
-            #     for s in sorted(self.printed_vars):
-            #         if s in self.state:
-            #             strs.append('{}: {}'.format(s, self.state[s]))
-            #         elif s in cmd:
-            #             strs.append('{}: {}'.format(s, cmd[s]))
-            #     print('\n'.join(strs))
+            if self._cythonized_printed_exprs is not None:
+                np_exprs = self._cythonized_printed_exprs(**str_state)
+                print('Expression evaluation iteration {}:\n  {}'.format(x,
+                       '\n  '.join(f'{name}: {value}' for (name, _), value in zip(self.printed_exprs, np_exprs))))
 
             self._post_update(dt, cmd)
             if real_time:
