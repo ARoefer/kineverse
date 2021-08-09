@@ -126,8 +126,8 @@ def jacobian(vector, symbols):
             if len(vector.shape) == 2 and vector.shape[1] > 1:
                 raise Exception(f'Cannot generate jacobian for 2d matrix.'
                                 f'Shape is {vector.shape}')
-            return matrix_wrapper([[diff(t[y, 0], s) for s in symbols] 
-                                                     for y in range(vector.shape[0])])
+            return matrix_wrapper([[diff(vector[y, 0], s) for s in symbols] 
+                                                          for y in range(vector.shape[0])])
     return matrix_wrapper([[0]*len(symbols)])
 
 def get_diff(term, symbols=None):
