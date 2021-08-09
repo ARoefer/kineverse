@@ -3,12 +3,12 @@ import os
 import copy      as copy_module
 import importlib
 import math
-import kineverse.gradients.common_math as gm
+import kineverse.gradients.gradient_math as gm
 
 from collections                       import namedtuple
 from kineverse.time_wrapper            import Time
 
-if gm.SYM_MATH_ENGINE == 'SYMENGINE':
+if gm.cm.SYM_MATH_ENGINE == 'SYMENGINE':
     from kineverse.symengine_types         import symengine_types
 else:
     symengine_types = set()
@@ -184,3 +184,23 @@ def static_var_bounds(km, symbols):
     return [s for s in ordered_symbols if s in static_constraints], \
            static_bounds, \
            [s for s in ordered_symbols if s not in static_constraints]
+
+
+def generate_transition_function(sym_dt, symbols, overrides=None):
+    overrides = {} if overrides is None else overrides
+    ordered_symbols = [s for (_, s) in sorted((str(s), s) for s in symbols.union(overrides.keys()))]
+
+    f = []
+    for s in ordered_symbols:
+        if s not in overrides:
+            f.append(gm.wrap_expr(s + gm.DiffSymbol(s) * sym_dt))
+        else:
+            f.append(overrides[s])
+
+    controls = {str(s) for s in sum([list(gm.free_symbols(e)) for e in f], [])}
+    f_params = [gm.Symbol(s) for s in sorted(controls)]
+    temp_f   = gm.Matrix([gm.extract_expr(e) for e in f])
+    print(f_params)
+    function = gm.speed_up(temp_f, f_params)
+
+    return ordered_symbols, function, f_params
