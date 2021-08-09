@@ -265,6 +265,22 @@ def matrix_wrapper(m_list):
         return GM(m_list)
     return cm.Matrix(m_list)
 
+def msum(matrix, axis=0):
+    if not is_matrix(matrix):
+        return matrix
+    if axis >= len(matrix.shape):
+        raise Exception(f'Cannot sum over {axis} since matrix '
+                        f'only has {len(matrix.shape)} dimensions')
+    if axis == 0:
+        matrix = matrix.T
+
+    rows = []
+    for y in range(matrix.shape[0]):
+        acc = 0
+        for x in range(matrix.shape[1]):
+            acc += matrix[y, x]
+        rows.append(acc)
+    return matrix_wrapper(rows)
 
 def point3(x, y, z):
     """Creates a 3d point for homogeneous transformations."""
