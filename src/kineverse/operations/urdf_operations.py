@@ -205,11 +205,11 @@ class CreateURDFFrameConnection(Operation):
             else:
                 raise Exception('Unknown joint type "{}". Failed to instantiate connection.'.format(joint.type))
 
-        self.child_parent = joint.parent
+        self.child_parent        = joint.parent
         self.child_relative_pose = new_local_fk
-        self.child_full_pose = dot(parent_frame.pose, new_local_fk)
-        self.child_link_joint = joint_name
-        self.constraints = constraints
+        self.child_full_pose     = dot(parent_frame.pose, new_local_fk)
+        self.child_link_joint    = joint_name
+        self.constraints         = constraints
 
 
 urdf_geom_types = {urdf.Mesh: GEOM_TYPE_MESH,
