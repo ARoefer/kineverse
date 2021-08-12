@@ -69,13 +69,14 @@ class ModelTFBroadcaster(object):
         with self.lock:
             if self.np_poses is not None:
                 # print('---\n{}'.format('\n'.join(['{}: {}'.format(k, v) for k, v in sorted(self.state.items())])))
-                
+
                 indices = set(sum(self.s_frame_map.values(), [])) # set(sum([self.s_frame_map[s] for s in update if s in self.s_frame_map], []))
                 now     = Time.now()
                 self.visualizer.begin_draw_cycle('debug')
                 self.visualizer.draw_poses('debug', cm.eye(4), 0.1, 0.01, [cm.Matrix(self.np_poses[x * 4:x * 4 + 4].tolist()) for x in range(self.np_poses.shape[0] // 4)])
                 self.visualizer.render('debug')
 
+                transforms = []
                 published_frames = []
                 for x in indices:
                     n, f     = self.frame_info[x]
@@ -90,7 +91,9 @@ class ModelTFBroadcaster(object):
                     msg.transform.rotation.y = quat[1]
                     msg.transform.rotation.z = quat[2]
                     msg.transform.rotation.w = quat[3]
-                    self.dynamic_broadcaster.sendTransform(msg)
+                    transforms.append(msg)
+
+                self.dynamic_broadcaster.sendTransform(transforms)
 
             # print('---\n{}'.format('\n'.join(['{} -> {}'.format(c, p) for c, p in sorted(published_frames)])))
 
@@ -112,8 +115,8 @@ class ModelTFBroadcaster(object):
 
 
                 names, lframes = zip(*frames.items())
-                pose_matrix    = cm.vstack(*[f.to_parent if not isinstance(f.to_parent, GM) 
-                                                         else f.to_parent.to_sym_matrix() 
+                pose_matrix    = cm.vstack(*[f.to_parent if not isinstance(f.to_parent, GM)
+                                                         else f.to_parent.to_sym_matrix()
                                                          for f in lframes])
 
                 self.frame_info = list(zip([str(n) for n in names], lframes))
@@ -168,7 +171,7 @@ class ModelTFBroadcaster(object):
 class ModelTFBroadcaster_URDF(ModelTFBroadcaster):
     def __init__(self, urdf_param, model_path, model=None, prefix_override=None):
         self.urdf_param  = urdf_param
-        
+
         super(ModelTFBroadcaster_URDF, self).__init__(model_path, model, prefix_override)
 
     def set_model(self, model, prefix_override=None):
