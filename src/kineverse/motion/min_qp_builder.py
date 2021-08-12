@@ -164,7 +164,8 @@ class MinimalQPBuilder(object):
         return {cv: xdot_full[i] for i, cv in enumerate(self.cv)}
 
     def equilibrium_reached(self, low_eq=1e-3, up_eq=-1e-3):
-        return (self.np_lb <= low_eq).min()  and \
+        return self.latest_error is not None and \
+               (self.np_lb <= low_eq).min()  and \
                (self.np_lbA <= low_eq).min() and \
                (self.np_ub >= up_eq).min()   and \
                (self.np_ubA >= up_eq).min()
