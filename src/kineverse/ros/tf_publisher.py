@@ -135,7 +135,7 @@ class ModelTFBroadcaster(object):
 
                 now = Time.now()
                 for x, (n, f) in enumerate(self.frame_info):
-                    print(n, f.parent)
+                    # print(n, f.parent)
                     if cm.is_symbolic(f.to_parent):
                         for s in cm.free_symbols(f.to_parent):
                             if s not in self.s_frame_map:
@@ -178,7 +178,7 @@ class ModelTFBroadcaster_URDF(ModelTFBroadcaster):
         super(ModelTFBroadcaster_URDF, self).set_model(model, prefix_override)
 
         if self.model is not None:
-            print('[ModelTFBroadcasterURDF] Model was received.')
+            # print('[ModelTFBroadcasterURDF] Model was received.')
             frames = dict(self.frame_info)
 
             # there can only be one root per published model

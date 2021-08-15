@@ -197,10 +197,10 @@ def generate_transition_function(sym_dt, symbols, overrides=None):
         else:
             f.append(overrides[s])
 
-    controls = {str(s) for s in sum([list(gm.free_symbols(e)) for e in f], [])}
-    f_params = [gm.Symbol(s) for s in sorted(controls)]
+    controls = {str(s) for s in sum([list(gm.free_symbols(e)) for e in f], []) if str(s) != str(sym_dt)}
+    f_params = [sym_dt] + [gm.Symbol(s) for s in sorted(controls)]
     temp_f   = gm.Matrix([gm.extract_expr(e) for e in f])
-    print(f_params)
+    # print(f_params)
     function = gm.speed_up(temp_f, f_params)
 
     return ordered_symbols, function, f_params
