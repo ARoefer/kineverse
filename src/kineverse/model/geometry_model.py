@@ -542,7 +542,7 @@ def generate_contact_model(actuated_point, actuated_symbols, contact_point, cont
         if set_inanimate:
             out['inanimate_{}'.format(s)] = Constraint(-in_contact * default_bound, in_contact * default_bound, s)
 
-    return out
+    return out, in_contact
 
 
 class ContactSymbolContainer(object):

@@ -374,7 +374,7 @@ class GradientMatrix(JSONSerializable):
 
     def __getitem__(self, idx):
         if type(idx) == int:
-            return self.expr[idx / self._ncols][idx % self._ncols]
+            return self.expr[idx // self._ncols][idx % self._ncols]
         elif type(idx) == slice:
             return sum(self.expr, [])[idx]
         elif type(idx) == tuple:
