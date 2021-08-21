@@ -79,6 +79,7 @@ else:
 is_symbol = cm.is_symbol
 eq_expr   = cm.eq_expr
 eye       = cm.eye
+zeros     = cm.zeros
 pos_of    = cm.pos_of
 rot_of    = cm.rot_of
 x_of      = cm.x_of
