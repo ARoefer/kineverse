@@ -1,7 +1,7 @@
 import numpy  as np
 import pandas as pd
 
-import kineverse.gradients.common_math  as cm
+import kineverse.gradients.gradient_math  as cm
 
 from kineverse.motion.qp_solver             import QPSolver, QPSolverException
 
@@ -412,9 +412,9 @@ def generate_controlled_values(constraints, symbols, weights={}, bounds={}, defa
 
     return controlled_values, new_constraints
 
-def depth_weight_controlled_values(gm, controlled_values, default_weight=0.01, exp_factor=1.0):
+def depth_weight_controlled_values(km, controlled_values, default_weight=0.01, exp_factor=1.0):
     for cv in controlled_values.values():
-        cv.weight_id = default_weight * max(1, len(gm.get_active_geometry_raw({cv.symbol}))) ** exp_factor
+        cv.weight_id = default_weight * max(1, len(km.get_active_geometry_raw({cm.IntSymbol(cv.symbol)}))) ** exp_factor
     return controlled_values
 
 def find_constant_bounds(constraints):
