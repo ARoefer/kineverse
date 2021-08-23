@@ -390,9 +390,10 @@ class GeomQPBuilder(PIDQPBuilder): #(TypedQPBuilder):
 
 
 @profile
-def generate_controlled_values(constraints, symbols, weights={}, bounds={}, default_weight=0.01, default_bounds=(-1e9, 1e9)):
+def generate_controlled_values(constraints, symbols, weights=None, bounds={}, default_weight=0.01, default_bounds=(-1e9, 1e9)):
     controlled_values = {}
     to_remove  = set()
+    weights = {} if weights is None else weights
 
     for k, c in constraints.items():
         if type(c) == PID_Constraint:
