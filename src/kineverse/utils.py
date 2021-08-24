@@ -1,8 +1,9 @@
 import os
 
-import copy      as copy_module
+import copy  as copy_module
 import importlib
 import math
+import numpy as np
 import kineverse.gradients.gradient_math as gm
 
 from collections                       import namedtuple
@@ -171,7 +172,7 @@ def static_var_bounds(km, symbols):
     ordered_symbols = [s for _, s in sorted((str(s), s) for s in symbols)]
 
     static_constraints = {}
-    for n, c in km.get_constraints_by_symbols(state_symbols).items():
+    for n, c in km.get_constraints_by_symbols(symbols).items():
         if gm.is_symbol(c.expr):
             s  = gm.free_symbols(c.expr).pop()
             fs = gm.free_symbols(c.lower).union(gm.free_symbols(c.upper))

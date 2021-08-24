@@ -33,7 +33,7 @@ class CreateValue(Operation):
 
 
 class ExecFunction(Operation):
-    def __init__(self, out_path, fn, *fn_args):
+    def __init__(self, out_path, fn, *fn_args, **constraints):
         if type(fn) == type:
             # Remove the "self" argument
 
@@ -51,10 +51,11 @@ class ExecFunction(Operation):
         # Manually modify the arguments and dependencies for this operation. DO NOT DO THIS OTHERWISE, IT IS BAD PRACTICE
         self._exec_args.update({k: deepcopy(v) for k, v in zip(args[:len(fn_args)], fn_args)})
         self.dependencies = {d for d in self._exec_args.values() if type(d) == Path}
+        self._constraints = constraints
 
     def _execute_impl(self, function, **kwargs):
         self.result = function(**kwargs)
-        self.constraints = {}
+        self.constraints = self._constraints
 
 
 # class CallFunctionOperator(Operation):
