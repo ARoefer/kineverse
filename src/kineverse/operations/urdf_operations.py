@@ -317,7 +317,7 @@ def load_urdf(ks,
 
         transform = urdf_origin_to_transform(u_link.origin) if urdf.get_root() != u_link.name else root_transform
 
-        ks.apply_operation('create {}'.format(str(prefix + Path(u_link.name))),
+        ks.apply_operation(f'create {link_path}',
                            CreateValue(link_path,
                                        RigidBody(reference_frame, transform, None, geometry, collision, inertial)))
 
