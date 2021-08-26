@@ -183,6 +183,11 @@ class MinimalQPBuilder(object):
     def _post_process_matrices(self, deltaT):
         pass
 
+    def str_last_soft_bounds(self):
+        return '\n'.join(f'{n}: {lb} {ub}' for n, lb, ub in zip(self.row_names[-self.n_sc:],
+                                                                self.np_lbA[-self.n_sc:],
+                                                                self.np_ubA[-self.n_sc:]))
+
     @property
     def cmd_df(self):
         return pd.DataFrame(self._cmd_log, columns=[str(s) for s in self.cv])
