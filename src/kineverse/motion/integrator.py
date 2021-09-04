@@ -18,7 +18,13 @@ from tqdm import tqdm
 DT_SYM = Position('dt')
 
 class CommandIntegrator(object):
-    def __init__(self, qp_builder, integration_rules=None, start_state=None, recorded_terms={}, equilibrium=0.001, printed_exprs={}):
+    def __init__(self,
+                 qp_builder,
+                 integration_rules=None,
+                 start_state=None,
+                 recorded_terms={},
+                 equilibrium=0.001,
+                 printed_exprs={}):
         self.qp_builder = qp_builder
         if isinstance(qp_builder, TQPB):
             self.integration_rules = {}
