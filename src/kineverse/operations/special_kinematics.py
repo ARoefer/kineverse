@@ -52,14 +52,21 @@ class DiffDriveJoint(KinematicJoint):
         return out
 
 
-def create_diff_drive_joint_with_symbols(parent_pose, child_pose, wheel_radius, wheel_distance, wheel_vel_limit, var_prefix):
+def create_diff_drive_joint_with_symbols(parent_pose,
+                                         child_pose,
+                                         wheel_radius,
+                                         wheel_distance,
+                                         wheel_vel_limit,
+                                         r_wheel_position,
+                                         l_wheel_position,
+                                         var_prefix):
     return DiffDriveJoint(parent_pose, child_pose,
                 Position((var_prefix + ('localization_x',)).to_symbol()),
                 Position((var_prefix + ('localization_y',)).to_symbol()),
                 Position((var_prefix + ('localization_z',)).to_symbol()),
                 Position((var_prefix + ('localization_a',)).to_symbol()),
-                Velocity((var_prefix + ('l_wheel',)).to_symbol()),
-                Velocity((var_prefix + ('r_wheel',)).to_symbol()),
+                DiffSymbol(l_wheel_position),
+                DiffSymbol(r_wheel_position),
                 wheel_radius, wheel_distance, wheel_vel_limit)
 
 
