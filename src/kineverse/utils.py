@@ -189,7 +189,7 @@ def static_var_bounds(km, symbols):
 
 def generate_transition_function(sym_dt, symbols, overrides=None):
     overrides = {} if overrides is None else overrides
-    ordered_symbols = [s for (_, s) in sorted((str(s), s) for s in symbols.union(overrides.keys()))]
+    ordered_symbols = [s for (_, s) in sorted((str(s), s) for s in symbols)] # .union(overrides.keys()))]
 
     f = []
     for s in ordered_symbols:
