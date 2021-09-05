@@ -397,6 +397,9 @@ class GradientMatrix(JSONSerializable):
     def __str__(self):
         return '\n'.join([str(r) for r in self.expr])
 
+    def elements(self):
+        return sum(self.expr, [])
+
     def nrows(self):
         """Returns the number of rows of the stored matrix.
         :rtype: int
