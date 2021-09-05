@@ -327,8 +327,8 @@ class GeomQPBuilder(PIDQPBuilder): #(TypedQPBuilder):
                     if coll_a not in self.collision_handlers:
                         self.collision_handlers[coll_a] = ContactHandler(obj_a)
                     handler = self.collision_handlers[coll_a]
-                    if handler.num_anon_contacts < n_anon:
-                        for x in range(n_anon - handler.num_anon_contacts):
+                    if handler.num_anon_contacts <= n_anon:
+                        for x in range(n_anon + 1 - handler.num_anon_contacts):
                             handler.add_passive_handle()
                 
                 else: 
