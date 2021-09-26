@@ -32,7 +32,7 @@ class ColorGenerator(object):
         self.counter = 0
 
     def get_color(self):
-        out = BASE_COLORS[self.counter % len(BASE_COLORS)][self.counter / len(BASE_COLORS)]
+        out = BASE_COLORS[self.counter % len(BASE_COLORS)][self.counter // len(BASE_COLORS)]
 
         self.counter = (self.counter + 1) % (len(BASE_COLORS) * len(BASE_COLORS[0]))
 
@@ -54,7 +54,7 @@ def draw_recorders(recorders, ratio=1.0, plot_width=3, plot_height=2, sizes=[]):
     gridsize  = (rows, cols)
     plot_size = (plot_width, plot_height)
     fig       = plt.figure(figsize=(cols*plot_size[0], rows*plot_size[1]))
-    axes      = [plt.subplot2grid(gridsize, (x / cols, x % cols), colspan=1, rowspan=1) for x in range(len(recorders))]
+    axes      = [plt.subplot2grid(gridsize, (x // cols, x % cols), colspan=1, rowspan=1) for x in range(len(recorders))]
     for a, r in zip(axes, recorders):
         r.plot(a)
     fig.tight_layout()
@@ -259,7 +259,7 @@ class ValueRecorder(object):
         no_xticks = self.x_labels is not None and len(self.x_labels) == 0
 
         if len(self.data) > 0:
-            labels = range(len(self.data.values()[0])) if self.x_labels is None or no_xticks else self.x_labels
+            labels = range(len(list(self.data.values())[0])) if self.x_labels is None or no_xticks else self.x_labels
         else:
             labels = []
 

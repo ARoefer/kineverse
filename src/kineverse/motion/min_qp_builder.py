@@ -286,7 +286,7 @@ class GeomQPBuilder(PIDQPBuilder): #(TypedQPBuilder):
 
         self.collision_handlers = {}
         symbols = set()
-        for c in hard_constraints.values() + soft_constraints.values():
+        for c in list(hard_constraints.values()) + list(soft_constraints.values()):
             symbols |= c.free_symbols
 
         self.name_resolver = {}
@@ -390,6 +390,9 @@ def generate_controlled_values(constraints, symbols, weights={}, bounds={}, defa
     to_remove  = set()
 
     for k, c in constraints.items():
+        if type(c) == PID_Constraint:
+            c = c.to_constraint()
+
         if cm.is_symbol(c.expr) and c.expr in symbols and str(c.expr) not in controlled_values:
             weight = default_weight if c.expr not in weights else weights[c.expr] 
             controlled_values[str(c.expr)] = ControlledValue(c.lower, c.upper, c.expr, weight)

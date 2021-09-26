@@ -28,7 +28,7 @@ if SYM_MATH_ENGINE == 'CASADI':
     ca.SX.sym = symbol_trace
 
     def Symbol(data):
-        if isinstance(data, str) or isinstance(data, unicode):
+        if isinstance(data, str):
             if data not in __SYMBOL_CACHE:
                 __SYMBOL_CACHE[data] = ca.SX.sym(ca.SX(), data)
             return __SYMBOL_CACHE[data]

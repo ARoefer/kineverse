@@ -20,7 +20,7 @@ symbol_path_separator = '__'
 
 class Path(tuple, JSONSerializable):
     def __new__(cls, path):
-        if type(path) == str or type(path) == unicode:
+        if type(path) == str:
             uri_split = str(path).split('://')
             parts = [p for p in uri_split[-1].split('/') if p != '']
             if len(uri_split) == 2:
@@ -45,12 +45,16 @@ class Path(tuple, JSONSerializable):
         return Path(super(Path, self).__getslice__(i, j))
 
     def __eq__(self, other):
-        if type(other) is str or type(other) is unicode:
+        if type(other) is str:
             return self == Path(other)
         return super(Path, self).__eq__(other)
 
     def __ne__(self, other):
         return not self.__eq__(other)
+
+    def __hash__(self):
+        return tuple.__hash__(self)
+
 
     def to_symbol(self):
         return cm.Symbol(symbol_path_separator.join(self))

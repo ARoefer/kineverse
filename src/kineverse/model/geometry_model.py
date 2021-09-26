@@ -257,7 +257,7 @@ class GeometryModel(EventModel):
             child.set_ignore_collision(parent)
 
     def set_data(self, key, value):
-        if type(key) is str or type(key) == unicode:
+        if type(key) is str:
             key = Path(key)
 
         if isinstance(value, RigidBody):
@@ -411,7 +411,7 @@ class CollisionSubworld(object):
         self._state.update(state)
         if self.pose_generator != None:
             pb.batch_set_transforms(self.collision_objects, self.pose_generator(**self._state))
-            self._needs_update = True    
+            self._needs_update = True
 
     @property
     def contacts(self):
