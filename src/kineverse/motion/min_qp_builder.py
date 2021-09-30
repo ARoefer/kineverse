@@ -1,6 +1,6 @@
 import numpy  as np
 import pandas as pd
-
+import pathlib
 import kineverse.gradients.gradient_math  as cm
 
 from kineverse.motion.qp_solver             import QPSolver, QPSolverException
@@ -142,7 +142,9 @@ class MinimalQPBuilder(object):
                                           self.np_A[:, :-self.n_sc])), 
                                           index=self.row_names, columns=['lbA', 'ubA'] + self.col_names[:self.n_cv])
 
-            print('INFEASIBLE CONFIGURATION!\nH:{}\nA:\n{}\nFull data written to "solver_crash_H.csv" and "solver_crash_A.csv"'.format(dfH.T, dfA))
+            print('INFEASIBLE CONFIGURATION!\nH:{}\nA:\n{}\nFull data written to "{}" and "{}"'.format(dfH.T, dfA, 
+                                                                                                       pathlib.Path('solver_crash_H.csv').resolve(),
+                                                                                                       pathlib.Path('solver_crash_A.csv').resolve()))
             dfH.to_csv('solver_crash_H.csv')
             dfA.to_csv('solver_crash_A.csv')
             b_comp  = np.greater(self.np_lb,  self.np_ub)

@@ -155,7 +155,10 @@ if SYM_MATH_ENGINE == 'CASADI':
         return out
 
     def diag(*args):
-        return ca.diag(args)
+        m = zeros((len(args), len(args)))
+        for x, a in enumerate(args):
+            m[x, x] = a
+        return m
 
     def eye(n):
         return ca.SX.eye(n)
