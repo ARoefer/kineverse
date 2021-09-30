@@ -160,8 +160,8 @@ class ModelServer_NoROS(object):
 
         stamp  = datetime.date.today()
         with self.lock:
-            plot_graph(generate_dependency_graph(self.km), '{}/{}_dep_graph.pdf'.format(prefix, stamp))
-            plot_graph(generate_modifications_graph(self.km), '{}/{}_mod_graph.pdf'.format(prefix, stamp))
+            plot_graph(generate_dependency_graph(self.km), f'{prefix}/{stamp}_dep_graph.pdf')
+            plot_graph(generate_modifications_graph(self.km), f'{prefix}/{stamp}_mod_graph.pdf')
 
         out = DebugInfoResponseMsg()
         out.prefix = str(stamp)

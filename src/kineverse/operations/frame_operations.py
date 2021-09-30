@@ -4,7 +4,7 @@ from kineverse.gradients.gradient_math     import inverse_frame, dot
 from kineverse.model.data_tree             import DataTree
 from kineverse.model.frames                import Frame, Transform
 from kineverse.model.articulation_model    import ArticulationModel
-from kineverse.model.paths                 import Path, collect_paths
+from kineverse.model.paths                 import Path, CPath, collect_paths
 from kineverse.operations.operation        import Operation
 
 def collect_chain(ks, frame):
@@ -40,28 +40,30 @@ def fk_a_in_b(ks, frame_a, frame_b):
         return dot(inverse_frame(b_in_root), a_in_root)
 
 class CreateRelativeFrame(Operation):
-    def init(self, path, frame):
-        self.frame = frame
-        attrs = collect_paths(self.frame, Path('frame'))
-        super(CreateRelativeFrame, self).init('Frame',
-                                              [str(a) for a in attrs],
-                                              parent=Path(self.frame.parent),
-                                              **{str(a): path + a[1:] for a in attrs})
-    def _apply(self, ks, parent):
-        return {'frame': Frame(self.frame.parent, dot(parent.pose, self.frame.to_parent), self.frame.to_parent)}, {}
+    def __init__(self, path, parent_path, child_frame):
+        super(CreateRelativeFrame, self).__init__({'output': path}, 
+                                                  parent_frame=Path(parent_path), 
+                                                  parent_path=CPath(parent_path),
+                                                  child_frame=child_frame)
+
+    def _execute_impl(self, parent_path, parent_frame, child_frame):
+        self.output = Frame(parent_path, 
+                            dot(parent_frame.pose, child_frame.to_parent), 
+                            child_frame.to_parent)
+        self.constraints = {}
 
 
 class CreateRelativeTransform(Operation):
-    def init(self, transform_path, from_frame, to_frame):
-        self.tf_obj = Transform(from_frame, to_frame, None)
-        attrs       = collect_paths(self.tf_obj, Path('transform'))
-        super(CreateRelativeTransform, self).init('Relative Transform',
-                                                  [str(a) for a in attrs],
-                                                  frame_a=from_frame,
-                                                  frame_b=to_frame,
-                                                  **{str(a): transform_path + a[1:] for a in attrs})
+    def __init__(self, path, from_frame_path, to_frame_path):
+        super(CreateRelativeTransform, self).__init__({'output': path},
+                                                      from_frame=Path(from_frame_path),
+                                                      to_frame=Path(to_frame_path),
+                                                      ff_path=CPath(from_frame_path),
+                                                      tf_path=CPath(to_frame_path))
 
-    def _apply(self, ks, frame_a, frame_b):
-        return {'transform': Transform(self.tf_obj.from_frame, 
-                                       self.tf_obj.to_frame, 
-                                       fk_a_in_b(ks, frame_a, frame_b))}, {}
+    # TODO: Inefficient
+    def _execute_impl(self, from_frame, to_frame, ff_path, tf_path):
+        self.output = Transform(ff_path, 
+                                tf_path, 
+                                dot(inverse_frame(to_frame.pose), from_frame.pose))
+        self.constraints = {}

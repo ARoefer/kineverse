@@ -116,7 +116,7 @@ def collect_paths(obj, root, depth=10000):
                 out.update(collect_paths(getattr(obj, a), root + Path(a,), depth - 1))
     return out
 
-def find_all(path, model, target_type):
+def find_all_of_type(path, model, target_type):
     """Returns all data of a given type stored under an model."""
     if isinstance(model, target_type):
         return {path: model}
@@ -127,13 +127,13 @@ def find_all(path, model, target_type):
         if t is dict:
             for k, v in model.items():
                 if type(k) is str:
-                    out.update(find_all(path + (k,), v, target_type))
+                    out.update(find_all_of_type(path + (k,), v, target_type))
         elif t is list:
             for x, d in enumerate(model):
-                out.update(find_all(path + (x,), d, target_type))
+                out.update(find_all_of_type(path + (x,), d, target_type))
         else:
             for a in [a for a in dir(model) if a[0] != '_' and not callable(getattr(model, a))]:
-                out.update(find_all(path + (a,), getattr(model, a), target_type))
+                out.update(find_all_of_type(path + (a,), getattr(model, a), target_type))
     return out
 
 def find_common_root(paths):

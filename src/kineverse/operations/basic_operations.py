@@ -33,7 +33,7 @@ class CreateValue(Operation):
 
 
 class ExecFunction(Operation):
-    def __init__(self, out_path, fn, *fn_args):
+    def __init__(self, out_path, fn, *fn_args, **constraints):
         if type(fn) == type:
             # Remove the "self" argument
 
@@ -41,9 +41,9 @@ class ExecFunction(Operation):
             n_def   = len([p for p in inspect.signature(fn.__init__).parameters.values() if p.default != inspect._empty])
             fn_name = str(fn)
         else:
-            args    = fn.__code__.co_varnames[:fn.__code__.co_argcount]
-            n_def   = len(fn.func_defaults) if fn.func_defaults is not None else 0
-            fn_name = fn.func_name
+            args    = [k for k in inspect.signature(fn).parameters.keys()]
+            n_def   = len([p for p in inspect.signature(fn).parameters.values() if p.default != inspect._empty])
+            fn_name = str(fn)
         if len(fn_args) < len(args) - n_def:
             raise Exception('Too few arguments given! Arguments "{}" are required by function "{}" but not given to the operation wrapper'.format(', '.join(args[len(fn_args) - 1:-n_def]), fn_name))
         super(ExecFunction, self).__init__({'result': out_path}, function=fn)
@@ -51,10 +51,11 @@ class ExecFunction(Operation):
         # Manually modify the arguments and dependencies for this operation. DO NOT DO THIS OTHERWISE, IT IS BAD PRACTICE
         self._exec_args.update({k: deepcopy(v) for k, v in zip(args[:len(fn_args)], fn_args)})
         self.dependencies = {d for d in self._exec_args.values() if type(d) == Path}
+        self._constraints = constraints
 
     def _execute_impl(self, function, **kwargs):
         self.result = function(**kwargs)
-        self.constraints = {}
+        self.constraints = self._constraints
 
 
 # class CallFunctionOperator(Operation):

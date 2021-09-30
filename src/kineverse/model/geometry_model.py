@@ -4,11 +4,10 @@ This model recognizes the insertion of rigid bodies and builds up a collision sc
 """
 import numpy as np
 
-import kineverse.gradients.common_math  as cm
-import kineverse.model.model_settings   as model_settings
+import kineverse.gradients.gradient_math as gm
+import kineverse.model.model_settings    as model_settings
 
 from kineverse.gradients.diff_logic     import Symbol, Position
-from kineverse.gradients.gradient_math  import *
 from kineverse.json_wrapper             import JSONSerializable
 from kineverse.model.paths              import Path, PathSet, PathDict
 from kineverse.model.articulation_model import Constraint
@@ -55,7 +54,7 @@ class Geometry(Frame):
     def __init__(self, parent_path, pose, geom_type, scale=None, mesh=None):
         super(Geometry, self).__init__(parent_path, pose)
         self.type  = geom_type
-        self.scale = scale if scale is not None else vector3(1,1,1)
+        self.scale = scale if scale is not None else gm.vector3(1,1,1)
         self.mesh  = mesh
 
     def _json_data(self, json_dict):
@@ -66,7 +65,7 @@ class Geometry(Frame):
                           'mesh':      self.mesh})
 
     def to_parent_xyz_str(self):
-        pos = cm.pos_of(self.to_parent)
+        pos = gm.pos_of(self.to_parent)
         return ' '.join([str(pos[x]) for x in range(3)])
     
     def to_parent_rpy_str(self):
@@ -77,7 +76,7 @@ class Geometry(Frame):
         if isinstance(other, Geometry):
             return super(Geometry, self).__eq__(other) and \
                    self.type == other.type and \
-                   cm.eq_expr(self.scale, other.scale) and \
+                   gm.eq_expr(self.scale, other.scale) and \
                    self.mesh == other.mesh
         return False
 
@@ -87,10 +86,22 @@ GEOM_TYPE_BOX      = 'box'
 GEOM_TYPE_CYLINDER = 'cylinder'
 GEOM_TYPE_SPHERE   = 'sphere'
 
+def Box(parent_path, pose, scale=None):
+    return Geometry(parent_path, pose, GEOM_TYPE_BOX, scale, None)
+
+def Mesh(parent_path, pose, mesh, scale=None):
+    return Geometry(parent_path, pose, GEOM_TYPE_MESH, scale, mesh)
+
+def Cylinder(parent_path, pose, diameter, height):
+    return Geometry(parent_path, pose, GEOM_TYPE_CYLINDER, gm.vector3(diameter, diameter, height), None)
+
+def Sphere(parent_path, pose, radius):
+    return Geometry(parent_path, pose, GEOM_TYPE_SPHERE, gm.vector3(radius, radius, radius), None)
+
 
 class InertialData(Frame):
     """Unused."""
-    def __init__(self, parent_path, pose, mass=1, inertia_matrix=cm.eye(3)):
+    def __init__(self, parent_path, pose, mass=1, inertia_matrix=gm.eye(3)):
         super(InertialData, self).__init__(parent_path, pose)
         if mass < 0:
             raise Exception('Mass can not be negative!')
@@ -108,7 +119,7 @@ class InertialData(Frame):
         if isinstance(other, InertialData):
             return super(InertialData, self).__eq__(other) and \
                    self.mass == other.mass and \
-                   cm.eq_expr(self.inertia_matrix, other.inertia_matrix)
+                   gm.eq_expr(self.inertia_matrix, other.inertia_matrix)
         return False
 
 
@@ -182,7 +193,10 @@ obj_to_world_prefix = 'distance_obj_to_world'
 
 def create_distance_symbol(obj_path, other_path=None):
     """Helper to create symbols that identify geometry queries."""
-    return '{}{}{}{}'.format(obj_to_obj_prefix, str(obj_path), obj_to_obj_infix, str(other_path)) if other_path is not None else '{}{}'.format(obj_to_world_prefix, str(obj_path))
+    return f'{obj_to_obj_prefix}' \
+           f'{str(obj_path)}'     \
+           f'{obj_to_obj_infix}'  \
+           f'{str(other_path)}' if other_path is not None else f'{obj_to_world_prefix}{str(obj_path)}'
 
 
 class GeometryModel(EventModel):
@@ -299,11 +313,11 @@ class GeometryModel(EventModel):
                     link = self.get_data(k_path)
                     pose_expr  = link.pose # * link.collision.to_parent
                     symbol_set = set()
-                    if type(pose_expr) is GM:
+                    if type(pose_expr) is gm.GM:
                         symbol_set  = symbol_set.union(pose_expr.diff_symbols)
                         pose_expr   = pose_expr.to_sym_matrix()
                     # fixme, this is a hack
-                    symbol_set |= cm.free_symbols(pose_expr) # type: {Symbol}
+                    symbol_set |= gm.free_symbols(pose_expr) # type: {Symbol}
                     if k_path in self._co_symbol_map: # The body might have been associated with different symbols before
                         for s_discard in self._co_symbol_map[k_path].difference(symbol_set):
                             self._symbol_co_map[s_discard].remove(k_path)
@@ -315,12 +329,12 @@ class GeometryModel(EventModel):
                             if s not in self._symbol_co_map:
                                 self._symbol_co_map[s] = set()
                             self._symbol_co_map[s].add(k_path)
-                        dynamic_poses[k_path] = cm.to_numpy(cm.subs(pose_expr, {s: 0 for s in cm.free_symbols(pose_expr)}))
+                        dynamic_poses[k_path] = gm.to_numpy(gm.subs(pose_expr, {s: 0 for s in gm.free_symbols(pose_expr)}))
                         # print('Evaluation of {} yields:\n{}'.format(pose_expr, dynamic_poses[k_path]))
                     else:
                         # print('{} is static, setting its pose to:\n{}'.format(k, pose_expr))
                         static_objects.append(self._collision_objects[k_path])
-                        static_poses.append(cm.to_numpy(pose_expr))
+                        static_poses.append(gm.to_numpy(pose_expr))
                 else:
                     removed_object.append(k_path)
         for k_path in removed_object:
@@ -367,34 +381,38 @@ class GeometryModel(EventModel):
             return CollisionSubworld(self.kw, [], [], set(), None)
 
         objs = [self._collision_objects[n] for n in obj_names]
-        pose_matrix = cm.vstack(*[self._co_pose_expr[n] for n in obj_names])
+        pose_matrix = gm.vstack(*[self._co_pose_expr[n] for n in obj_names])
 
         if static_state is not None:
-            pose_matrix = cm.subs(pose_matrix, {s: static_state[s] for s in cm.free_symbols(pose_matrix).difference(symbols) if s in static_state})
+            pose_matrix = gm.subs(pose_matrix, {s: static_state[s] for s in gm.free_symbols(pose_matrix).difference(symbols) if s in static_state})
 
-        cythonized_matrix = cm.speed_up(pose_matrix, cm.free_symbols(pose_matrix))
+        cythonized_matrix = gm.speed_up(pose_matrix, gm.free_symbols(pose_matrix))
 
         # world = pb.KineverseWorld()
-        # filtered_objs = objs if not include_static else objs + self._static_objects
         # for obj in filtered_objs:
         #     world.add_collision_object(obj)
 
-        return CollisionSubworld(self.kw, obj_names, objs, cm.free_symbols(pose_matrix), cythonized_matrix)
+        if include_static:
+            return CollisionSubworld(self.kw, obj_names, objs, 
+                                     gm.free_symbols(pose_matrix), cythonized_matrix, self._static_objects.copy())
+        return CollisionSubworld(self.kw, obj_names, objs, 
+                                 gm.free_symbols(pose_matrix), cythonized_matrix)
 
 
 class CollisionSubworld(object):
     """A wrapper around the bpb collision world which is focused on a subset of objects."""
-    def __init__(self, world, names, collision_objects, free_symbols, pose_generator):
+    def __init__(self, world, names, dynamic_objects, free_symbols, pose_generator, static_objects=[]):
         self.world = world
         self.names = names
-        self.collision_objects = collision_objects
-        self.named_objects     = dict(zip(self.names, self.collision_objects))
-        self.object_name_map   = {o: n for n, o in self.named_objects.items()}
-        self.free_symbols      = free_symbols
-        self.pose_generator    = pose_generator
-        self._state            = {}
-        self._needs_update     = False 
-        self._contacts         = None
+        self.dynamic_objects = dynamic_objects
+        self.static_objects  = static_objects
+        self.named_objects   = dict(zip(self.names, self.dynamic_objects))
+        self.object_name_map = {o: n for n, o in self.named_objects.items()}
+        self.free_symbols    = free_symbols
+        self.pose_generator  = pose_generator
+        self._state          = {}
+        self._needs_update   = False 
+        self._contacts       = None
 
     @profile
     def update_world(self, state):
@@ -410,8 +428,12 @@ class CollisionSubworld(object):
         """
         self._state.update(state)
         if self.pose_generator != None:
-            pb.batch_set_transforms(self.collision_objects, self.pose_generator(**self._state))
+            pb.batch_set_transforms(self.dynamic_objects, self.pose_generator(**self._state))
             self._needs_update = True
+
+    @property
+    def collision_objects(self):
+        return self.dynamic_objects + self.static_objects
 
     @property
     def contacts(self):
@@ -447,9 +469,9 @@ def contact_geometry(pose_a, pose_b, path_a, path_b):
     and object paths.
     """
     cont    = ContactSymbolContainer(path_a, path_b)
-    normal  = vector3(cont.normal_x, cont.normal_y, cont.normal_z)
-    point_a = dot(pose_a, point3(cont.on_a_x, cont.on_a_y, cont.on_a_z))
-    point_b = dot(pose_b, point3(cont.on_b_x, cont.on_b_y, cont.on_b_z))
+    normal  = gm.vector3(cont.normal_x, cont.normal_y, cont.normal_z)
+    point_a = gm.dot(pose_a, gm.point3(cont.on_a_x, cont.on_a_y, cont.on_a_z))
+    point_b = gm.dot(pose_b, gm.point3(cont.on_b_x, cont.on_b_y, cont.on_b_z))
     return point_a, point_b, normal
 
 def closest_distance(pose_a, pose_b, path_a, path_b):
@@ -457,7 +479,7 @@ def closest_distance(pose_a, pose_b, path_a, path_b):
     and object paths.
     """
     point_a, point_b, _ = contact_geometry(pose_a, pose_b, path_a, path_b)
-    return norm(point_a - point_b)
+    return gm.norm(point_a - point_b)
 
 def closest_distance_constraint(obj_a_pose, obj_b_pose, obj_a_path, obj_b_path, margin=0):
     """Generates an impenetrability constraint, given two object poses, paths, and a margin.
@@ -471,44 +493,56 @@ def contact_constraint(obj_a_pose, obj_b_pose, obj_a_path, obj_b_path):
     dist = closest_distance(obj_a_pose, obj_b_pose, obj_a_path, obj_b_path)
     return Constraint(-dist, -dist, dist)
 
+def contact_geometry_world(obj_pose, obj_path):
+    return contact_geometry(obj_pose, gm.eye(4), obj_path, Path('anon'))
+
+def closest_distance_world(obj_pose, obj_path):
+    return contact_distance(obj_pose, gm.eye(4), obj_path, Path('anon'))
+
+def closest_distance_constraint_world(obj_pose, obj_path, margin=0):
+    return closest_distance_constraint(obj_pose, gm.eye(4), obj_path, Path('anon'), margin)
+
+def contact_constraint_world(obj_pose, obj_path):
+    return contact_constraint(obj_pose, gm.eye(4), obj_path, Path('anon'))
+
 def generate_contact_model(actuated_point, actuated_symbols, contact_point, contact_normal, affected_dof, dist_threshold=0.01, set_inanimate=True, default_bound=1e9):
     """Normal is assumed to point towards the actuator.
     This is a very bad and limited model. Should suffice for 1-Dof pushes though.
     """
-    distance     = dot_product(contact_normal, actuated_point - contact_point)
-    in_contact   = less_than(distance, dist_threshold)
-    actuated_jac = vector3(get_diff(actuated_point[0], actuated_symbols),
-                           get_diff(actuated_point[1], actuated_symbols),
-                           get_diff(actuated_point[2], actuated_symbols))
+    distance     = gm.dot_product(contact_normal, actuated_point - contact_point)
+    in_contact   = gm.less_than(distance, dist_threshold)
+    actuated_jac = gm.vector3(gm.get_diff(actuated_point[0], actuated_symbols),
+                              gm.get_diff(actuated_point[1], actuated_symbols),
+                              gm.get_diff(actuated_point[2], actuated_symbols))
 
-    actuated_n   = dot_product(actuated_point, contact_normal)
+    actuated_n   = gm.dot_product(actuated_point, contact_normal)
     actuated_t   = actuated_point - actuated_n * contact_normal
 
-    contact_n    = dot_product(contact_point,  contact_normal)
+    contact_n    = gm.dot_product(contact_point,  contact_normal)
     contact_t    = contact_point - contact_n * contact_normal
 
-    tangent_dist = norm(contact_t - actuated_t)
+    tangent_dist = gm.norm(contact_t - actuated_t)
 
     # print('distance:\n{}'.format(distance))
     # print('impenetrability lb:\n{}'.format(-distance - alg_not(in_contact) * default_bound))
 
-    imp_lb = -distance - alg_not(in_contact) * default_bound
+    imp_lb = -distance - gm.alg_not(in_contact) * default_bound
 
-    out = {'direction_limit': Constraint(-default_bound, 0, dot_product(contact_point, contact_normal)),
+    out = {'direction_limit': Constraint(-default_bound, 0, gm.dot_product(contact_point, contact_normal)),
            'impenetrability': Constraint(imp_lb, default_bound, distance),
            #'motion_alignment_tangent': Constraint(-alg_not(in_contact), alg_not(in_contact), tangent_dist),
            #'motion_alignment_normal': Constraint(-alg_not(in_contact), alg_not(in_contact), actuated_n - contact_n)
            }
 
     for s in affected_dof:
-        contact_jac = vector3(cm.diff(contact_point[0], s),
-                              cm.diff(contact_point[1], s),
-                              cm.diff(contact_point[2], s)) * get_diff(s)
-        #  out['motion_alignment_{}'.format(s)] = Constraint(-in_contact * default_bound, 0, dot_product(contact_normal, contact_jac))
+        contact_jac = gm.vector3(gm.diff(contact_point[0], s),
+                                 gm.diff(contact_point[1], s),
+                                 gm.diff(contact_point[2], s)) * gm.get_diff(s)
+        #  out['motion_alignment_{}'.format(s)] = Constraint(-in_contact * default_bound, 0, gm.dot_product(contact_normal, contact_jac))
         if set_inanimate:
             out['inanimate_{}'.format(s)] = Constraint(-in_contact * default_bound, in_contact * default_bound, s)
 
-    return out
+    return out, in_contact
 
 
 class ContactSymbolContainer(object):
@@ -529,15 +563,15 @@ class ContactSymbolContainer(object):
 
     def __eq__(self, other):
         if isinstance(other, ContactSymbolContainer):
-            return cm.eq_expr(self.on_a_x, other.on_a_x) and \
-                   cm.eq_expr(self.on_a_y, other.on_a_y) and \
-                   cm.eq_expr(self.on_a_z, other.on_a_z) and \
-                   cm.eq_expr(self.on_b_x, other.on_b_x) and \
-                   cm.eq_expr(self.on_b_y, other.on_b_y) and \
-                   cm.eq_expr(self.on_b_z, other.on_b_z) and \
-                   cm.eq_expr(self.normal_x, other.normal_x) and \
-                   cm.eq_expr(self.normal_y, other.normal_y) and \
-                   cm.eq_expr(self.normal_z, other.normal_z)
+            return gm.eq_expr(self.on_a_x, other.on_a_x) and \
+                   gm.eq_expr(self.on_a_y, other.on_a_y) and \
+                   gm.eq_expr(self.on_a_z, other.on_a_z) and \
+                   gm.eq_expr(self.on_b_x, other.on_b_x) and \
+                   gm.eq_expr(self.on_b_y, other.on_b_y) and \
+                   gm.eq_expr(self.on_b_z, other.on_b_z) and \
+                   gm.eq_expr(self.normal_x, other.normal_x) and \
+                   gm.eq_expr(self.normal_y, other.normal_y) and \
+                   gm.eq_expr(self.normal_z, other.normal_z)
         return False
 
 
@@ -568,7 +602,7 @@ class ContactHandler(object):
             self.handle_contact(pb_zero_vector, pb_zero_vector, pb_default_normal, other_path)
 
     def add_passive_handle(self):
-        self.var_map[self._num_anon_contacts] = ContactSymbolContainer(self.obj_path, Path('anon/{}'.format(self._num_anon_contacts)))
+        self.var_map[self._num_anon_contacts] = ContactSymbolContainer(self.obj_path, Path(f'anon/{self._num_anon_contacts}'))
         self.handle_contact(pb_zero_vector, pb_zero_vector, pb_default_normal, self._num_anon_contacts)
         self._num_anon_contacts += 1
 

@@ -19,6 +19,9 @@ BASE_COLORS = [[b * (1.0, 1.0, f) for f in np.linspace(1.0, 0.5, 3)] for b in BA
 def hsv_to_rgb(h, s, v):
     return matcolors.hsv_to_rgb((h, s, v))
 
+def rgb_to_hex(r, g, b):
+    return '#{:02X}{:02X}{:02X}'.format(int(r * 255), int(g * 255), int(b * 255))
+
 def print_return(f):
     def wrap(*args):
         out = f(*args)
@@ -39,8 +42,7 @@ class ColorGenerator(object):
         return hsv_to_rgb(*out)
 
     def get_color_hex(self):
-        r, g, b = self.get_color()
-        return '#{:02X}{:02X}{:02X}'.format(int(r * 255), int(g * 255), int(b * 255))
+        return rgb_to_hex(*self.get_color())
 
 
 def draw_recorders(recorders, ratio=1.0, plot_width=3, plot_height=2, sizes=[]):

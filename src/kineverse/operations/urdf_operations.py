@@ -184,13 +184,13 @@ class CreateURDFFrameConnection(Operation):
                 pos += joint.offset
 
             if hasattr(joint, 'limit_lower') and joint.limit_lower is not None:
-                constraints['{}_position'.format(joint_name)] = Constraint(joint.limit_lower - pos,
-                                                                           joint.limit_upper - pos,
-                                                                           pos)
+                constraints[f'{joint_name}_position'] = Constraint(joint.limit_lower - pos,
+                                                                   joint.limit_upper - pos,
+                                                                   pos)
             if joint.limit_vel is not None:
-                constraints['{}_velocity'.format(joint_name)] = Constraint(-joint.limit_vel,
-                                                                           joint.limit_vel,
-                                                                           vel)
+                constraints[f'{joint_name}_velocity'] = Constraint(-joint.limit_vel,
+                                                                    joint.limit_vel,
+                                                                    vel)
 
             if joint.type == 'prismatic':
                 new_local_fk = dot(joint.tf_offset,
@@ -205,11 +205,11 @@ class CreateURDFFrameConnection(Operation):
             else:
                 raise Exception('Unknown joint type "{}". Failed to instantiate connection.'.format(joint.type))
 
-        self.child_parent = joint.parent
+        self.child_parent        = joint.parent
         self.child_relative_pose = new_local_fk
-        self.child_full_pose = dot(parent_frame.pose, new_local_fk)
-        self.child_link_joint = joint_name
-        self.constraints = constraints
+        self.child_full_pose     = dot(parent_frame.pose, new_local_fk)
+        self.child_link_joint    = joint_name
+        self.constraints         = constraints
 
 
 urdf_geom_types = {urdf.Mesh: GEOM_TYPE_MESH,
@@ -294,7 +294,7 @@ def load_urdf(ks,
                 urdf_to_geometry(c.geometry, collision[x])
         elif u_link.collision is not None:
             collision = {'0': Geometry(str(link_path), urdf_origin_to_transform(u_link.collision.origin), '')}
-            urdf_to_geometry(u_link.collision.geometry, collision.values()[0])
+            urdf_to_geometry(u_link.collision.geometry, next(iter(collision.values())))
 
         if hasattr(u_link, 'visuals') and u_link.visuals is not None and len(u_link.visuals) > 0:
             geometry = {}
@@ -303,7 +303,7 @@ def load_urdf(ks,
                 urdf_to_geometry(v.geometry, geometry[x])
         elif u_link.visual is not None:
             geometry = {'0': Geometry(str(link_path), urdf_origin_to_transform(u_link.visual.origin), '')}
-            urdf_to_geometry(u_link.visual.geometry, geometry.values()[0])
+            urdf_to_geometry(u_link.visual.geometry, next(iter(geometry.values())))
 
         if u_link.inertial is not None:
             if u_link.inertial.origin is not None:
@@ -317,7 +317,7 @@ def load_urdf(ks,
 
         transform = urdf_origin_to_transform(u_link.origin) if urdf.get_root() != u_link.name else root_transform
 
-        ks.apply_operation('create {}'.format(str(prefix + Path(u_link.name))),
+        ks.apply_operation(f'create {link_path}',
                            CreateValue(link_path,
                                        RigidBody(reference_frame, transform, None, geometry, collision, inertial)))
 

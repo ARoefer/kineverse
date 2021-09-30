@@ -96,28 +96,6 @@ if SYM_MATH_ENGINE == 'CASADI':
     lt     = ca.lt
     gt     = ca.gt
 
-    acos   = ca.acos
-    acosh  = ca.acosh
-    asin   = ca.asin
-    asinh  = ca.asinh
-    atan   = ca.atan
-    atanh  = ca.atanh
-    cos    = ca.cos
-    cosh   = ca.cosh
-    exp    = ca.exp
-    log    = ca.log
-    sin    = ca.sin
-    sinh   = ca.sinh
-    sqrt   = ca.sqrt
-    tan    = ca.tan
-    tanh   = ca.tanh
-
-    eq     = ca.eq
-    le     = ca.le
-    ge     = ca.ge
-    lt     = ca.lt
-    gt     = ca.gt
-
     matrix_types = {ca.SX, ca.DM, ca.MX}
     math_types   = set(matrix_types)
     symfloats    = set()
@@ -177,7 +155,10 @@ if SYM_MATH_ENGINE == 'CASADI':
         return out
 
     def diag(*args):
-        return ca.diag(args)
+        m = zeros((len(args), len(args)))
+        for x, a in enumerate(args):
+            m[x, x] = a
+        return m
 
     def eye(n):
         return ca.SX.eye(n)
@@ -190,7 +171,7 @@ if SYM_MATH_ENGINE == 'CASADI':
     def to_numpy(matrix):
         # type: (object) -> np.ndarray
         if type(matrix) != np.ndarray:
-            return np.array(matrix.elements()).astype(float).reshape((matrix.shape[1], matrix.shape[0])).T
+            return np.array([float(x) for x in matrix.elements()]).reshape((matrix.shape[1], matrix.shape[0])).T
         return matrix
 
     def diff(expression, symbol):
@@ -210,7 +191,7 @@ if SYM_MATH_ENGINE == 'CASADI':
 
     def is_matrix(expr):
         # tyoe: (object) -> bool
-        return hasattr(expr, 'shape') and expr.shape[0] * expr.shape[1] > 1
+        return hasattr(expr, 'shape') and (expr.shape[0] > 1 or (len(expr.shape) == 2 and expr.shape[0] * expr.shape[1] > 1))
 
     def is_symbolic(expr):
         # tyoe: (object) -> bool

@@ -1,5 +1,7 @@
 import urdf_parser_py.urdf as urdf
 
+from kineverse.utils import res_pkg_path
+
 def hacky_urdf_parser_fix(urdf_str):
     # TODO this function is inefficient but the tested urdfs's aren't big enough for it to be a problem
     fixed_urdf = ''
@@ -33,3 +35,11 @@ def urdf_filler(model, fill_with_visual=True):
                 else:
                     link.collision = None
     return model
+
+def load_urdf_str(string):
+    return urdf_filler(urdf.URDF.from_xml_string(hacky_urdf_parser_fix(string)))
+
+def load_urdf_file(path):
+    with open(res_pkg_path(path), 'r') as f:
+        return load_urdf_str(f.read())
+

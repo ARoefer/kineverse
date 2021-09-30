@@ -15,9 +15,16 @@ from kineverse.gradients.diff_logic         import Position, \
                                                    Symbol, \
                                                    DiffSymbol, \
                                                    IntSymbol, \
-                                                   erase_type
+                                                   erase_type, \
+                                                   get_symbol_type, \
+                                                   TYPE_UNKNOWN, \
+                                                   TYPE_POSITION, \
+                                                   TYPE_VELOCITY, \
+                                                   TYPE_ACCEL, \
+                                                   TYPE_JERK, \
+                                                   TYPE_SNAP
 from kineverse.gradients.gradient_container import GradientContainer as GC, \
-                                                   GradientMatrix    as GM 
+                                                   GradientMatrix    as GM
 
 
 contrast = 1e10
@@ -39,7 +46,7 @@ if cm.SYM_MATH_ENGINE == 'CASADI':
             return o_op(self, other)
 
         return wrapped_op
-    
+
 
     cm.ca.SX.__add__ = op_wrapper(cm.ca.SX, 'add')
     cm.ca.MX.__add__ = op_wrapper(cm.ca.MX, 'add')
@@ -65,26 +72,30 @@ if cm.SYM_MATH_ENGINE == 'CASADI':
         return cm.subs(expr, subs_dict)
 else:
     from kineverse.symengine_types              import symengine_types, symengine_matrix_types
-    
+
     subs = cm.subs
 
 
 is_symbol = cm.is_symbol
 eq_expr   = cm.eq_expr
 eye       = cm.eye
+zeros     = cm.zeros
 pos_of    = cm.pos_of
 rot_of    = cm.rot_of
 x_of      = cm.x_of
 y_of      = cm.y_of
 z_of      = cm.z_of
-free_symbols = cm.free_symbols 
+free_symbols = cm.free_symbols
 diff      = cm.diff
 Matrix    = cm.Matrix
 trace     = cm.trace
 speed_up  = cm.speed_up
 vstack    = cm.vstack
 hstack    = cm.hstack
-
+atan2     = cm.atan2
+numeric_eq = cm.numeric_eq
+to_list   = cm.to_list
+to_numpy  = cm.to_numpy
 
 def is_symbolic(expr):
     """Is the given expression symbolic?"""
@@ -102,11 +113,32 @@ def wrap_expr(expr):
     """Wrap the expression in an augmented gradient, if it is not one already."""
     return expr if type(expr) == GC else GC(expr)
 
+def diff(term, symbol):
+    if is_symbolic(term):
+        return term.diff(symbol) if type(term) == GC else cm.diff(term, symbol)
+    return 0
+
+def jacobian(vector, symbols):
+    if is_matrix(vector):
+        if len(vector.shape) == 1: # GM is always 2d so casadi can be assumed
+            return matrix_wrapper([[diff(t, s) for s in symbols]
+                                               for t in vector.elements()])
+        elif len(vector.shape) == 2:
+            if len(vector.shape) == 2 and vector.shape[1] > 1:
+                raise Exception(f'Cannot generate jacobian for 2d matrix.'
+                                f'Shape is {vector.shape}')
+            return matrix_wrapper([[diff(vector[y, 0], s) for s in symbols]
+                                                          for y in range(vector.shape[0])])
+    return matrix_wrapper([[0]*len(symbols)])
+
 def get_diff(term, symbols=None):
-    """Returns the derivative of a passed expression."""
-    if cm.is_symbol(term):
+    """Returns the derivative of a passed expression.
+     TODO: This should be using diff from above now, or even Jacobian with a
+           sum over axis 1
+    """
+    if is_symbol(term):
         return DiffSymbol(term)
-    
+
     if type(term) != GC:
         term = GC(term)
 
@@ -115,6 +147,14 @@ def get_diff(term, symbols=None):
         return sum([s * t for s, t in term.gradients.items()])
     else:
         return sum([s * term[s] for s in symbols if s in term])
+
+def get_diff_symbols(expr):
+    if not is_symbolic(expr):
+        return set()
+    if type(expr) == GM or type(expr) == GC:
+            return expr.diff_symbols
+    return {DiffSymbol(s) for s in free_symbols(expr)
+                                if get_symbol_type(s) != TYPE_UNKNOWN}
 
 def sin(expr):
     """Sine"""
@@ -194,7 +234,7 @@ def exp(expr):
     if type(expr) == GC:
         return GC(cm.exp(expr.expr), {s: d * cm.exp(expr.expr) for s, d in expr.gradients.items()})
     return cm.exp(expr)
-    
+
 def log(expr):
     """Logarithm"""
     if type(expr) == GC:
@@ -226,6 +266,22 @@ def matrix_wrapper(m_list):
         return GM(m_list)
     return cm.Matrix(m_list)
 
+def msum(matrix, axis=0):
+    if not is_matrix(matrix):
+        return matrix
+    if axis >= len(matrix.shape):
+        raise Exception(f'Cannot sum over {axis} since matrix '
+                        f'only has {len(matrix.shape)} dimensions')
+    if axis == 0:
+        matrix = matrix.T
+
+    rows = []
+    for y in range(matrix.shape[0]):
+        acc = 0
+        for x in range(matrix.shape[1]):
+            acc += matrix[y, x]
+        rows.append(acc)
+    return matrix_wrapper(rows)
 
 def point3(x, y, z):
     """Creates a 3d point for homogeneous transformations."""
@@ -246,7 +302,7 @@ unitZ = vector3(0, 0, 1)
 def norm(v):
     if type(v) in cm.matrix_types:
         return cm.norm(v)
-    
+
     out = 0
     for x in v:
         out += x ** 2
@@ -254,6 +310,7 @@ def norm(v):
 
 dot  = cm.dot
 dot_product = cm.dot_product
+diag = cm.diag
 
 def cross(u, v):
     """Computes the cross product between two vectors."""
@@ -261,22 +318,28 @@ def cross(u, v):
                            u[2] * v[0] - u[0] * v[2],
                            u[0] * v[1] - u[1] * v[0], 0])
 
-def axis_angle_from_matrix(rotation_matrix):
+def rotation_vector_from_matrix(rotation_matrix):
     rm = rotation_matrix
-    if hasattr(rm, 'free_symbols') and len(rm.free_symbols) == 0:
-        if 1 - rm[0,0] <= 1e-4 and 1 - rm[1,1] <= 1e-4 and 1 - rm[2,2] <= 1e-4:
-            return unitX, 0
-    
+
     angle = (trace(rm[:3, :3]) - 1) / 2
     angle = acos(angle)
     angle = angle # if type(angle) is not cm.ComplexDouble else angle.real
     x = (rm[2, 1] - rm[1, 2])
     y = (rm[0, 2] - rm[2, 0])
     z = (rm[1, 0] - rm[0, 1])
-    n = sqrt(x * x + y * y + z * z)
 
+    return vector3(x, y, z)
 
-    axis = vector3(x / n, y / n, z / n)
+def axis_angle_from_matrix(rotation_matrix):
+    rm = rotation_matrix
+    if hasattr(rm, 'free_symbols') and len(rm.free_symbols) == 0:
+        if 1 - rm[0,0] <= 1e-4 and 1 - rm[1,1] <= 1e-4 and 1 - rm[2,2] <= 1e-4:
+            return unitX, 0
+
+    v_rot = rotation_vector_from_matrix(rm)
+
+    angle = norm(v_rot)
+    axis  = v_rot / angle
     return axis, angle
 
 def translation3(x, y, z, w=1):
@@ -390,7 +453,7 @@ def greater_than(x, y):
     if cm.is_symbol(y):
         fake_diffs[DiffSymbol(y)] = -1
     else:
-        if type(y) in cm.math_types: 
+        if type(y) in cm.math_types:
             y = GC(y)
         if type(y) == GC:
             y.do_full_diff()
@@ -402,7 +465,7 @@ def greater_than(x, y):
         else:
             fake_diffs[x_d] = 1
     else:
-        if type(x) in cm.math_types: 
+        if type(x) in cm.math_types:
             x = GC(x)
         if type(x) == GC:
             x.do_full_diff()

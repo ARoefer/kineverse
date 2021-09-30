@@ -1,7 +1,7 @@
 import numpy  as np
 import pandas as pd
-
-import kineverse.gradients.common_math  as cm
+import pathlib
+import kineverse.gradients.gradient_math  as cm
 
 from kineverse.motion.qp_solver             import QPSolver, QPSolverException
 
@@ -86,7 +86,8 @@ class MinimalQPBuilder(object):
         self.A_dfs     = []
         self.H_dfs     = []
         self._cmd_log  = []
-        
+        self.latest_error = None
+
         self._build_M()
 
     def _build_M(self):
@@ -103,6 +104,7 @@ class MinimalQPBuilder(object):
 
     def reset_solver(self):
         self.qp_solver = QPSolver(self.A.shape[1], self.A.shape[0])
+        self.latest_error = None
 
     @profile
     def get_cmd(self, substitutions, nWSR=None, deltaT=None):
@@ -127,6 +129,7 @@ class MinimalQPBuilder(object):
         try:
             xdot_full = self.qp_solver.solve(self.np_H, self.np_g, self.np_A, self.np_lb,  self.np_ub, 
                                                                     self.np_lbA, self.np_ubA, nWSR)
+            self.latest_error = np.sum(xdot_full[len(self.cv):])
             if PANDA_LOGGING:
                 self.A_dfs.append(dfA)
                 self.H_dfs.append(dfH)
@@ -139,7 +142,9 @@ class MinimalQPBuilder(object):
                                           self.np_A[:, :-self.n_sc])), 
                                           index=self.row_names, columns=['lbA', 'ubA'] + self.col_names[:self.n_cv])
 
-            print('INFEASIBLE CONFIGURATION!\nH:{}\nA:\n{}\nFull data written to "solver_crash_H.csv" and "solver_crash_A.csv"'.format(dfH.T, dfA))
+            print('INFEASIBLE CONFIGURATION!\nH:{}\nA:\n{}\nFull data written to "{}" and "{}"'.format(dfH.T, dfA, 
+                                                                                                       pathlib.Path('solver_crash_H.csv').resolve(),
+                                                                                                       pathlib.Path('solver_crash_A.csv').resolve()))
             dfH.to_csv('solver_crash_H.csv')
             dfA.to_csv('solver_crash_A.csv')
             b_comp  = np.greater(self.np_lb,  self.np_ub)
@@ -161,7 +166,8 @@ class MinimalQPBuilder(object):
         return {cv: xdot_full[i] for i, cv in enumerate(self.cv)}
 
     def equilibrium_reached(self, low_eq=1e-3, up_eq=-1e-3):
-        return (self.np_lb <= low_eq).min()  and \
+        return self.latest_error is not None and \
+               (self.np_lb <= low_eq).min()  and \
                (self.np_lbA <= low_eq).min() and \
                (self.np_ub >= up_eq).min()   and \
                (self.np_ubA >= up_eq).min()
@@ -178,6 +184,11 @@ class MinimalQPBuilder(object):
 
     def _post_process_matrices(self, deltaT):
         pass
+
+    def str_last_soft_bounds(self):
+        return '\n'.join(f'{n}: {lb} {ub}' for n, lb, ub in zip(self.row_names[-self.n_sc:],
+                                                                self.np_lbA[-self.n_sc:],
+                                                                self.np_ubA[-self.n_sc:]))
 
     @property
     def cmd_df(self):
@@ -312,13 +323,14 @@ class GeomQPBuilder(PIDQPBuilder): #(TypedQPBuilder):
                 obj_b = path[path.index(obj_to_obj_infix) + 1: -2]
                 #print('Adding handler for distance\n {} ->\n {}'.format(obj_a_str, obj_b_str))
                 if obj_b[0] == 'anon':
+                    n_anon = 0
                     if len(obj_b) > 1:
                         n_anon = int(obj_b[1]) + 1 
                     if coll_a not in self.collision_handlers:
                         self.collision_handlers[coll_a] = ContactHandler(obj_a)
                     handler = self.collision_handlers[coll_a]
-                    if handler.num_anon_contacts < n_anon:
-                        for x in range(n_anon - handler.num_anon_contacts):
+                    if handler.num_anon_contacts <= n_anon:
+                        for x in range(n_anon + 1 - handler.num_anon_contacts):
                             handler.add_passive_handle()
                 
                 else: 
@@ -385,9 +397,10 @@ class GeomQPBuilder(PIDQPBuilder): #(TypedQPBuilder):
 
 
 @profile
-def generate_controlled_values(constraints, symbols, weights={}, bounds={}, default_weight=0.01, default_bounds=(-1e9, 1e9)):
+def generate_controlled_values(constraints, symbols, weights=None, bounds={}, default_weight=0.01, default_bounds=(-1e9, 1e9)):
     controlled_values = {}
     to_remove  = set()
+    weights = {} if weights is None else weights
 
     for k, c in constraints.items():
         if type(c) == PID_Constraint:
@@ -407,9 +420,9 @@ def generate_controlled_values(constraints, symbols, weights={}, bounds={}, defa
 
     return controlled_values, new_constraints
 
-def depth_weight_controlled_values(gm, controlled_values, default_weight=0.01, exp_factor=1.0):
+def depth_weight_controlled_values(km, controlled_values, default_weight=0.01, exp_factor=1.0):
     for cv in controlled_values.values():
-        cv.weight_id = default_weight * max(1, len(gm.get_active_geometry_raw({cv.symbol}))) ** exp_factor
+        cv.weight_id = default_weight * max(1, len(km.get_active_geometry_raw({cm.IntSymbol(cv.symbol)}))) ** exp_factor
     return controlled_values
 
 def find_constant_bounds(constraints):

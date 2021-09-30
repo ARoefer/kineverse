@@ -1,14 +1,15 @@
 import os
 
-import copy      as copy_module
+import copy  as copy_module
 import importlib
 import math
-import kineverse.gradients.common_math as cm
+import numpy as np
+import kineverse.gradients.gradient_math as gm
 
 from collections                       import namedtuple
 from kineverse.time_wrapper            import Time
 
-if cm.SYM_MATH_ENGINE == 'SYMENGINE':
+if gm.cm.SYM_MATH_ENGINE == 'SYMENGINE':
     from kineverse.symengine_types         import symengine_types
 else:
     symengine_types = set()
@@ -62,24 +63,24 @@ def import_class(class_path):
 RPY = namedtuple('RPY', ['r', 'p', 'y'])
 
 def rot3_to_rpy(rot3, evaluate=False):
-    sy = cm.sqrt(rot3[0,0] * rot3[0,0] + rot3[2,2] * rot3[2,2])
+    sy = gm.sqrt(rot3[0,0] * rot3[0,0] + rot3[2,2] * rot3[2,2])
 
     if sy >= 1e-6:
         if evaluate:
-            return RPY(float(cm.atan2(rot3[2,1], rot3[2,2])), 
-                       float(cm.atan2(-rot3[2,0], sy)), 
-                       float(cm.atan2(rot3[1,0], rot3[0,0])))
+            return RPY(float(gm.atan2(rot3[2,1], rot3[2,2])), 
+                       float(gm.atan2(-rot3[2,0], sy)), 
+                       float(gm.atan2(rot3[1,0], rot3[0,0])))
         else:
-            return RPY(cm.atan2(rot3[2,1], rot3[2,2]), 
-                       cm.atan2(-rot3[2,0], sy), 
-                       cm.atan2(rot3[1,0], rot3[0,0]))
+            return RPY(gm.atan2(rot3[2,1], rot3[2,2]), 
+                       gm.atan2(-rot3[2,0], sy), 
+                       gm.atan2(rot3[1,0], rot3[0,0]))
     else:
         if evaluate:
-            return RPY(float(cm.atan2(-rot3[1,2], rot3[1,1])), 
-                       float(cm.atan2(-rot3[2,0], sy)), 0)
+            return RPY(float(gm.atan2(-rot3[1,2], rot3[1,1])), 
+                       float(gm.atan2(-rot3[2,0], sy)), 0)
         else:
-            return RPY(cm.atan2(-rot3[1,2], rot3[1,1]), 
-                       cm.atan2(-rot3[2,0], sy), 0)
+            return RPY(gm.atan2(-rot3[1,2], rot3[1,1]), 
+                       gm.atan2(-rot3[2,0], sy), 0)
 
 
 def real_quat_from_matrix(frame):
@@ -153,3 +154,54 @@ def union(sets, starting_set=None):
     for s in sets:
         out = out.union(s)
     return out
+
+
+def static_var_bounds(km, symbols):
+    """Extracts the static bounds for a set of symbols from a model
+       and returns them as a numpy matrix.
+    
+    Args:
+        km (ArticulationModel): Articulation model to draw info from
+        symbols (set): Set of symbols to bound
+    
+    Returns:
+        (list, np.ndarray, list): Returns a tuple of m bounded variables,
+                                  a bounding m*2 bound matrix, and n unbounded variables.
+
+    """
+    ordered_symbols = [s for _, s in sorted((str(s), s) for s in symbols)]
+
+    static_constraints = {}
+    for n, c in km.get_constraints_by_symbols(symbols).items():
+        if gm.is_symbol(c.expr):
+            s  = gm.free_symbols(c.expr).pop()
+            fs = gm.free_symbols(c.lower).union(gm.free_symbols(c.upper))
+            if len(fs.difference({s})) == 0:
+                static_constraints[s] = (float(gm.subs(c.lower, {s: 0})), float(gm.subs(c.upper, {s: 0})))
+
+    static_bounds = np.array([static_constraints[s] for s in ordered_symbols 
+                                                    if  s in static_constraints])
+
+    return [s for s in ordered_symbols if s in static_constraints], \
+           static_bounds, \
+           [s for s in ordered_symbols if s not in static_constraints]
+
+
+def generate_transition_function(sym_dt, symbols, overrides=None):
+    overrides = {} if overrides is None else overrides
+    ordered_symbols = [s for (_, s) in sorted((str(s), s) for s in symbols)] # .union(overrides.keys()))]
+
+    f = []
+    for s in ordered_symbols:
+        if s not in overrides:
+            f.append(gm.wrap_expr(s + gm.DiffSymbol(s) * sym_dt))
+        else:
+            f.append(overrides[s])
+
+    controls = {str(s) for s in sum([list(gm.free_symbols(e)) for e in f], []) if str(s) != str(sym_dt)}
+    f_params = [sym_dt] + [gm.Symbol(s) for s in sorted(controls)]
+    temp_f   = gm.Matrix([gm.extract_expr(e) for e in f])
+    # print(f_params)
+    function = gm.speed_up(temp_f, f_params)
+
+    return ordered_symbols, function, f_params

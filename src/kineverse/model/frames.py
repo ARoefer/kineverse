@@ -68,7 +68,7 @@ class Transform(JSONSerializable):
 def get_root_frames(frame_dict):
     """Given a dictionary of frames, identifies the roots of the kinematic chains."""
     if len(frame_dict) > 0:
-        if type(frame_dict.keys()[0]) == str:
+        if type(next(iter(frame_dict))) == str:
             return {k: f for k, f in frame_dict.items() if str(f.parent) not in frame_dict}
         return {k: f for k, f in frame_dict.items() if f.parent not in frame_dict}
     return {}
