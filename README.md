@@ -40,28 +40,16 @@ git checkout noetic
 Once you are done cloning the package, you can rebuild and re-source your workspace. 
 
 ### Installing Bullet
-Kineverse includes a small geometry query system which uses a custom wrapper for the Bullet Physics Engine. Unfortunately the installation is quite manual and requires a modification of the `PYTHONPATH` variable.
+Kineverse includes a small geometry query system which uses a custom wrapper for the Bullet Physics Engine. Unfortunately, the installation has to be done from source. The `kineverse` package includes a `build_pybullet.sh` script which can be run to perform the entire installation automatically. The script expects a directory as argument to which it will clone both `pybind11` and `bullet3`. It will build and install both from there. The script will ask for `sudo` rights as a part of the process.
 
 ```bash
-sudo apt install python-dev 
-pip install 'pytest<5.0'
+# Ensure you have the Python 3 development tools
+sudo apt install python3-dev 
 
-cd libs  # Go to a directory where you want to store the bullet code
-git clone https://github.com/pybind/pybind11.git
-cd pybind11
-mkdir build
-cd build 
-cmake .. -DCMAKE_BUILD_TYPE=Release -DPYTHON_EXECUTABLE=/usr/bin/python2.7
-make install -j4
-
-git clone https://github.com/ARoefer/bullet3.git
-cd bullet3
-./build_cmake_pybullet_3.8_double.sh
-
-export PYTHONPATH=$PYTHONPATH:$PWD/build_cmake/better_python:$PWD/examples/pybullet  # Extend the python path
+# Run installation
+./build_pybullet.sh /my/awesome/library/dir
+# Wait...
 ```
-
-If you do not want to keep adding the library to your path manually, I advise adding the export of `PYTHONPATH` to your `.bashrc` file.
 
 If everything worked, you should be able to import the wrapper in a Python environment. 
 
