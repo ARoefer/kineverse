@@ -350,10 +350,13 @@ class ArticulationModel(object):
         """
         # NOTE: Fuck the complicated update mechanism. It causes nothing but problems and is mostly irrelevant to current real-world applications
         if model_settings.BRUTE_MODE:
+            if len(self.operation_history.chunk_history) == 0:
+                self.data_tree.clear()
+                return
+
             # Implies that the model needs to be rebuilt.
             if len(self.operation_history.chunk_history) > 0 and self._touched_stamp < self.operation_history.chunk_history[-1].stamp:
                 self.data_tree.clear()
-
                 for chunk in self.operation_history.chunk_history:
                     chunk.operation.execute(self, chunk.stamp)
                     chunk.operation.apply_to_model(self, chunk.stamp)

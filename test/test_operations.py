@@ -24,12 +24,12 @@ class TestOperations(ut.TestCase):
         km.apply_operation('my_var*=2', op_b)
         km.clean_structure()
 
-        self.assertEquals(km.get_data(p), 10)
+        self.assertEqual(km.get_data(p), 10)
 
         km.apply_operation_before('my_var+=3', 'my_var*=2', op_c)
         km.clean_structure()
 
-        self.assertEquals(km.get_data(p), 16)
+        self.assertEqual(km.get_data(p), 16)
 
     def test_add_single(self):
         km = ArticulationModel()
@@ -37,8 +37,9 @@ class TestOperations(ut.TestCase):
         op = CreateValue(p, 5)
         km.apply_operation('create my_var', op)
         self.assertTrue(km.has_data(p))
-        self.assertEquals(km.get_data(p), 5)
+        self.assertEqual(km.get_data(p), 5)
         km.remove_operation('create my_var')
+        km.clean_structure()
         self.assertFalse(km.has_data(p))
 
 
@@ -61,12 +62,13 @@ class TestOperations(ut.TestCase):
         self.assertIn(Path('my_obj/some_subobj/z'),op.full_mod_paths)
         km.apply_operation('create my_obj', op)
         self.assertTrue(km.has_data('my_obj'))
-        self.assertEquals(km.get_data('my_obj/some_str'), 'lol')
-        self.assertEquals(km.get_data('my_obj/some_scalar'), 7.5)
-        self.assertEquals(km.get_data('my_obj/some_subobj/x'), 4)
-        self.assertEquals(km.get_data('my_obj/some_subobj/y'), 5)
-        self.assertEquals(km.get_data('my_obj/some_subobj/z'), 10)
+        self.assertEqual(km.get_data('my_obj/some_str'), 'lol')
+        self.assertEqual(km.get_data('my_obj/some_scalar'), 7.5)
+        self.assertEqual(km.get_data('my_obj/some_subobj/x'), 4)
+        self.assertEqual(km.get_data('my_obj/some_subobj/y'), 5)
+        self.assertEqual(km.get_data('my_obj/some_subobj/z'), 10)
         km.remove_operation('create my_obj')
+        km.clean_structure()
         self.assertFalse(km.has_data('my_obj'))
         self.assertFalse(km.has_data('my_obj/some_scalar'))
         self.assertFalse(km.has_data('my_obj/some_subobj'))
@@ -87,8 +89,9 @@ class TestOperations(ut.TestCase):
         self.assertIn(Path('my_var'), op.dependencies)
         km.apply_operation('compute sin of my_var', op)
         self.assertTrue(km.has_data('sin_of_my_var'))
-        self.assertEquals(km.get_data('sin_of_my_var'), sin(5))
+        self.assertEqual(km.get_data('sin_of_my_var'), sin(5))
         km.remove_operation('compute sin of my_var')
+        km.clean_structure()
         self.assertFalse(km.has_data('sin_of_my_var'))
 
         with self.assertRaises(Exception):
@@ -96,13 +99,14 @@ class TestOperations(ut.TestCase):
 
         op = ExecFunction('cross_of_a_b', cross, Path('vec_a'), Path('vec_b'))
         self.assertIn('u', op._exec_args)
-        self.assertEquals(op._exec_args['u'], Path('vec_a'))
+        self.assertEqual(op._exec_args['u'], Path('vec_a'))
         self.assertIn('v', op._exec_args)
-        self.assertEquals(op._exec_args['v'], Path('vec_b'))
+        self.assertEqual(op._exec_args['v'], Path('vec_b'))
         km.apply_operation('compute cross of vectors', op)
         self.assertTrue(km.has_data('cross_of_a_b'))
         self.assertTrue(eq_expr(km.get_data('cross_of_a_b'), vector3(0,0,1)))
         km.remove_operation('compute cross of vectors')
+        km.clean_structure()
         self.assertFalse(km.has_data('cross_of_a_b'))
 
 if __name__ == '__main__':
