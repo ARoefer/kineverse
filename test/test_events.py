@@ -10,10 +10,10 @@ from kineverse.utils                    import bb
 
 class EmptyOperation(Operation):
     def __init__(self):
-        super(EmptyOperation, self).__init__([])
+        super(EmptyOperation, self).__init__({})
 
-    def _apply(self, ks):
-        return {}, {}
+    def _execute_impl(self, **kwargs):
+        self.constraints = {}
 
 
 class TestEventModel(ut.TestCase):
