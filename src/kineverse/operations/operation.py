@@ -1,4 +1,5 @@
-import kineverse.model.model_settings  as model_settings
+import kineverse.gradients.gradient_math as gm
+import kineverse.model.model_settings    as model_settings
 
 from kineverse.model.paths import Path, CPath, PathDict, collect_paths
 from kineverse.utils       import copy, deepcopy
@@ -176,3 +177,19 @@ class Operation(object):
     def json_factory(cls, args):
         raise NotImplementedError
         # return cls(*args)
+
+    def __eq__(self, other):
+        if type(self) == type(other):
+            for k, v in self._exec_args.items():
+                if k in other._exec_args:
+                    if type(v) in gm.symbolic_types or type(other._exec_args[k]) in gm.symbolic_types:
+                        if str(v) != str(other._exec_args[k]):
+                            break
+                    elif v != other._exec_args[k]:
+                        break
+            else:
+                return True
+        return False
+
+    def __hash__(self):
+        return hash(str(type(self))) ^ hash(', '.join(str(v) for v in self._exec_args.values()))

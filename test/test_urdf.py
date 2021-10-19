@@ -26,7 +26,7 @@ class TestURDF(ut.TestCase):
         ks2 = ArticulationModel()
         load_urdf(ks1, Path(urdf_model.name), urdf_model)
         load_urdf(ks2, Path(urdf_model.name), urdf_model)
-        self.assertEquals(ks1, ks2)
+        self.assertEqual(ks1, ks2)
 
     def test_load(self):
         urdf_model = URDF.from_xml_file(res_pkg_path('package://kineverse/urdf/testbot.urdf'))
@@ -68,7 +68,7 @@ class TestURDF(ut.TestCase):
                                                                              Path('child')))
         self.assertTrue(km.has_data('fixed_joint'))
         self.assertTrue(gm.cm.numeric_eq(km.get_data('child/pose'), child_pose))
-        self.assertEquals(km.get_data('child/parent_joint'), 'fixed_joint')
+        self.assertEqual(km.get_data('child/parent_joint'), 'fixed_joint')
 
     def test_prismatic_joint(self):
         km = ArticulationModel()
@@ -99,7 +99,7 @@ class TestURDF(ut.TestCase):
                                                                               Path('parent'),
                                                                               Path('child')))
         self.assertTrue(gm.cm.numeric_eq(km.get_data('child/pose'), child_pose))
-        self.assertEquals(km.get_data('child/parent_joint'), 'prismatic_joint')
+        self.assertEqual(km.get_data('child/parent_joint'), 'prismatic_joint')
 
     def test_revolute_and_continuous_joint(self):
         km = ArticulationModel()
@@ -128,7 +128,7 @@ class TestURDF(ut.TestCase):
                                                      Path('parent'), 
                                                      Path('child')))
         self.assertTrue(gm.cm.numeric_eq(km.get_data('child/pose'), child_pose))
-        self.assertEquals(km.get_data('child/parent_joint'), 'revolute_joint')
+        self.assertEqual(km.get_data('child/parent_joint'), 'revolute_joint')
 
         km.remove_operation('connect parent child')
         km.remove_operation('create revolute joint')
@@ -142,7 +142,7 @@ class TestURDF(ut.TestCase):
                                                      Path('parent'), 
                                                      Path('child')))
         self.assertTrue(gm.cm.numeric_eq(km.get_data('child/pose'), child_pose))
-        self.assertEquals(km.get_data('child/parent_joint'), 'continuous_joint')
+        self.assertEqual(km.get_data('child/parent_joint'), 'continuous_joint')
 
     def test_model_reform(self):
         km = ArticulationModel()

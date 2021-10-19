@@ -64,6 +64,8 @@ if cm.SYM_MATH_ENGINE == 'CASADI':
     cm.ca.MX.__div__ = op_wrapper(cm.ca.MX, 'div')
     cm.ca.DM.__div__ = op_wrapper(cm.ca.DM, 'div')
 
+    symbolic_types = cm.math_types
+
     def subs(expr, subs_dict):
         if type(expr) == GC:
             return cm.subs(expr.expr, subs_dict)
