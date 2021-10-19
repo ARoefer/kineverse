@@ -3,6 +3,7 @@ The geometry_model module provides a third articulation model that is derived fr
 This model recognizes the insertion of rigid bodies and builds up a collision scene in the background.
 """
 import numpy as np
+import copy
 
 import kineverse.gradients.gradient_math as gm
 import kineverse.model.model_settings    as model_settings
@@ -177,8 +178,8 @@ class ArticulatedObject(JSONSerializable):
     def __deepcopy__(self, memo):
         out = type(self)(self.name)
         memo[id(self)] = out
-        out.links  = {k: deepcopy(v) for k, v in self.links.items()}
-        out.joints = {k: deepcopy(v) for k, v in self.joints.items()}
+        out.links  = {k: copy.deepcopy(v) for k, v in self.links.items()}
+        out.joints = {k: copy.deepcopy(v) for k, v in self.joints.items()}
         return out
 
     def __eq__(self, other):

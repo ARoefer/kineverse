@@ -2,9 +2,10 @@ import kineverse.gradients.gradient_math as gm
 import unittest as ut
 import betterpybullet as pb
 
+from kineverse.operations.basic_operations import CreateValue
 from kineverse.gradients.diff_logic       import Position
 from kineverse.gradients.gradient_math    import *
-from kineverse.model.paths                import Path
+from kineverse.model.paths                import Path, CPath
 from kineverse.model.geometry_model       import GeometryModel,\
                                                  CollisionSubworld,\
                                                  ArticulatedObject,\
@@ -20,14 +21,15 @@ class TestGeometryModel(ut.TestCase):
         sym_b = Position('b')
         sym_c = Position('c')
 
-        box_shape  = Geometry('my_box',  gm.eye(4), 'box')
-        mesh_shape = Geometry('my_mesh', gm.eye(4), 'mesh', mesh='package://kineverse/meshes/suzanne.obj')
+        box_shape  = Geometry(CPath('my_box'),  gm.eye(4), 'box')
+        mesh_shape = Geometry(CPath('my_mesh'), gm.eye(4), 'mesh', mesh='package://kineverse/meshes/suzanne.obj')
 
-        box_link  = RigidBody('world', translation3(sym_a, 1, 0), geometry={'0' : box_shape}, collision={'0' : box_shape})
-        mesh_link = RigidBody('world', translation3(1, sym_b, 0), geometry={'0' : mesh_shape}, collision={'0' : mesh_shape}) 
+        box_link  = RigidBody(CPath('world'), translation3(sym_a, 1, 0), geometry={'0' : box_shape}, collision={'0' : box_shape})
+        mesh_link = RigidBody(CPath('world'), translation3(1, sym_b, 0), geometry={'0' : mesh_shape}, collision={'0' : mesh_shape}) 
 
-        km.set_data('my_box', box_link)
-        km.set_data('my_mesh', mesh_link)
+        km.apply_operation('create my_box',  CreateValue(Path('my_box'),  box_link))
+        km.apply_operation('create my_mesh', CreateValue(Path('my_mesh'), mesh_link))
+
         km.clean_structure()
         km.dispatch_events() # Generates the pose expressions for links
 
@@ -64,7 +66,7 @@ class TestGeometryModel(ut.TestCase):
         robot.links['my_box']  = box_link
         robot.links['my_mesh'] = mesh_link
 
-        km.set_data('my_bot', robot)
+        km.apply_operation('create my_bot', CreateValue(Path('my_bot'), robot))
         km.clean_structure()
         km.dispatch_events() # Generates the pose expressions for links        
 
