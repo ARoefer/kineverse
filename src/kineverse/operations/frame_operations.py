@@ -45,6 +45,7 @@ class CreateRelativeFrame(Operation):
                                                   parent_frame=Path(parent_path), 
                                                   parent_path=CPath(parent_path),
                                                   child_frame=child_frame)
+        self._save_serialization_args(path, parent_path, child_frame)
 
     def _execute_impl(self, parent_path, parent_frame, child_frame):
         self.output = Frame(parent_path, 
@@ -60,6 +61,7 @@ class CreateRelativeTransform(Operation):
                                                       to_frame=Path(to_frame_path),
                                                       ff_path=CPath(from_frame_path),
                                                       tf_path=CPath(to_frame_path))
+        self._save_serialization_args(path, from_frame_path, to_frame_path)
 
     # TODO: Inefficient
     def _execute_impl(self, from_frame, to_frame, ff_path, tf_path):

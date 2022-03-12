@@ -54,6 +54,9 @@ class OperationsClient_NoROS(object):
         if type(path) == str:
             path = Path(path)
 
+        if len(self._operations_batch) > 0:
+            self.apply_changes()
+
         with self.lock:
             if path not in self.tracked_paths: 
                 self._start_tracking(path)
@@ -101,8 +104,8 @@ class OperationsClient_NoROS(object):
         self.km.dispatch_events()
 
     def _check_tracked(self, operation):
-        mod_paths = set(operation._root_set.values())
-        if mod_paths.intersection(self.tracked_paths) < len(mod_paths):
+        mod_paths = set(operation.output_path_assignments.values())
+        if len(mod_paths.intersection(self.tracked_paths)) < len(mod_paths):
             for p in mod_paths:
                 if p not in self.tracked_paths:
                     self._start_tracking(p)

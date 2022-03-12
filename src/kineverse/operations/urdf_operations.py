@@ -170,6 +170,7 @@ class CreateURDFFrameConnection(Operation):
              'child_full_pose': child_frame + ('pose',),
              'child_link_joint': child_frame + ('parent_joint',)},
             joint_name=str(joint), joint=joint, parent_frame=parent_frame, child_frame=child_frame)
+        self._save_serialization_args(joint, parent_frame, child_frame)
 
     def _execute_impl(self, joint_name, joint, parent_frame, child_frame):
         constraints = {}

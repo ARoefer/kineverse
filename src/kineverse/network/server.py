@@ -9,7 +9,7 @@ import kineverse.network.names as stdn
 from kineverse.model.paths             import Path, PathDict, collect_paths
 from kineverse.model.event_model       import EventModel
 from kineverse.model.articulation_model   import ApplyAt, ApplyBefore, ApplyAfter, RemoveOp
-from kineverse.model.history           import Timeline, StampedData
+from kineverse.model.history           import History, Timeline, StampedData
 from kineverse.utils                   import import_class, res_pkg_path
 from kineverse.network.ros_conversion  import json, encode_constraint, decode_op_msg,encode_operation_update, decode_operation_instruction
 from kineverse.time_wrapper            import Time
@@ -132,10 +132,11 @@ class ModelServer_NoROS(object):
 
     def srv_get_history(self, req):
         res = GetHistoryResponseMsg()
-        res.stamp = Time.now()
+        # res.stamp = Time.now()
+        stamp = Time.now()
 
         with self.lock:
-            res.history = encode_operation_update(res.stamp, self.km.get_history_of([Path(x) for x in req.paths]))
+            res.history = encode_operation_update(stamp, self.km.get_history_of([Path(x) for x in req.paths]))
         return res
 
     @profile

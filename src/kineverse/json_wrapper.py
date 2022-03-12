@@ -1,3 +1,4 @@
+from importlib import import_module
 import traceback
 
 import kineverse.gradients.common_math as cm
@@ -11,8 +12,10 @@ from kineverse.utils             import import_class
 
 json_sym_matrix = 'SYM_MATRIX'
 json_sym_expr   = 'SYM_EXPR'
+json_fn         = 'FUNCTION'
 
 class_registry = {}
+function_registry = {}
 
 def encode_symbolic_number(obj):
     return float(obj) if type(obj) in cm.symfloats else int(obj)
@@ -21,10 +24,14 @@ class KineverseJSONEncoder(json.JSONEncoder):
     def default(self, obj):
         if isinstance(obj, JSONSerializable):
             return obj.json_data()
-        elif type(obj) in symengine_matrix_types:
+        elif type(obj) in cm.matrix_types:
             return {'__type__': json_sym_matrix, 'data': obj.tolist()}
-        elif type(obj) in symengine_types:
+        elif type(obj) in cm.symfloats:
             return {'__type__': json_sym_expr,   'data': str(obj)} if cm.is_symbolic(obj) else encode_symbolic_number(obj)
+        elif type(obj) == function:
+            return {'__type__': json_fn, 
+                    'module': f'{obj.__module__}', 
+                    'name': obj.__qualname__}
         else:
             try:
                 return super(KineverseJSONEncoder, self).default(obj)
@@ -56,6 +63,18 @@ def json_decoder(dct):
                 return sp.sympify(dct['data'])
             except NameError as e:
                 raise Exception('NameError Occured while trying to sympify string {}. Error: {}\n{}'.format(repr(dct['data']), str(e), traceback.format_exc()))
+        elif t == json_fn:
+            key = (dct['module'], dct['name'])
+            if key not in function_registry:
+                m = import_module(key[0])
+                f = m
+                try:
+                    for n in key[1].split('.'):
+                        f = getattr(f, n)
+                except AttributeError as e:
+                    raise TypeError(f'Failed to deserialze function "{key[0]}.{key[1]}": {e}')
+                if type(f) is not function:
+                    raise TypeError(f'Deserialized function "{key[0]}.{key[1]}" is not a function but a {type(f)}')
         elif t[:8] == '<class \'' and t[-2:] == '\'>':
             t = t[8:-2]
             if t not in class_registry:

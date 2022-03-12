@@ -48,6 +48,7 @@ class Operation(object):
                          'constraint_memento'}
 
     def __init__(self, output_paths, **exec_args):
+        self._save_serialization_args(output_paths, exec_args)
         # Store arguments used in the construction of this operation for network serialization.
         # self._construction_args = [deepcopy(x) for x in construction_args]
         illegal_outputs = [k for k in output_paths.keys() if k in Operation._output_blacklist]
@@ -65,9 +66,9 @@ class Operation(object):
         args = set(self._execute_impl.__code__.co_varnames[1:self._execute_impl.__code__.co_argcount])
         given_args = set(exec_args.keys())
 
-        self._exec_args       = {k: deepcopy(exec_args[k]) for k in check_function_signature(self._execute_impl, 
-                                                                                             exec_args, 
-                                                                                             Operation._execute_impl)}
+        self._exec_args   = {k: deepcopy(exec_args[k]) for k in check_function_signature(self._execute_impl, 
+                                                                                         exec_args, 
+                                                                                         Operation._execute_impl)}
         self.dependencies = {d for d in self._exec_args.values() if type(d) == Path}
 
 
@@ -101,6 +102,9 @@ class Operation(object):
         # Collect the tree structure of the output
         self.output_paths = {o: collect_paths(getattr(self, o), Path('')) for o in self._outputs}
         
+        # Collect the roots of the modified paths
+        # self.root_paths   = {p for p in self.output_path_assignments.values()}
+
         # Generate list of all modified paths by prefixing the write-path assigned to an output
         # to the 
         self.full_mod_paths = set(sum([[p] + [p + x for x in self.output_paths[o]]
@@ -165,6 +169,9 @@ class Operation(object):
 
     # def _collect_deps(self, **kwargs):
     #     return set()
+
+    def _save_serialization_args(self, *args):
+        self._serialization_args = deepcopy(args)
 
     def _execute_impl(self, **kwargs):
         raise NotImplementedError

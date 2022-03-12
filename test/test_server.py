@@ -2,6 +2,7 @@ import unittest as ut
 
 import kineverse.network.ros_conversion as rc
 import kineverse.json_wrapper           as json
+import kineverse.urdf_fix               as kurdf
 
 from kineverse.operations.urdf_operations import load_urdf
 from kineverse.model.paths                import Path
@@ -16,7 +17,6 @@ from kineverse_msgs.msg import ModelUpdate as ModelUpdateMsg
 
 from kineverse_msgs.srv import ApplyOperationsRequest as ApplyOperationsRequestMsg
 
-from urdf_parser_py.urdf import URDF
 
 # Just implements the update function to return the generated messages
 class ModelServerForTesting(ModelServer_NoROS):
@@ -29,10 +29,15 @@ class ModelServerForTesting(ModelServer_NoROS):
 
 
 class OperationsClientForTesting(OperationsClient_NoROS):
+    def __init__(self, srv_apply_operations, srv_get_history, model_type, buffered, *args):
+        super().__init__(model_type, buffered, *args)
+        self.srv_apply_operations = srv_apply_operations
+        self.srv_get_history      = srv_get_history
+
     def apply_changes(self):
-        out = [encode_operation_instruction(x) for x in self._operations_batch]
-        self._operations_batch = []        
-        return out
+        update_msg = [encode_operation_instruction(x) for x in self._operations_batch]
+        self._operations_batch = []      
+        self.srv_apply_operations(update_msg)
 
 
 class ModelClientForTesting(ModelClient_NoROS):
@@ -60,11 +65,18 @@ class TestServer(ut.TestCase):
         def cb_srv_get_constraints(csymbs):
             return server.srv_get_constraints(bb(symbols=csymbs))
 
-        op_client = OperationsClientForTesting(None, True)
+        def cb_srv_get_history(paths):
+            return server.srv_get_history(bb(paths=paths))
+        
+        def cb_srv_apply_operations(operations):
+            return server.srv_apply_operations(bb(operations=operations))
+
+        op_client = OperationsClientForTesting(cb_srv_apply_operations,
+                                               cb_srv_get_history, None, True)
         m_client  = ModelClientForTesting(cb_srv_get_model, cb_srv_get_constraints, None)
         m_client.has_data('testbot')
 
-        urdf_model = URDF.from_xml_file(res_pkg_path('package://kineverse/urdf/testbot.urdf'))
+        urdf_model = kurdf.load_urdf_file('package://kineverse/urdf/testbot.urdf')
 
         load_urdf(op_client, urdf_model.name, urdf_model)
 
