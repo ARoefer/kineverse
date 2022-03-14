@@ -59,7 +59,7 @@ class ModelServer_NoROS(object):
                 changed_ops[call_msg.tag] = call_msg.operation
                 removed_ops.discard(call_msg.tag)
                 instr = decode_operation_instruction(call_msg)
-                for p in instr.op._root_set.values():
+                for p in instr.op.output_path_assignments.values():
                     if p[0] not in self._changed_set:
                         self._changed_set[p[0]] = PathDict(False, default_factory=lambda: False)
                     self._changed_set[p[0]][p[1:]] = True

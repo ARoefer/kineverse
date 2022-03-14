@@ -53,9 +53,14 @@ class TestServer(ut.TestCase):
         self.ops_msg   = None
         self.model_msg = None
 
+        op_client = None
+        m_client  = None
+
         def cb_update(ops, model):
             self.ops_msg   = ops
             self.model_msg = model
+            op_client.cb_operations_update(ops)
+            m_client.cb_model_update(model)
 
         server = ModelServerForTesting(cb_update)
 

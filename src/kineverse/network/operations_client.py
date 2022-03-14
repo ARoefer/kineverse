@@ -71,15 +71,15 @@ class OperationsClient_NoROS(object):
    
                 to.op = decode_op_msg(to.op)
                 # If operation modifies a path in our indicator set, add it
-                if max([p in self._indicator_paths for p in to.op._root_set.values()]):
+                if max([p in self._indicator_paths for p in to.op.output_path_assignments.values()]):
                     tl.add(to)
                     # Monitor paths this operation depends on
-                    self._indicator_paths.update({p for p in to.args_paths.values() if type(p) is Path})
+                    self._indicator_paths.update(to.op.dependencies)
             else: # Update operations we already know to care about
                 to.op = decode_op_msg(to.op)
                 tl.add(to)
                 # Monitor paths this operation depends on. TODO: SEEMS SUB-OPTIMAL
-                self._indicator_paths.update({p for p in to.args_paths.values() if type(p) is Path})
+                self._indicator_paths.update(to.op.dependencies)
 
         relevant_deletions = [x for x in msg.deleted if self.km.has_tag(x)]
         self.km.merge_operations_timeline(tl)
