@@ -112,8 +112,9 @@ def collect_paths(obj, root, depth=10000):
             for x, d in enumerate(obj):
                 out.update(collect_paths(d, root + (x,), depth - 1))
         else:
-            for a in vars(obj):
-                out.update(collect_paths(getattr(obj, a), root + Path(a,), depth - 1))
+            for a in dir(obj):
+                if a[0] != '_' and not callable(getattr(obj, a)):
+                    out.update(collect_paths(getattr(obj, a), root + Path(a,), depth - 1))
     return out
 
 def find_all_of_type(path, model, target_type):
