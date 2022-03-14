@@ -1,5 +1,5 @@
 casadi
 tqdm
 pandas
-numpy
+numpy<=1.17.4
 matplotlib
