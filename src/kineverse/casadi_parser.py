@@ -42,7 +42,7 @@ def parse(string):
             raise Exception(f'Expected "," after parsing of definition got "{string[i]}"')
         i += 1
 
-    return parse_expr(string, i, defs)
+    return parse_expr(string, i, defs)[0]
 
 def parse_def(s, i, defs):
     if s[i] != '@':
@@ -137,7 +137,7 @@ def parse_factor(s, i, defs):
         return sign * m, i
     elif s[i] == '@':
         int_s, i = parse_int_str(s, i + 1)
-        return defs[f'@{int_s}'], i
+        return sign * defs[f'@{int_s}'], i
     elif s[i] in letters:
         name, i = parse_name(s, i)
         if i < len(s) and s[i] == '(':

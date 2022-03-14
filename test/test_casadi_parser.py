@@ -27,6 +27,7 @@ class TestEventModel(ut.TestCase):
         self.assertEqual(cp.parse_factor('-43.32e4', 0, defs)[0], -43.32e4)
         self.assertEqual(str(cp.parse_factor('  lol ', 0, defs)[0]), 'lol')
         self.assertEqual(cp.parse_factor('  @12 ', 0, defs)[0], 4)
+        self.assertEqual(cp.parse_factor(' -@12 ', 0, defs)[0], -4)
         self.assertEqual(str(cp.parse_factor('sin(a)', 0, defs)[0]), str(gm.sin(gm.Symbol('a'))))
 
     def test_parse_term(self):
@@ -60,7 +61,7 @@ class TestEventModel(ut.TestCase):
         M = gm.Matrix([[    1, 2, ref_1],
                        [ref_1, 5, defs['@2']],
                        [    7, 8, defs['@2']]])
-        self.assertEqual(str(cp.parse('@1=4, @2=sin(a), ([[1,2,@1], [@1, 5, @2], [7, 8, @2]])')[0]),
+        self.assertEqual(str(cp.parse('@1=4, @2=sin(a), ([[1,2,@1], [@1, 5, @2], [7, 8, @2]])')),
                          str(M))
 
 if __name__ == '__main__':
