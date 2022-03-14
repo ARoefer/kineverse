@@ -133,6 +133,7 @@ class ArticulationModel(object):
         self.constraint_symbol_map = {}
         self._touched_set      = set()
         self._touched_stamp    = 0
+        self._operational_use  = False
 
 
     @profile
@@ -194,6 +195,7 @@ class ArticulationModel(object):
         :param  op: Operation to apply.
         :type   op: Operation
         """
+        self._operational_use = True
         time = self.timeline_tags[tag] if tag in self.timeline_tags \
                                        else self.operation_history.get_time_stamp()
         self.clean_structure(time)
@@ -253,6 +255,7 @@ class ArticulationModel(object):
         :param  op: Operation to apply.
         :type   op: Operation
         """
+        self._operational_use = True
         if before_tag not in self.timeline_tags:
             raise Exception('History does not contain a timestamp for tag "{}"'.format(before_tag))
         if tag in self.timeline_tags:
@@ -290,6 +293,7 @@ class ArticulationModel(object):
         :param  op: Operation to apply.
         :type   op: Operation
         """
+        self._operational_use = True
         if after_tag not in self.timeline_tags:
             raise Exception('History does not contain a timestamp for tag "{}"'.format(after_tag))
         if tag in self.timeline_tags:    
@@ -319,6 +323,7 @@ class ArticulationModel(object):
         """Removes the operation with the given tag.
         An exception is raise, if the tag is not defined, or removing the operation would break the structure of the history.
         """
+        self._operational_use = True
         if tag not in self.timeline_tags:
             raise Exception('Tag "{}" not found in time line.'.format(tag))
         chunk = self.operation_history.get_chunk(self.timeline_tags[tag])
@@ -349,6 +354,10 @@ class ArticulationModel(object):
         NOTE: The model should be cleaned fully, BEFORE new modifications are made, 
         DO NOT mix modifications and model cleaning.
         """
+        # Some operation has to be added at least once for this operation to make any sense
+        if not self._operational_use:
+            return
+
         # NOTE: Fuck the complicated update mechanism. It causes nothing but problems and is mostly irrelevant to current real-world applications
         if model_settings.BRUTE_MODE:
             if len(self.operation_history.chunk_history) == 0:
@@ -533,6 +542,7 @@ class ArticulationModel(object):
 
     @profile
     def merge_operations_timeline(self, timeline, deleted_tags=[]):
+        self._operational_use = True
         if not isinstance(timeline, Timeline):
             raise Exception('Merging only works with timeline type.')
 
@@ -551,12 +561,28 @@ class ArticulationModel(object):
 
                     chunk = self.operation_history.get_chunk(tagged_op.stamp)
                     chunk.operation.revoke(self)
-                    self.operation_history.replace_chunk(chunk, Chunk(tagged_op.stamp, tagged_op.op))
+                
+                try:
+                    tagged_op.op.execute(self, tagged_op.stamp)
+
+                    new_chunk = Chunk(tagged_op.stamp, tagged_op.op)
+                    self.operation_history.check_can_insert(new_chunk)
+
+                    tagged_op.op.apply_to_model(self, tagged_op.stamp)
+                except Exception as e:
+                    # Revert change
+                    if tagged_op.tag in self.timeline_tags:
+                        chunk.operation.apply_to_model(self, tagged_op.stamp)
+                    raise OperationException(f'Failed to apply operation "{type(tagged_op.op)}" tagged "{tagged_op.tag}" at time "{tagged_op.stamp}". Traceback:\n  {traceback.print_exc()}\nError: \n{e}')
+
+                if tagged_op.tag in self.timeline_tags:
+                    self.operation_history.replace_chunk(chunk, new_chunk)
                 else:
                     self.timeline_tags[tagged_op.tag] = tagged_op.stamp
-                    self.operation_history.insert_chunk(Chunk(tagged_op.stamp, tagged_op.op))
+                    self.operation_history.insert_chunk(new_chunk)
 
-                tagged_op.op.apply(self)
+                self._touched_set  |= new_chunk.modifications
+                self._touched_stamp = new_chunk.stamp
 
     @profile
     def apply_instructions(self, instructions):

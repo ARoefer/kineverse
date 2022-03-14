@@ -122,12 +122,15 @@ class OperationsClient_NoROS(object):
 
     def apply_operation(self, tag, op,):
         self._add_instruction(ApplyAt(op, tag))
+        self._indicator_paths.update(op.output_path_assignments.values())
 
     def apply_operation_before(self, tag, before, op):
         self._add_instruction(ApplyBefore(op, tag, before))
+        self._indicator_paths.update(op.output_path_assignments.values())
 
     def apply_operation_after(self, tag, after, op):
         self._add_instruction(ApplyAfter(op, tag, after))
+        self._indicator_paths.update(op.output_path_assignments.values())
 
     def remove_operation(self, tag):
         if not self.km.has_tag(tag):

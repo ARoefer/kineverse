@@ -85,12 +85,7 @@ class TestServer(ut.TestCase):
 
         load_urdf(op_client, urdf_model.name, urdf_model)
 
-        op_list = op_client.apply_changes()
-
-        req = bb(operations=op_list)
-
-        server.srv_apply_operations(req)
-        server.srv_apply_operations(req)
+        op_client.apply_changes()
 
         op_client.cb_operations_update(self.ops_msg)
         
@@ -108,7 +103,7 @@ class TestServer(ut.TestCase):
         with open('transmitted.json', 'w') as f:
             json.dump(t_model, f, indent=True)
 
-        self.assertEquals(o_model.name, t_model.name)
+        self.assertEqual(o_model.name, t_model.name)
         
         l  = o_model.links['arm_mount_link']
         lt = t_model.links['arm_mount_link']
@@ -137,8 +132,8 @@ class TestServer(ut.TestCase):
             print('collision: {}'.format(lt.collision == l.collision))
             print('inertial: {}'.format(lt.inertial == l.inertial))
 
-        self.assertEquals(o_model.joints, t_model.joints)
-        self.assertEquals(o_model, t_model)
+        self.assertEqual(o_model.joints, t_model.joints)
+        self.assertEqual(o_model, t_model)
 
 if __name__ == '__main__':
     ut.main()

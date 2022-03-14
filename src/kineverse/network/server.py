@@ -143,12 +143,12 @@ class ModelServer_NoROS(object):
     def srv_apply_operations(self, req):
         res = ApplyOperationsResponseMsg()
         res.success = False
-        print('Received new operation instructions.')
+        # print('Received new operation instructions.')
         try:
             with self.lock:
                 self.process_operations_msgs(req.operations)
                 res.success = True
-                print('Done processing.')
+                # print('Done processing.')
         except Exception as e:
             print(traceback.format_exc())
             res.error_msg = str(e)

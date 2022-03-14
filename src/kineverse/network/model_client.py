@@ -60,7 +60,7 @@ class ModelClient_NoROS(object):
         for str_path, data in zip(msg.paths, msg.data):
             path = Path(str_path)
             if path in self.tracked_paths:
-                print('Updating {}'.format(path))
+                # print('Updating {}'.format(path))
                 self.km.set_data(path, json.loads(data))
 
         for cmsg in msg.constraints:
@@ -103,7 +103,7 @@ class ModelClient_NoROS(object):
 
     def _start_tracking(self, path):
         with self.lock:
-            print('Started tracking {}'.format(path))
+            # print('Started tracking {}'.format(path))
             self.tracked_paths.add(path)
             for x in range(len(path)):
                 if not self.km.has_data(path[:x]):

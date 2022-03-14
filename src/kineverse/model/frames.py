@@ -32,8 +32,8 @@ class Frame(JSONSerializable):
     def __eq__(self, other):
         if isinstance(other, Frame):
             return self.parent == other.parent       and \
-                   cm.eq_expr(self.pose, other.pose) and \
-                   cm.eq_expr(self.to_parent, other.to_parent)
+                   str(self.pose) == str(other.pose) and \
+                   str(self.to_parent) == str(other.to_parent)
         return False
 
 
@@ -60,8 +60,8 @@ class Transform(JSONSerializable):
     def __eq__(self, other):
         if isinstance(other, Transform):
             return self.from_frame == other.from_frame and \
-                   cm.eq_expr(self.pose, other.pose)   and \
-                   cm.eq_expr(self.to_frame, other.to_frame)
+                   str(self.pose) == str(other.pose) and \
+                   str(self.to_frame) == str(other.to_frame)
         return False
 
 
