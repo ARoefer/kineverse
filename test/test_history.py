@@ -1,5 +1,7 @@
 import unittest as ut
 
+from dataclasses import dataclass
+
 from kineverse.model.history import *
 from kineverse.utils import bb
 
@@ -22,39 +24,44 @@ op7     = fake_op(['a'], ['f', 'e'])
 op8     = fake_op(['a', 'x'], ['d', 'f', 'e'])
 
 
+@dataclass(order=True)
+class FakeChunk():
+    stamp : int
+
 class TestTimeline(ut.TestCase):
     def test_sorting(self):
-        l = [100, 34, -77, -5, 0, 3.14, 42]
+        l = [FakeChunk(x) for x in [100, 34, -77, -5, 0, 3.14, 42]]
         t = Timeline(l)
         for x, y in zip(t, sorted(l)):
             self.assertEqual(x, y)
 
     def test_get_floor(self):
-        l = [1, 2, 3, 4, 33, 84, 91, 100]
+        l = [FakeChunk(x) for x in [1, 2, 3, 4, 33, 84, 91, 100]]
         t = Timeline(l)
 
-        self.assertEqual(t.get_floor(2)[1],     2)
-        self.assertEqual(t.get_floor(4)[1],     4)
-        self.assertEqual(t.get_floor(83)[1],   33)
-        self.assertEqual(t.get_floor(200)[1], 100)
-        self.assertEqual(t.get_floor(0)[1],  None)
+        self.assertEqual(t.get_floor(2)[1].stamp,     2)
+        self.assertEqual(t.get_floor(4)[1].stamp,     4)
+        self.assertEqual(t.get_floor(83)[1].stamp,   33)
+        self.assertEqual(t.get_floor(200)[1].stamp, 100)
+        self.assertEqual(t.get_floor(0)[1],        None)
 
     def test_get_ceil(self):
-        l = [1, 2, 3, 4, 33, 84, 91, 100]
+        l = [FakeChunk(x) for x in [1, 2, 3, 4, 33, 84, 91, 100]]
         t = Timeline(l)
 
-        self.assertEqual(t.get_ceil(2)[1],      2)
-        self.assertEqual(t.get_ceil(4)[1],      4)
-        self.assertEqual(t.get_ceil(34)[1],    84)
-        self.assertEqual(t.get_ceil(200)[1], None)
-        self.assertEqual(t.get_ceil(0)[1],      1)
+        self.assertEqual(t.get_ceil(2)[1].stamp,      2)
+        self.assertEqual(t.get_ceil(4)[1].stamp,      4)
+        self.assertEqual(t.get_ceil(34)[1].stamp,    84)
+        self.assertEqual(t.get_ceil(200)[1],       None)
+        self.assertEqual(t.get_ceil(0)[1].stamp,      1)
 
     def test_get_ceil_odd_error_case(self):
-        l = [1, 2, 3]
+        l = [FakeChunk(x) for x in [1, 2, 3]]
         t = Timeline(l)
 
-        self.assertEqual(t.get_ceil(2)[0],      1)
-
+        self.assertEqual(t.get_ceil(1)[1].stamp,      1)
+        self.assertEqual(t.get_ceil(2)[1].stamp,      2)
+        self.assertEqual(t.get_ceil(3)[1].stamp,      3)
 
 class TestHistory(ut.TestCase):
     def test_get_time_stamp(self):

@@ -112,11 +112,18 @@ class History(object):
                 _, pred = self.modification_history[p].get_floor(chunk.stamp)
                 if pred is None:
                     raise Exception('Chunk at time {} executing "{}" depends on attributes with empty history! Attributes:\n  {}'.format(chunk.stamp, chunk.operation.name, '\n  '.join([str(p) for p in chunk.dependencies if p not in self.modification_history or self.modification_history[p].get_floor(chunk.stamp)[1] is None])))
+        # else:
+        #     rogue_paths = {p for p in chunk.operation.dependencies
+        #                            if p not in self.modification_history
+        #                            or self.modification_history[p].get_floor(chunk.stamp)[1] is None}
+        #     if len(rogue_paths) > 0:
+        #         raise Exception(f'Operation {type(chunk.operation)} cannot be inserted at time {chunk.stamp}, '
+        #                          'due to missing dependencies:\n  {}'.format("\n  ".join(str(p) for p in rogue_paths)))
 
     @profile
     def insert_chunk(self, chunk):
+        self.check_can_insert(chunk)
         if not model_settings.BRUTE_MODE:
-            self.check_can_insert(chunk)
             # This is part of the work done in can_insert again
             for p in chunk.dependencies:
                 _, pred = self.modification_history[p].get_floor(chunk.stamp)
@@ -184,8 +191,8 @@ class History(object):
 
     @profile
     def replace_chunk(self, c_old, c_new):
+        self.check_can_replace(c_old, c_new)
         if not model_settings.BRUTE_MODE:
-            self.check_can_replace(c_old, c_new)
             overlap = c_old.modifications.intersection(c_new.modifications)
             new_deps = {p: self.modification_history[p].get_floor(c_new.stamp)[1] if p in self.modification_history else None for p in c_new.dependencies.difference(overlap)}
 
@@ -214,7 +221,7 @@ class History(object):
                 c.dependents.add(c_new)
         else:
             for p in c_old.modifications:
-                self.modification_tracker[p].remove(c_old)
+                self.modification_tracker[p].discard(c_old)
 
             for p in c_new.modifications:
                 self.modification_tracker[p].add(c_new)
