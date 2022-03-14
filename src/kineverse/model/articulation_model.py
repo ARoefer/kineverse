@@ -194,7 +194,8 @@ class ArticulationModel(object):
         :param  op: Operation to apply.
         :type   op: Operation
         """
-        time = self.timeline_tags[tag] if tag in self.timeline_tags else self.operation_history.get_time_stamp()
+        time = self.timeline_tags[tag] if tag in self.timeline_tags \
+                                       else self.operation_history.get_time_stamp()
         self.clean_structure(time)
 
         if tag in self.timeline_tags:
