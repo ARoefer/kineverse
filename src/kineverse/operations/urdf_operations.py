@@ -61,6 +61,7 @@ class FixedJoint(KinematicJoint):
     def _json_data(self, json_dict):
         super(FixedJoint, self)._json_data(json_dict)
         del json_dict['jtype']
+        json_dict['tf_offset'] = self.tf_offset
 
     def __deepcopy__(self, memo):
         out = type(self)(self.parent, self.child, self.tf_offset * 1)
@@ -84,7 +85,14 @@ class PrismaticJoint(KinematicJoint):
     def _json_data(self, json_dict):
         super(PrismaticJoint, self)._json_data(json_dict)
         del json_dict['jtype']
-        json_dict.update({'position': self.position})
+        json_dict.update({'position': self.position,
+                          'axis': self.axis,
+                          'tf_offset': self.tf_offset,
+                          'limit_lower': self.limit_lower,
+                          'limit_upper': self.limit_upper,
+                          'limit_vel': self.limit_vel,
+                          'multiplier': self.multiplier,
+                          'offset': self.offset})
 
     def __deepcopy__(self, memo):
         out = type(self)(self.parent,
@@ -114,7 +122,12 @@ class ContinuousJoint(KinematicJoint):
     def _json_data(self, json_dict):
         super(ContinuousJoint, self)._json_data(json_dict)
         del json_dict['jtype']
-        json_dict.update({'position': self.position})
+        json_dict.update({'position': self.position,
+                          'axis': self.axis,
+                          'tf_offset': self.tf_offset,
+                          'limit_vel': self.limit_vel,
+                          'multiplier': self.multiplier,
+                          'offset': self.offset})
 
     def __deepcopy__(self, memo):
         out = type(self)(self.parent,
@@ -145,7 +158,14 @@ class RevoluteJoint(KinematicJoint):
     def _json_data(self, json_dict):
         super(RevoluteJoint, self)._json_data(json_dict)
         del json_dict['jtype']
-        json_dict.update({'position': self.position})
+        json_dict.update({'position': self.position,
+                          'axis': self.axis,
+                          'tf_offset': self.tf_offset,
+                          'limit_lower': self.limit_lower,
+                          'limit_upper': self.limit_upper,
+                          'limit_vel': self.limit_vel,
+                          'multiplier': self.multiplier,
+                          'offset': self.offset})
 
     def __deepcopy__(self, memo):
         out = type(self)(self.parent,
