@@ -5,6 +5,7 @@ import kineverse.model.model_settings as model_settings
 
 from sortedcontainers import SortedList, SortedSet
 
+from kineverse.common      import profile
 from kineverse.model.paths import Path, PathDict
 
 class Timeline(SortedList):

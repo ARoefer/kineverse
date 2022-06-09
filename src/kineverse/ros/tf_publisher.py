@@ -9,12 +9,14 @@ from jinja2 import Environment, FileSystemLoader, select_autoescape, exceptions
 
 from kineverse.model.paths                  import Path, stopping_set, find_all_of_type
 from kineverse.model.frames                 import Frame, get_root_frames
-from kineverse.model.geometry_model         import RigidBody, EventModel
+from kineverse.model.event_model            import EventModel
+from kineverse.model.geometry               import RigidBody
 from kineverse.network.model_client         import ModelClient
 from kineverse.time_wrapper                 import Time
 from kineverse.type_sets                    import is_symbolic, GM
-from kineverse.utils                        import real_quat_from_matrix, res_pkg_path
+from kineverse.utils                        import real_quat_from_matrix
 from kineverse.visualization.ros_visualizer import ROSVisualizer
+from kineverse.ros.utils                    import res_pkg_path
 
 from multiprocessing import RLock
 

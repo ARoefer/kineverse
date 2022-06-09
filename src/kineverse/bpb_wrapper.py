@@ -2,8 +2,9 @@ import betterpybullet as pb
 
 import kineverse.gradients.common_math as cm
 
-from kineverse.utils import res_pkg_path, real_quat_from_matrix
+from kineverse.ros.utils               import res_pkg_path
 from kineverse.gradients.gradient_math import GM
+from kineverse.utils                   import real_quat_from_matrix
 
 
 def matrix_to_transform(matrix):

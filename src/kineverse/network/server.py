@@ -6,13 +6,13 @@ from multiprocessing import RLock
 
 import kineverse.network.names as stdn 
 
-from kineverse.model.paths             import Path, PathDict, collect_paths
-from kineverse.model.event_model       import EventModel
-from kineverse.model.articulation_model   import ApplyAt, ApplyBefore, ApplyAfter, RemoveOp
-from kineverse.model.history           import History, Timeline, StampedData
-from kineverse.utils                   import import_class, res_pkg_path
-from kineverse.network.ros_conversion  import json, encode_constraint, decode_op_msg,encode_operation_update, decode_operation_instruction
-from kineverse.time_wrapper            import Time
+from kineverse.model.paths              import Path, PathDict, collect_paths
+from kineverse.model.event_model        import EventModel
+from kineverse.model.articulation_model import ApplyAt, ApplyBefore, ApplyAfter, RemoveOp
+from kineverse.model.history            import History, Timeline, StampedData
+from kineverse.ros.utils                import res_pkg_path
+from kineverse.network.ros_conversion   import json, encode_constraint, decode_op_msg,encode_operation_update, decode_operation_instruction
+from kineverse.time_wrapper             import Time
 from kineverse.visualization.graph_generator import generate_modifications_graph, generate_dependency_graph, plot_graph
 
 from kineverse_msgs.msg import ModelUpdate      as ModelUpdateMsg

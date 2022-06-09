@@ -1,6 +1,6 @@
 import urdf_parser_py.urdf as urdf
 
-from kineverse.utils import res_pkg_path
+from kineverse.ros.utils import res_pkg_path
 
 def hacky_urdf_parser_fix(urdf_str):
     # TODO this function is inefficient but the tested urdfs's aren't big enough for it to be a problem

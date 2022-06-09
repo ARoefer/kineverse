@@ -10,20 +10,20 @@ from kineverse.gradients.gradient_math import get_diff, \
     vector3, \
     dot
 from kineverse.model.articulation_model import Constraint
-from kineverse.model.geometry_model import RigidBody, \
-    KinematicJoint, \
-    Geometry, \
-    InertialData, \
-    ArticulatedObject, \
-    GEOM_TYPE_MESH, \
-    GEOM_TYPE_BOX, \
-    GEOM_TYPE_CYLINDER, \
-    GEOM_TYPE_SPHERE
+from kineverse.model.geometry           import RigidBody, \
+                                               KinematicJoint, \
+                                               Geometry, \
+                                               InertialData, \
+                                               ArticulatedObject, \
+                                               GEOM_TYPE_MESH, \
+                                               GEOM_TYPE_BOX, \
+                                               GEOM_TYPE_CYLINDER, \
+                                               GEOM_TYPE_SPHERE
 from kineverse.operations.basic_operations import Operation, \
-    CreateValue,  \
-    ExecFunction, \
-    Path,         \
-    CPath
+                                                  CreateValue,  \
+                                                  ExecFunction, \
+                                                  Path,         \
+                                                  CPath
 
 
 def urdf_origin_to_transform(origin):

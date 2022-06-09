@@ -6,7 +6,8 @@ import kineverse.gradients.gradient_math as gm
 import kineverse.json_wrapper as json
 
 from kineverse.model.articulation_model import ApplyAt, ApplyBefore, ApplyAfter, RemoveOp, Constraint
-from kineverse.utils                    import import_class, real_quat_from_matrix
+from kineverse.json_wrapper             import import_class
+from kineverse.utils                    import real_quat_from_matrix
 
 from kineverse_msgs.msg import OperationCall    as OperationCallMsg
 from kineverse_msgs.msg import Operation        as OperationMsg

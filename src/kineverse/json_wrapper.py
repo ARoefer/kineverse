@@ -1,8 +1,9 @@
 from importlib import import_module
+import importlib
 import traceback
+import simplejson as json
 
 import kineverse.gradients.common_math as cm
-import simplejson as json
 
 if cm.SYM_MATH_ENGINE == 'SYMENGINE':
     import symengine  as sp
@@ -12,7 +13,22 @@ elif cm.SYM_MATH_ENGINE == 'CASADI':
     sym_parser = parse_casadi
 
 from kineverse.json_serializable import JSONSerializable
-from kineverse.utils             import import_class
+
+
+def import_class(class_path):
+    """Imports a class using a type string.
+
+    :param class_path: Type string of the class.
+    :type  class_path: str
+    :rtype: type
+    """
+    components = class_path.split('.')
+    mod = importlib.import_module('.'.join(components[:-1]))
+    try:
+        return getattr(mod, components[-1])
+    except AttributeError:
+        raise AttributeError('Module "{}" loaded from "{}" has no attribute "{}"'.format(mod.__name__, '.'.join(components[:-1]), components[-1]))
+
 
 json_sym_matrix = 'SYM_MATRIX'
 json_sym_expr   = 'SYM_EXPR'

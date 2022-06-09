@@ -3,7 +3,7 @@ import math
 
 
 from kineverse.visualization.ros_visualizer import ROSVisualizer
-from kineverse.utils import make_pkg_path
+from kineverse.ros.utils import make_pkg_path
 
 
 cylinder_rotations = [pb.Quaternion(0, math.pi * 0.5, 0), pb.Quaternion(0, 0, math.pi * 0.5), pb.Quaternion.identity()]
