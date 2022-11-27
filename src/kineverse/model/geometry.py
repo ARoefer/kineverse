@@ -2,6 +2,7 @@ import kineverse.gradients.gradient_math as gm
 
 from kineverse.json_serializable import JSONSerializable
 from kineverse.model.frames      import Frame
+from kineverse.utils             import rot3_to_rpy
 
 
 class KinematicJoint(JSONSerializable):

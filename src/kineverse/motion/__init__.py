@@ -20,4 +20,5 @@ from kineverse.model.geometry_model import create_distance_symbol, \
                                            closest_distance_constraint_world, \
                                            contact_constraint_world, \
                                            generate_contact_model
-                                                                       
+
+from kineverse.utils import generate_transition_function
