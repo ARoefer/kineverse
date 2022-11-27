@@ -7,7 +7,13 @@ try:
    d = generate_distutils_setup(
       packages=['kineverse'],
       package_dir={'': 'src'},
-      requires=['numpy', 'symengine']
+      requires=['numpy',
+                'casadi',
+                'tqdm',
+                'matplotlib',
+                'pandas',
+                'simplejson',
+                'sortedcontainers',]
    )
    setup(**d)
 except ModuleNotFoundError:
