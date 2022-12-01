@@ -120,6 +120,9 @@ def diff(term, symbol):
         return term.diff(symbol) if type(term) == GC else cm.diff(term, symbol)
     return 0
 
+def flatten(matrix):
+    return matrix.elements()
+
 def jacobian(vector, symbols):
     if is_matrix(vector):
         if len(vector.shape) == 1: # GM is always 2d so casadi can be assumed

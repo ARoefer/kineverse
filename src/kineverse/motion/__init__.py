@@ -9,6 +9,7 @@ from .min_qp_builder import SoftConstraint, \
                             generate_controlled_values, \
                             depth_weight_controlled_values, \
                             find_constant_bounds
+from .qp_solver import QPSolverException
 
 from kineverse.model.geometry_model import create_distance_symbol, \
                                            contact_geometry, \
