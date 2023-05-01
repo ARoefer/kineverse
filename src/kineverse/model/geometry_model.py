@@ -6,20 +6,9 @@ import numpy as np
 import copy
 
 import kineverse.gradients.gradient_math as gm
-import kineverse.model.model_settings    as model_settings
 
 from kineverse.gradients.diff_logic     import Symbol, Position
 from kineverse.json_wrapper             import JSONSerializable
-from kineverse.model.paths              import Path, PathSet, PathDict
-from kineverse.model.articulation_model import Constraint
-from kineverse.model.event_model        import EventModel
-from kineverse.model.geometry           import Box, \
-                                               Mesh, \
-                                               Cylinder, \
-                                               Sphere, \
-                                               KinematicJoint, \
-                                               RigidBody, \
-                                               ArticulatedObject
 from kineverse.bpb_wrapper              import pb,                     \
                                                create_object,          \
                                                create_cube_shape,      \
@@ -29,6 +18,20 @@ from kineverse.bpb_wrapper              import pb,                     \
                                                load_convex_mesh_shape, \
                                                matrix_to_transform
 from kineverse.utils                    import rot3_to_rpy
+
+from .paths                             import Path, PathSet, PathDict
+from .articulation_model                import Constraint
+from .event_model                       import EventModel
+from .geometry                          import Frame, \
+                                               Geometry, \
+                                               Box, \
+                                               Mesh, \
+                                               Cylinder, \
+                                               Sphere, \
+                                               KinematicJoint, \
+                                               RigidBody, \
+                                               ArticulatedObject
+from . import model_settings
 
 
 obj_to_obj_prefix = 'distance_obj_to_obj'
