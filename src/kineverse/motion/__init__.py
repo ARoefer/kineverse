@@ -5,6 +5,7 @@ from .min_qp_builder import SoftConstraint, \
                             TypedQPBuilder   as TQPB, \
                             PIDQPBuilder     as PQPB, \
                             GeomQPBuilder    as GQPB, \
+                            QPSolverException, \
                             PID_Constraint, \
                             generate_controlled_values, \
                             depth_weight_controlled_values, \

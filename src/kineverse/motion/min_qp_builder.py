@@ -1,18 +1,17 @@
 import numpy  as np
 import pandas as pd
 import pathlib
-import kineverse.gradients.gradient_math  as cm
 
-from kineverse.motion.qp_solver             import QPSolver, QPSolverException
+from kineverse import gm
 
-from kineverse.gradients.diff_logic         import get_symbol_type, IntSymbol, Symbol
 from kineverse.gradients.gradient_container import GradientContainer as GC
-from kineverse.gradients.gradient_math      import extract_expr, wrap_expr
 from kineverse.model.articulation_model     import Constraint, Path
 from kineverse.model.geometry_model         import CollisionSubworld, ContactHandler, obj_to_obj_infix
 from kineverse.visualization.bpb_visualizer import ROSBPBVisualizer
 from kineverse.bpb_wrapper                  import transform_to_matrix as tf2mx
 from kineverse.type_sets                    import is_symbolic
+
+from .qp_solver             import QPSolver, QPSolverException
 
 default_bound  = 1e9    
 
@@ -53,29 +52,29 @@ class ControlledValue(object):
 
     def __eq__(self, other):
         if isinstance(other, ControlledValue):
-            return cm.eq_expr(self.lower, other.lower)   and \
-                   cm.eq_expr(self.upper, other.upper)   and \
-                   cm.eq_expr(self.symbol, other.symbol) and \
-                   cm.eq_expr(self.weight, other.weight)
+            return gm.eq_expr(self.lower, other.lower)   and \
+                   gm.eq_expr(self.upper, other.upper)   and \
+                   gm.eq_expr(self.symbol, other.symbol) and \
+                   gm.eq_expr(self.weight, other.weight)
         return False
 
 
 class MinimalQPBuilder(object):
     def __init__(self, hard_constraints, soft_constraints, controlled_values):
-        hc = [(k, Constraint(extract_expr(c.lower), extract_expr(c.upper), wrap_expr(c.expr))) for k, c in hard_constraints.items()]
-        sc = [(k, SoftConstraint(extract_expr(c.lower), extract_expr(c.upper), c.weight_id, wrap_expr(c.expr))) for k, c in soft_constraints.items()]
-        cv = [(k, ControlledValue(extract_expr(c.lower), extract_expr(c.upper), c.symbol, extract_expr(c.weight_id))) for k, c in controlled_values.items()]
+        hc = [(k, Constraint(gm.extract_expr(c.lower), gm.extract_expr(c.upper), gm.wrap_expr(c.expr))) for k, c in hard_constraints.items()]
+        sc = [(k, SoftConstraint(gm.extract_expr(c.lower), gm.extract_expr(c.upper), c.weight_id, gm.wrap_expr(c.expr))) for k, c in soft_constraints.items()]
+        cv = [(k, ControlledValue(gm.extract_expr(c.lower), gm.extract_expr(c.upper), c.symbol, gm.extract_expr(c.weight_id))) for k, c in controlled_values.items()]
 
         self.np_g = np.zeros(len(cv + sc))
-        self.H    = cm.diag(*[extract_expr(c.weight_id) for _, c in cv + sc])
-        self.lb   = cm.Matrix([c.lower if c.lower is not None else -default_bound for _, c in cv] + [-default_bound] * len(sc))
-        self.ub   = cm.Matrix([c.upper if c.upper is not None else  default_bound for _, c in cv] + [default_bound] * len(sc))
-        self.lbA  = cm.Matrix([c.lower if c.lower is not None else -default_bound for _, c in hc + sc])
-        self.ubA  = cm.Matrix([c.upper if c.upper is not None else  default_bound for _, c in hc + sc])
+        self.H    = gm.diag(*[gm.extract_expr(c.weight_id) for _, c in cv + sc])
+        self.lb   = gm.Matrix([c.lower if c.lower is not None else -default_bound for _, c in cv] + [-default_bound] * len(sc))
+        self.ub   = gm.Matrix([c.upper if c.upper is not None else  default_bound for _, c in cv] + [default_bound] * len(sc))
+        self.lbA  = gm.Matrix([c.lower if c.lower is not None else -default_bound for _, c in hc + sc])
+        self.ubA  = gm.Matrix([c.upper if c.upper is not None else  default_bound for _, c in hc + sc])
 
         M_cv      = [c.symbol for _, c in cv]
-        self.A    = cm.hstack(cm.Matrix([[c.expr[s] if s in c.expr else 0 for s in M_cv] for _, c in hc + sc]), 
-                              cm.vstack(cm.zeros(len(hc), len(sc)), cm.eye(len(sc))))
+        self.A    = gm.hstack(gm.Matrix([[c.expr[s] if s in c.expr else 0 for s in M_cv] for _, c in hc + sc]), 
+                              gm.vstack(gm.zeros(len(hc), len(sc)), gm.eye(len(sc))))
 
         self.cv        = [c.symbol for _, c in cv]
         self.n_cv      = len(cv)
@@ -91,11 +90,11 @@ class MinimalQPBuilder(object):
         self._build_M()
 
     def _build_M(self):
-        self.big_ass_M = cm.vstack(cm.hstack(self.A, self.lbA, self.ubA), 
-                                   cm.hstack(self.H, self.lb,  self.ub))
+        self.big_ass_M = gm.vstack(gm.hstack(self.A, self.lbA, self.ubA), 
+                                   gm.hstack(self.H, self.lb,  self.ub))
 
-        self.free_symbols     = cm.free_symbols(self.big_ass_M)
-        self.cython_big_ass_M = cm.speed_up(self.big_ass_M, self.free_symbols)
+        self.free_symbols     = gm.free_symbols(self.big_ass_M)
+        self.cython_big_ass_M = gm.speed_up(self.big_ass_M, self.free_symbols)
 
         self.shape1    = self.A.shape[0]
         self.shape2    = self.A.shape[1]
@@ -199,7 +198,7 @@ class TypedQPBuilder(MinimalQPBuilder):
     def __init__(self, hard_constraints, soft_constraints, controlled_values):
         super(TypedQPBuilder, self).__init__(hard_constraints, soft_constraints, controlled_values)
         self.cv      = [c for c in self.cv]
-        self.cv_type = [get_symbol_type(c) for c in self.cv]
+        self.cv_type = [gm.get_symbol_type(c) for c in self.cv]
 
     def get_command_signature(self):
         return dict(zip(self.cv, self.cv_type))
@@ -354,7 +353,8 @@ class GeomQPBuilder(PIDQPBuilder): #(TypedQPBuilder):
                             handler.add_active_handle(obj_a)
 
         if len(missing_objects) > 0:
-            raise Exception('Missing objects to compute queries:\n  {}\nObjects in world:\n  {}'.format('\n  '.join(sorted(missing_objects)), '\n  '.join(sorted(str(n) for n in collision_world.names))))
+            raise Exception('Missing objects to compute queries:\n  {}'.format('\n  '.join(sorted([str(p) for p in missing_objects])) +
+                            '\nObjects in world:\n  {}'.format('\n  '.join(sorted(str(n) for n in collision_world.names)))))
 
         self.closest_query_batch = {collision_object: default_query_distance for collision_object in self.collision_handlers.keys()}
         self._cb_draw = None
@@ -406,7 +406,7 @@ def generate_controlled_values(constraints, symbols, weights=None, bounds={}, de
         if type(c) == PID_Constraint:
             c = c.to_constraint()
 
-        if cm.is_symbol(c.expr) and c.expr in symbols and str(c.expr) not in controlled_values:
+        if gm.is_symbol(c.expr) and c.expr in symbols and str(c.expr) not in controlled_values:
             weight = default_weight if c.expr not in weights else weights[c.expr] 
             controlled_values[str(c.expr)] = ControlledValue(c.lower, c.upper, c.expr, weight)
             to_remove.add(k)
@@ -422,7 +422,7 @@ def generate_controlled_values(constraints, symbols, weights=None, bounds={}, de
 
 def depth_weight_controlled_values(km, controlled_values, default_weight=0.01, exp_factor=1.0):
     for cv in controlled_values.values():
-        cv.weight_id = default_weight * max(1, len(km.get_active_geometry_raw({cm.IntSymbol(cv.symbol)}))) ** exp_factor
+        cv.weight_id = default_weight * max(1, len(km.get_active_geometry_raw({gm.IntSymbol(cv.symbol)}))) ** exp_factor
     return controlled_values
 
 def find_constant_bounds(constraints):
@@ -430,7 +430,7 @@ def find_constant_bounds(constraints):
     maxes = {}
 
     for c in constraints.values():
-        if cm.is_symbol(c.expr):
+        if gm.is_symbol(c.expr):
             if not is_symbolic(c.lower):
                 mins[c.expr] = c.lower if c.expr not in mins  else max(mins[c.expr], c.lower)
 

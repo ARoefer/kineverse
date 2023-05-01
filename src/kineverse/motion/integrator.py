@@ -4,18 +4,15 @@ import pandas as pd
 
 import kineverse.gradients.gradient_math  as gm
 
-from kineverse.visualization.plotting  import ValueRecorder, SymbolicRecorder
-from kineverse.gradients.diff_logic    import erase_type, \
-                                              get_symbol_type, \
-                                              Position
-from kineverse.motion.min_qp_builder   import TypedQPBuilder as TQPB, \
-                                              GeomQPBuilder  as GQPB, \
-                                              extract_expr
+from .min_qp_builder   import TypedQPBuilder as TQPB, \
+                              GeomQPBuilder  as GQPB
 from kineverse.type_sets               import is_symbolic
 from kineverse.time_wrapper            import Time
+from kineverse.utils                   import ValueRecorder, \
+                                              SymbolicRecorder
 from tqdm import tqdm
 
-DT_SYM = Position('dt')
+DT_SYM = gm.Symbol('dt')
 
 class CommandIntegrator(object):
     def __init__(self,
@@ -65,7 +62,7 @@ class CommandIntegrator(object):
     def restart(self, title='Integrator'):
         self.state    = self.start_state.copy()
         self.recorder = ValueRecorder(title, *sorted([str(s) for s in self.state.keys()]))
-        self.sym_recorder = SymbolicRecorder(title, **{k: extract_expr(s) for k, s in self.recorded_terms.items() 
+        self.sym_recorder = SymbolicRecorder(title, **{k: gm.extract_expr(s) for k, s in self.recorded_terms.items() 
                                                                                    if is_symbolic(s)})
         self.current_iteration = 0
 

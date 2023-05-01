@@ -138,7 +138,7 @@ def get_diff(term, symbols=None):
      TODO: This should be using diff from above now, or even Jacobian with a
            sum over axis 1
     """
-    if is_symbol(term):
+    if is_symbol(term) and symbols is None:
         return DiffSymbol(term)
 
     if type(term) != GC:
