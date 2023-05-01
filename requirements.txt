@@ -3,3 +3,4 @@ tqdm
 pandas
 numpy<=1.17.4
 matplotlib
+sortedcontainers
