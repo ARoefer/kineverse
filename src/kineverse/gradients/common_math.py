@@ -64,7 +64,7 @@ if SYM_MATH_ENGINE == 'CASADI':
 
     def tracer(a, b):
         if type(a) in matrix_types and type(b) in matrix_types and is_matrix(a) and is_matrix(b):
-            raise Exception('Tracer exception')
+            raise Exception('Tracer exception: Due to refactoring, you are using * to express matrix multiplication. Please change to gm.dot(a, b).')
         return ca.mtimes(a, b)
 
     ca.SX.__mul__ = tracer
@@ -89,6 +89,7 @@ if SYM_MATH_ENGINE == 'CASADI':
     sqrt   = ca.sqrt
     tan    = ca.tan
     tanh   = ca.tanh
+    # pow    = ca.power
 
     eq     = ca.eq
     le     = ca.le
