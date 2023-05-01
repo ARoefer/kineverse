@@ -158,6 +158,11 @@ def get_diff_symbols(expr):
     return {DiffSymbol(s) for s in free_symbols(expr)
                                 if get_symbol_type(s) != TYPE_UNKNOWN}
 
+# def pow(x, y):
+#     """Power"""
+#     if type(x) == GC or type(y) == GC:
+#         return GC(cm.pow(x, y), )
+
 def sin(expr):
     """Sine"""
     if type(expr) == GC:
