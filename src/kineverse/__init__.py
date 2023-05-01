@@ -3,6 +3,8 @@ from .model.paths import Path, \
                          PathDict, \
                          PathSet, \
                          PathException
+from .model.frames import Frame, \
+                          Transform
 from .operations.operation        import Operation, \
                                          OperationException
 from .operations.basic_operations import CreateValue, \
@@ -13,17 +15,16 @@ from .operations.urdf_operations  import load_urdf
 from .urdf_fix                    import load_urdf_file, \
                                          load_urdf_str
 
-
 from .model.event_model    import EventModel
 from .model.geometry_model import GeometryModel, \
                                   CollisionSubworld, \
                                   ArticulatedObject, \
                                   RigidBody, \
-                                  Frame, \
-                                  Geometry, \
                                   Box, \
                                   Mesh, \
                                   Cylinder, \
                                   Sphere
 from .model.articulation_model import ArticulationModel, \
                                       Constraint
+
+from . import utils

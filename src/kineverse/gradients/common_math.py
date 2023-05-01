@@ -198,41 +198,48 @@ if SYM_MATH_ENGINE == 'CASADI':
         # tyoe: (object) -> bool
         return len(free_symbols(expr)) > 0
 
+    def _shape(obj):
+        if hasattr(obj, 'shape'):
+            return obj.shape
+        if type(obj) in {list, tuple}:
+            return (len(obj), ) + _shape(obj[0])
+        return tuple()
+
     def vstack(*matrices):
         # tyoe: (*ca.SX) -> ca.SX
-        width = matrices[0].shape[1]
+        width = _shape(matrices[0])[1]
         for x, m in enumerate(matrices[1:]):
-            if width != m.shape[1]:
+            if width != _shape(m)[1]:
                 raise Exception('Matrices for stacking need to be of equal width. Initial width is {} but matrix {} has width {}'.format(width, x, m.shape[1]))
 
-        height = sum([m.shape[0] for m in matrices])
+        height = sum([_shape(m)[0] for m in matrices])
         out    = ca.SX(height, width)
         
         start_row = 0
         for m in matrices:
-            for y in range(m.shape[0]):
-                for x in range(m.shape[1]):
+            for y in range(_shape(m)[0]):
+                for x in range(_shape(m)[1]):
                     out[start_row + y, x] = m[y, x]
-            start_row += m.shape[0]
+            start_row += _shape(m)[0]
 
         return out
 
     def hstack(*matrices):
         # tyoe: (*ca.SX) -> ca.SX
-        height = matrices[0].shape[0]
+        height = _shape(matrices[0])[0]
         for x, m in enumerate(matrices[1:]):
-            if height != m.shape[0]:
-                raise Exception('Matrices for stacking need to be of equal height. Initial height is {} but matrix {} has height {}'.format(height, x, m.shape[0]))
+            if height != _shape(m)[0]:
+                raise Exception('Matrices for stacking need to be of equal height. Initial height is {} but matrix {} has height {}'.format(height, x, _shape(m)[0]))
 
-        width = sum([m.shape[1] for m in matrices])
+        width = sum([_shape(m)[1] for m in matrices])
         out   = ca.SX(height, width)
         
         start_col = 0
         for m in matrices:
-            for x in range(m.shape[1]):
-                for y in range(m.shape[0]):
+            for x in range(_shape(m)[1]):
+                for y in range(_shape(m)[0]):
                     out[y, start_col + x] = m[y, x]
-            start_col += m.shape[1]
+            start_col += _shape(m)[1]
 
         return out
 
