@@ -4,6 +4,11 @@ Kineverse
 Kineverse is a framework for building models of articulated objects/robots using symbolic mathematical expressions and constraints. 
 It is meant to be used in a ROS environment and features a client-server implementation which allows articulation models to be modified and updated across multiple nodes in a running ROS system.
 
+Version 2
+---------
+Kineverse has gotten (or is in the progress of getting) a full re-write as [kv-lite](https://github.com/ARoefer/kv_lite.git), as this version made a good first step, but is very difficult to use.
+The second version is meant to be more streamlined and tries as much as possible to behave like `numpy` to be easier to approach.
+This repository will remain for the sake of posterity. 
 
 Installation
 ------------
